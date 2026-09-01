@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const DEFAULT_INBOX = "owen@fruma.ai";
+const INBOX = "owen@fruma.ai";
 const KINDS = new Set(["brand", "mill", "retailer"]);
 
 export async function POST(request: Request) {
@@ -29,8 +29,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tell us which you are." }, { status: 400 });
   }
 
-  const inbox = process.env.INTEREST_EMAIL?.trim() || DEFAULT_INBOX;
-  const sent = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(inbox)}`, {
+  const sent = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(INBOX)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
-  console.info("interest", { name, email, company, kind, inbox });
+  console.info("interest", { name, email, company, kind, inbox: INBOX });
 
   return NextResponse.json({ ok: true });
 }

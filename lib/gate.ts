@@ -1,6 +1,13 @@
 import { type Founder, isFounder } from "./founders";
 
-export { FOUNDERS, isFounder, founderLabel, type Founder } from "./founders";
+export {
+  FOUNDERS,
+  FOUNDER_EMAILS,
+  isFounder,
+  founderFromLogin,
+  founderLabel,
+  type Founder,
+} from "./founders";
 
 export const DEMO_COOKIE = "fruma_demo";
 

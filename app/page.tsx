@@ -51,6 +51,9 @@ export default function Home() {
               <Link href="/origin" className="manifest-cta border-white/30">
                 The factories
               </Link>
+              <Link href="/app" className="manifest-cta border-white/30">
+                Platform
+              </Link>
             </div>
           </div>
         </section>
@@ -81,10 +84,10 @@ export default function Home() {
             Fruma
           </p>
           <Link
-            href="/enter"
+            href="/app"
             className="text-[11px] uppercase tracking-[0.18em] text-white/35 hover:text-white"
           >
-            Team
+            Platform
           </Link>
         </div>
       </footer>

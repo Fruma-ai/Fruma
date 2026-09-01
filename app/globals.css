@@ -11,7 +11,7 @@
   --madder: #9a3d38;
   --indigo: #3d5a8a;
   --r: 4px;
-  --chrome: 44px;
+  --chrome: 52px;
   --background: var(--paper);
   --foreground: var(--ink);
   --card: var(--canvas);
@@ -37,34 +37,34 @@
 }
 
 [data-mode="mill"] {
-  --background: #0c0d10;
-  --foreground: #eceae4;
-  --card: #14161c;
-  --card-foreground: #eceae4;
-  --primary: #eceae4;
-  --primary-foreground: #12141a;
-  --secondary: #181b22;
-  --secondary-foreground: #eceae4;
-  --muted: #181b22;
-  --muted-foreground: #9aa1ad;
-  --accent: #181b22;
-  --accent-foreground: #eceae4;
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #111111;
+  --card-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #141414;
+  --secondary-foreground: #ffffff;
+  --muted: #141414;
+  --muted-foreground: rgba(255, 255, 255, 0.55);
+  --accent: #141414;
+  --accent-foreground: #ffffff;
   --destructive: #c45c54;
-  --border: #262a33;
-  --input: #262a33;
-  --ring: #eceae4;
-  --line: #262a33;
-  --line2: #343a46;
-  --panel: #14161c;
-  --panel2: #181b22;
-  --raw: #c4c0b6;
-  --mute: #9aa1ad;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #ffffff;
+  --line: rgba(255, 255, 255, 0.1);
+  --line2: rgba(255, 255, 255, 0.18);
+  --panel: #111111;
+  --panel2: #141414;
+  --raw: rgba(255, 255, 255, 0.72);
+  --mute: rgba(255, 255, 255, 0.55);
   --ok: #5e9e76;
   --madder: #c45c54;
-  --chalk: #eceae4;
-  --canvas: #101218;
-  --paper: #0c0d10;
-  --ink: #eceae4;
+  --chalk: #ffffff;
+  --canvas: #0a0a0a;
+  --paper: #000000;
+  --ink: #ffffff;
 }
 
 @theme inline {
@@ -151,15 +151,14 @@ button {
   background: color-mix(in srgb, var(--foreground) 16%, transparent);
 }
 
-.wordmark {
-  font-family: var(--font-fraunces), Georgia, serif;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  font-optical-sizing: auto;
-}
-
-.wordmark .dot {
-  color: var(--weld);
+.brand-lockup,
+.manifest-lockup {
+  font-family: var(--font-archivo), sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: inherit;
 }
 
 .cloth-name {
@@ -178,10 +177,12 @@ button {
 }
 
 .ui-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
   color: var(--mute);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
 .page-title {
@@ -252,11 +253,6 @@ button {
 }
 
 .manifest-lockup {
-  font-family: var(--font-archivo), sans-serif;
-  font-weight: 500;
-  font-size: 13px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
   color: #fff;
 }
 
@@ -312,7 +308,7 @@ button {
   letter-spacing: 0.32em;
   text-transform: uppercase;
   line-height: 1.72;
-  color: #fff;
+  color: inherit;
   font-variation-settings: "wdth" 92;
 }
 
@@ -331,7 +327,7 @@ button {
   width: 42px;
   height: 1px;
   margin: 22px 0;
-  background: #fff;
+  background: currentColor;
 }
 
 .manifest-cta {
@@ -385,14 +381,16 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 44px;
+  height: var(--chrome);
   padding: 0 10px;
   color: var(--mute);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: -0.015em;
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   white-space: nowrap;
-  border-bottom: 1.5px solid transparent;
+  border-bottom: 1px solid transparent;
   transition: color 0.12s ease, border-color 0.12s ease;
 }
 
@@ -421,13 +419,13 @@ button {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: #0c0d10;
+  background: #000;
   border-bottom: 1px solid var(--line);
 }
 
 .mill-wizard-top {
   display: flex;
-  height: 44px;
+  height: var(--chrome);
   align-items: center;
   gap: 12px;
   margin: 0 auto;
@@ -440,9 +438,11 @@ button {
   align-items: center;
   gap: 8px;
   color: var(--mute);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .mill-wizard-track {
@@ -511,9 +511,11 @@ button {
   height: 40px;
   padding: 0 6px;
   color: var(--mute);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: -0.015em;
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -617,7 +619,7 @@ button {
   z-index: 80;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, #0c0d10 72%, transparent);
+  background: color-mix(in srgb, #000 72%, transparent);
   padding: 16px;
 }
 
@@ -644,9 +646,11 @@ button {
   border-radius: 4px;
   background: transparent;
   color: var(--mute);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   font-variation-settings: "wdth" 92;
 }
 
@@ -660,9 +664,11 @@ button {
   align-items: center;
   gap: 8px;
   color: var(--mute);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 @media (min-width: 900px) {

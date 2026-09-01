@@ -154,7 +154,7 @@ export function MillReviewView() {
                   className={cn(
                     "flex shrink-0 items-center justify-between gap-3 px-2 py-2 text-left text-[13px] lg:w-full",
                     millReviewGroup === g.id
-                      ? "bg-chalk text-[#0c0d10]"
+                      ? "bg-chalk text-black"
                       : "text-mute hover:text-chalk",
                   )}
                 >

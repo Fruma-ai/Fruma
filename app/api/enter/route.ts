@@ -1,24 +1,35 @@
 import { NextResponse } from "next/server";
 import {
   DEMO_COOKIE,
-  isFounder,
+  founderFromLogin,
   passwordFor,
   sessionToken,
 } from "@/lib/gate";
 
 export async function POST(request: Request) {
-  let body: { who?: string; password?: string; next?: string } = {};
+  let body: {
+    email?: string;
+    username?: string;
+    who?: string;
+    password?: string;
+    next?: string;
+  } = {};
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Send who you are, and a password." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Enter your email and password." },
+      { status: 400 },
+    );
   }
 
-  const who = String(body.who ?? "").toLowerCase();
+  const who = founderFromLogin(
+    String(body.email ?? body.username ?? body.who ?? ""),
+  );
   const given = String(body.password ?? "");
-  if (!isFounder(who) || given !== passwordFor(who)) {
+  if (!who || given !== passwordFor(who)) {
     return NextResponse.json(
-      { error: "Only Owen, Chris or Sam can open the prototype." },
+      { error: "Wrong email or password." },
       { status: 401 },
     );
   }

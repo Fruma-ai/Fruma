@@ -60,7 +60,7 @@ export function MillShell({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div data-mode="mill" className="min-h-dvh bg-background text-chalk">
+    <div data-mode="mill" className="min-h-dvh bg-black text-white">
       <header className="mill-wizard">
         <div className="mill-wizard-top">
           <button
@@ -72,7 +72,7 @@ export function MillShell({ children }: { children: React.ReactNode }) {
             <Wordmark size="sm" />
           </button>
           <span className="chrome-rule" aria-hidden />
-          <span className="text-[12px] font-medium tracking-[-0.01em] text-weld">
+          <span className="text-[11px] uppercase tracking-[0.22em] text-white/55">
             Workshop
           </span>
           <div className="ml-auto flex items-center gap-3">

@@ -141,7 +141,7 @@ export function CatalogView() {
             className={cn(
               "h-8 px-2.5 text-[12.5px]",
               catalogFilter === f.id
-                ? "bg-chalk text-[#0c0d10]"
+                ? "bg-chalk text-black"
                 : "text-mute hover:text-chalk",
             )}
           >

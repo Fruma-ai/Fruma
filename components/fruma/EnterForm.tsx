@@ -4,22 +4,20 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FOUNDERS, type Founder, founderLabel } from "@/lib/founders";
-import { cn } from "@/lib/utils";
 
 export function EnterForm() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") || "/app";
-  const [who, setWho] = useState<Founder | "">("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!who) {
-      setError("Choose who you are.");
+    if (!email.trim()) {
+      setError("Enter your email.");
       return;
     }
     setLoading(true);
@@ -28,7 +26,7 @@ export function EnterForm() {
       const res = await fetch("/api/enter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ who, password, next }),
+        body: JSON.stringify({ email, password, next }),
       });
       const data = (await res.json()) as { error?: string; next?: string };
       if (!res.ok) {
@@ -46,30 +44,25 @@ export function EnterForm() {
 
   return (
     <form onSubmit={submit} className="mt-8 max-w-[400px]">
-      <fieldset>
-        <legend className="ui-label">I am</legend>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {FOUNDERS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setWho(id)}
-              className={cn(
-                "h-10 border text-[13px] font-medium tracking-[-0.015em]",
-                who === id
-                  ? "border-ink bg-ink text-paper"
-                  : "border-line bg-transparent text-ink hover:border-ink",
-              )}
-            >
-              {founderLabel(id)}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+      <label className="block">
+        <span className="ui-label">Email</span>
+        <Input
+          className="mt-1.5 border-white/15 text-white"
+          type="email"
+          name="email"
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </label>
       <label className="mt-4 block">
         <span className="ui-label">Password</span>
         <Input
-          className="mt-1.5"
+          className="mt-1.5 border-white/15 text-white"
           type="password"
           name="password"
           autoComplete="current-password"
@@ -83,8 +76,12 @@ export function EnterForm() {
           {error}
         </p>
       ) : null}
-      <Button type="submit" className="mt-5" disabled={loading}>
-        {loading ? "Opening…" : "Open the prototype"}
+      <Button
+        type="submit"
+        className="mt-5 bg-chalk text-black hover:bg-white"
+        disabled={loading}
+      >
+        {loading ? "Opening…" : "Open the platform"}
       </Button>
     </form>
   );

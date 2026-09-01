@@ -8,11 +8,12 @@ export const metadata: Metadata = {
 };
 
 const TOKENS = [
-  { name: "Ink", hex: "#12141A", note: "Studio text and primary" },
+  { name: "Black", hex: "#000000", note: "Public site and workshop" },
+  { name: "Ink", hex: "#12141A", note: "Studio text" },
   { name: "Paper", hex: "#F4F2EC", note: "Studio ground" },
   { name: "Canvas", hex: "#FCFBF8", note: "Cloth and photo stage" },
-  { name: "Workshop", hex: "#0C0D10", note: "Factory ground" },
-  { name: "Weld", hex: "#C9A227", note: "Rare signal" },
+  { name: "Chalk", hex: "#FFFFFF", note: "Public type" },
+  { name: "Weld", hex: "#C9A227", note: "Rare mill signal" },
   { name: "Ok", hex: "#1F6B45", note: "Confirmed / live" },
   { name: "Madder", hex: "#9A3D38", note: "Error / blocked" },
 ];
@@ -26,17 +27,18 @@ export default function BrandPage() {
             <Wordmark size="sm" />
           </Link>
           <span className="chrome-rule" aria-hidden />
-          <span className="text-[12px] font-medium text-mute">System</span>
-          <Link href="/app" className="ml-auto text-[12px] font-medium text-mute hover:text-ink">
-            Prototype
+          <span className="text-[11px] uppercase tracking-[0.22em] text-mute">System</span>
+          <Link href="/app" className="ml-auto text-[11px] uppercase tracking-[0.18em] text-mute hover:text-ink">
+            Platform
           </Link>
         </div>
       </header>
       <main className="mx-auto max-w-[720px] px-5 py-10">
         <h1 className="page-title">Type and colour</h1>
         <p className="page-lede mt-2">
-          Fraunces for cloth names and the wordmark. Archivo for UI. IBM Plex Mono
-          for SKU, GSM, and price.
+          Archivo for the Fruma lockup and UI, matching the public site. Fraunces
+          for cloth names. IBM Plex Mono for SKU, GSM, and price. Black on the
+          landing and workshop; paper in the brand studio.
         </p>
         <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden border border-line bg-line sm:grid-cols-4">
           {TOKENS.map((d) => (

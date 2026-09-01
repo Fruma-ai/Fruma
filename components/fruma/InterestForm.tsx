@@ -74,7 +74,7 @@ export function InterestForm() {
               className={cn(
                 "h-9 border text-[12px] font-medium tracking-[-0.015em]",
                 kind === value
-                  ? "border-chalk bg-chalk text-[#0c0d10]"
+                  ? "border-chalk bg-chalk text-black"
                   : "border-white/15 bg-transparent text-chalk hover:border-chalk/50",
               )}
             >
@@ -124,7 +124,7 @@ export function InterestForm() {
       )}
       <Button
         type="submit"
-        className="mt-5 bg-chalk text-[#0c0d10] hover:bg-weld"
+        className="mt-5 bg-chalk text-black hover:bg-white"
         disabled={status === "loading"}
       >
         {status === "loading" ? "Sending…" : "Apply"}
