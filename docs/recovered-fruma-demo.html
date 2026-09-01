@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fruma — demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14161A;--panel:#1A1D22;--panel2:#20242A;--line:#2C313A;--line2:#3A414C;
+  --raw:#C9C3B5;--chalk:#F1EEE6;--mute:#7E8592;
+  --indigo:#5B7FB9;--madder:#B4544A;--weld:#C9A227;--ok:#5E9E76;--r:3px;
+}
+*{box-sizing:border-box;margin:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--ink);color:var(--raw);font-family:Archivo,system-ui,sans-serif;
+  font-variation-settings:'wdth' 100;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:'IBM Plex Mono',monospace}
+.serif{font-family:Fraunces,Georgia,serif}
+h1,h2,h3{font-family:Archivo,sans-serif;font-variation-settings:'wdth' 112;letter-spacing:-.01em;color:var(--chalk)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+
+/* ── wordmark ── */
+.wordmark{font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:.02em}
+.wordmark .dot{color:var(--weld)}
+
+/* ══ GUIDE OVERLAY ══ */
+.guide{position:fixed;inset:0;z-index:100;background:rgba(11,13,16,.78);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;padding:24px;transition:opacity .4s}
+.guide.gone{opacity:0;pointer-events:none}
+.guide-card{max-width:520px;background:var(--panel);border:1px solid var(--line2);border-radius:8px;
+  padding:34px 34px 28px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.guide-mark{font-family:Fraunces,Georgia,serif;font-size:30px;font-weight:600;color:var(--chalk);margin-bottom:4px}
+.guide-mark .dot{color:var(--weld)}
+.guide-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2.4px;color:var(--mute);margin-bottom:22px}
+.guide-card h2{font-family:Fraunces,Georgia,serif;font-size:23px;font-weight:600;color:var(--chalk);
+  font-variation-settings:normal;letter-spacing:-.01em;margin-bottom:12px;line-height:1.25}
+.guide-card p{font-size:15px;color:var(--raw);line-height:1.6;margin-bottom:14px}
+.guide-card p b{color:var(--chalk);font-weight:600}
+.guide-steps{display:flex;gap:7px;margin:22px 0}
+.gs{flex:1;height:3px;border-radius:2px;background:var(--line)}
+.gs.on{background:var(--weld)}
+.guide-actions{display:flex;gap:10px;align-items:center;margin-top:22px}
+.btn{padding:11px 20px;border-radius:var(--r);font-family:'IBM Plex Mono',monospace;font-size:11px;
+  letter-spacing:1.3px;transition:.16s}
+.btn.primary{background:var(--weld);color:#1A1400;font-weight:600}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{color:var(--mute)}
+.btn.ghost:hover{color:var(--raw)}
+.guide-skip{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--mute)}
+.guide-skip:hover{color:var(--raw)}
+
+/* coach mark — points at the active area during guided mode */
+.coach{position:fixed;z-index:90;background:var(--weld);color:#1A1400;font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.6px;padding:9px 13px;border-radius:var(--r);max-width:260px;line-height:1.4;
+  box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;transform:translateY(6px);transition:.3s;pointer-events:none;font-weight:500}
+.coach.on{opacity:1;transform:none}
+.coach::after{content:'';position:absolute;width:9px;height:9px;background:var(--weld);transform:rotate(45deg)}
+.coach.down::after{bottom:-4px;left:22px} .coach.up::after{top:-4px;left:22px}
+
+/* ── top switch ── */
+.switch{position:fixed;top:0;left:0;right:0;height:48px;z-index:60;
+  background:rgba(20,22,26,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:2px;padding:0 16px}
+.switch .wm{font-size:16px;margin-right:6px}
+.switch .wm .sub{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.6px;color:var(--mute);margin-left:8px;font-weight:400}
+.tab{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:1.3px;padding:7px 13px;border-radius:var(--r);color:var(--mute);transition:.16s;position:relative}
+.tab:hover{color:var(--raw)}
+.tab[aria-selected="true"]{background:var(--panel2);color:var(--chalk);box-shadow:inset 0 0 0 1px var(--line2)}
+.tab .num{font-size:8px;opacity:.6;margin-right:5px}
+.replay{margin-left:auto;display:flex;gap:8px;align-items:center}
+.replay .synth{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.1px;color:var(--weld);
+  border:1px solid rgba(201,162,39,.3);background:rgba(201,162,39,.07);padding:4px 9px;border-radius:var(--r)}
+.replay button{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1px;color:var(--mute);
+  border:1px solid var(--line2);padding:5px 10px;border-radius:var(--r)}
+.replay button:hover{color:var(--raw);border-color:var(--indigo)}
+@media(max-width:720px){.switch .wm .sub{display:none}.replay .synth{display:none}.switch{padding:0 11px}.tab{padding:7px 9px;font-size:10px}}
+
+.view{display:none;padding-top:48px;animation:fade .4s}
+.view.on{display:block}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* ══════════ DESIGNER ══════════ */
+.brief{position:sticky;top:48px;z-index:40;background:var(--panel);border-bottom:1px solid var(--line);padding:18px 22px 16px}
+.brief-in{max-width:1240px;margin:0 auto}
+.brief-lab{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:2px;color:var(--mute);margin-bottom:9px}
+.brief-field{display:flex;align-items:flex-start;gap:12px}
+.brief-field .caret{color:var(--indigo);font-family:'IBM Plex Mono',monospace;font-size:17px;line-height:1.35;flex-shrink:0}
+#brief{flex:1;font-size:17px;line-height:1.4;color:var(--chalk);min-height:24px;overflow:hidden;
+  background:none;border:none;resize:none;font-family:inherit;padding:0}
+#brief:focus{outline:none}
+.brief-meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--mute);opacity:0;transition:opacity .4s}
+.brief-meta.on{opacity:1}
+.brief-meta b{color:var(--raw);font-weight:500}.parsed{color:var(--indigo)}
+.results{max-width:1240px;margin:0 auto;padding:26px 22px 150px}
+.rhead{display:flex;align-items:baseline;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.rhead h2{font-size:15px;font-weight:600}.rhead .sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:18px}
+@media(max-width:520px){.grid{grid-template-columns:1fr}#brief{font-size:15.5px}.results{padding:20px 16px 160px}.brief{padding:14px 16px 13px}}
+
+.sw{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  opacity:0;transform:translateY(14px);transition:opacity .5s,transform .5s,border-color .16s;display:flex;flex-direction:column;cursor:pointer}
+.sw.in{opacity:1;transform:none}
+.sw:hover{border-color:var(--line2)}.sw:hover .cloth{transform:scale(1.03)}
+.cloth-wrap{position:relative;height:150px;overflow:hidden;background:#0F1114}
+.cloth{position:absolute;inset:0;transition:transform .5s cubic-bezier(.2,.7,.3,1)}
+.punch{position:absolute;top:11px;left:11px;width:13px;height:13px;border-radius:50%;background:var(--ink);box-shadow:inset 0 1px 2px rgba(0,0,0,.7);z-index:2}
+.gsm{position:absolute;right:9px;bottom:8px;z-index:2;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.6px;color:#fff;background:rgba(10,12,15,.72);padding:3px 7px;border-radius:2px}
+.label{padding:13px 14px 12px;flex:1;display:flex;flex-direction:column}
+.label .mill{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.1px;color:var(--mute);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label .name{font-size:14.5px;font-weight:600;color:var(--chalk);font-variation-settings:'wdth' 108;line-height:1.25}
+.label .comp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--raw);margin-top:5px}
+.spec{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute)}
+.spec b{color:var(--raw);font-weight:500}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.7px;padding:2.5px 6px;border-radius:2px;border:1px solid var(--line2);color:var(--mute)}
+.chip.cert{color:var(--ok);border-color:rgba(94,158,118,.35);background:rgba(94,158,118,.07)}
+.chip.feel{color:var(--indigo);border-color:rgba(91,127,185,.3);background:rgba(91,127,185,.06)}
+.ways{display:flex;gap:4px;margin:11px 0 12px;align-items:center;min-height:15px}
+.way{width:15px;height:15px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.way.out{opacity:.28}.ways .more{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--mute);margin-left:3px}
+.addbtn{margin-top:auto;width:100%;padding:8px;border-radius:var(--r);border:1px solid var(--line2);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.3px;color:var(--raw);transition:.16s}
+.sw:hover .addbtn{border-color:var(--indigo);color:var(--indigo)}
+.addbtn.added{background:rgba(91,127,185,.14);border-color:var(--indigo);color:var(--indigo)}
+
+.tray{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(26,29,34,.97);backdrop-filter:blur(14px);border-top:1px solid var(--line2);transform:translateY(100%);transition:transform .4s cubic-bezier(.2,.7,.3,1)}
+.tray.up{transform:none}
+.tray-in{max-width:1240px;margin:0 auto;padding:14px 22px 16px;display:flex;align-items:center;gap:18px}
+.tray-lab{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.8px;color:var(--mute);flex-shrink:0}
+.tray-lab b{color:var(--chalk)}
+.tray-items{display:flex;gap:9px;flex:1;overflow-x:auto;padding:2px 0}
+.tray-sw{width:52px;height:52px;border-radius:2px;flex-shrink:0;position:relative;overflow:hidden;border:1px solid var(--line2)}
+.tray-sw .x{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,12,15,.72);color:#fff;font-size:15px;opacity:0;transition:.15s}
+.tray-sw:hover .x{opacity:1}
+.order{flex-shrink:0;padding:11px 20px;border-radius:var(--r);background:var(--indigo);color:#0C1016;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1.4px;font-weight:600}
+.order:hover{filter:brightness(1.08)}
+@media(max-width:680px){.tray-in{flex-wrap:wrap;gap:11px}.order{width:100%;text-align:center}}
+
+/* ══════════ MILL ══════════ */
+.mill-wrap{max-width:1240px;margin:0 auto;padding:30px 22px 90px}
+.mill-head{margin-bottom:26px}
+.mill-head .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2.2px;color:var(--weld);margin-bottom:10px}
+.mill-head h1{font-size:30px;font-variation-settings:'wdth' 115;margin-bottom:8px}
+.mill-head p{color:var(--mute);max-width:560px;font-size:14.5px}
+.cols{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start}
+@media(max-width:940px){.cols{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.card-h{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.card-h .t{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.8px;color:var(--mute)}
+.card-b{padding:6px 18px 16px}
+.row{display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.tick{width:19px;height:19px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700}
+.tick.y{background:rgba(94,158,118,.16);color:var(--ok);box-shadow:inset 0 0 0 1px rgba(94,158,118,.35)}
+.tick.n{background:rgba(201,162,39,.12);color:var(--weld);box-shadow:inset 0 0 0 1px rgba(201,162,39,.3)}
+.row .k{flex:1;min-width:0}.row .k .kn{font-size:14px;color:var(--chalk)}
+.row .k .kv{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--mute);margin-top:2px}
+.row .act{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.2px;padding:6px 11px;border-radius:2px;border:1px solid var(--line2);color:var(--raw);flex-shrink:0;transition:.16s}
+.row .act:hover{border-color:var(--indigo);color:var(--indigo)}
+.row .act.done{border-color:transparent;color:var(--ok);background:rgba(94,158,118,.1)}
+.hint{padding:14px 18px;border-top:1px solid var(--line);font-size:13px;color:var(--mute);line-height:1.55}
+.hint b{color:var(--raw);font-weight:500}
+.drop{margin:14px 18px 18px;border:1px dashed var(--line2);border-radius:var(--r);padding:20px;text-align:center;transition:.18s}
+.drop:hover{border-color:var(--indigo);background:rgba(91,127,185,.04)}
+.drop .big{font-size:14.5px;color:var(--chalk);margin-bottom:5px}
+.drop .small{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);letter-spacing:.6px}
+.preview{position:sticky;top:78px}
+.pv-head{padding:15px 18px;border-bottom:1px solid var(--line)}
+.pv-head .t{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.8px;color:var(--indigo)}
+.pv-head .s{font-size:12.5px;color:var(--mute);margin-top:5px}
+.pv-body{padding:18px}
+.pv-card{background:var(--panel2);border:1px solid var(--line2);border-radius:var(--r);padding:16px}
+.pv-card .nm{font-size:16px;font-weight:600;color:var(--chalk);font-variation-settings:'wdth' 108}
+.pv-card .lo{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);margin-top:3px}
+.pv-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px}
+.meter{margin-top:16px}
+.meter-t{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);margin-bottom:7px}
+.meter-t b{color:var(--chalk)}
+.bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--indigo);border-radius:3px;transition:width .6s cubic-bezier(.2,.7,.3,1)}
+.pv-note{margin-top:14px;padding-top:14px;border-top:1px solid var(--line2);font-size:12.5px;color:var(--mute);line-height:1.5}
+.pv-note b{color:var(--weld);font-weight:500}
+.freeforever{margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.1px;color:var(--mute);text-align:center}
+
+/* ══════════ INGEST ══════════ */
+.ing-cols{display:grid;grid-template-columns:1.35fr .65fr;gap:22px;align-items:start}
+@media(max-width:1000px){.ing-cols{grid-template-columns:1fr}}
+.maprow{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.maprow:last-child{border-bottom:none}.maprow.quiet{padding:10px 0;opacity:.72}
+.mapfrom{width:180px;flex-shrink:0}.mapfrom .col{font-size:13px;color:var(--chalk)}
+.mapfrom .samp{font-size:10px;color:var(--mute);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mapar{color:var(--line2);flex-shrink:0}.mapto{flex:1;min-width:0}
+.mapto .fld{font-size:14px;color:var(--chalk)}.mapto .infer{color:var(--indigo);font-size:12.5px}.mapto .skip{color:var(--mute);font-size:12px}
+.conf{font-size:9px;letter-spacing:1.1px;margin-top:4px}.conf.low{color:var(--madder)}.conf.med{color:var(--weld)}
+.mapact{display:flex;gap:6px;flex-shrink:0}
+.mapact .act{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1px;padding:6px 10px;border:1px solid var(--line2);border-radius:2px;color:var(--raw);transition:.15s}
+.mapact .act:hover{border-color:var(--indigo);color:var(--indigo)}
+.mapact .act.ghost{border-color:transparent;color:var(--mute)}.mapact .act.ghost:hover{color:var(--raw)}
+.mapact .act.chosen{background:rgba(94,158,118,.13);border-color:transparent;color:var(--ok)}
+.tickok{color:var(--ok);font-size:13px}
+.nextup{margin-top:16px;padding:15px;background:rgba(91,127,185,.07);border:1px solid rgba(91,127,185,.22);border-radius:3px}
+.nextup-t{font-size:9.5px;letter-spacing:1.6px;color:var(--indigo);margin-bottom:7px;font-family:'IBM Plex Mono',monospace}
+.nextup p{font-size:13px;line-height:1.55;color:var(--raw)}.nextup b{color:var(--chalk)}
+.confirmbtn{width:100%;margin-top:16px;padding:13px;border-radius:3px;background:var(--indigo);color:#0C1016;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:1.6px;font-weight:600}
+.confirmbtn:hover{filter:brightness(1.08)}
+@media(max-width:720px){
+  .maprow{flex-wrap:wrap;gap:8px;padding:16px 0}.mapfrom{width:auto;flex:1 1 42%}
+  .mapar{order:2}.mapto{flex:1 1 42%;min-width:0}.mapact{flex:1 1 100%;order:4;margin-top:6px}
+  .mapact .act{flex:1;text-align:center;padding:9px 8px}.maprow.quiet .mapact{flex:0 0 auto;order:0;margin-top:0}
+}
+
+/* ══════════ PRODUCT ══════════ */
+.prod-wrap{max-width:1240px;margin:0 auto;padding:26px 22px 90px}
+.prod-head{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.prod-head .l{flex:1;min-width:260px}
+.prod-head .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2.2px;color:var(--weld);margin-bottom:9px}
+.prod-head h1{font-size:28px;font-variation-settings:'wdth' 115;margin-bottom:6px}
+.prod-head .meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mute)}
+.state{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.4px;padding:7px 12px;border-radius:2px;
+  background:rgba(94,158,118,.13);color:var(--ok);border:1px solid rgba(94,158,118,.3);white-space:nowrap}
+.prod-cols{display:grid;grid-template-columns:.78fr 1.22fr;gap:22px;align-items:start}
+@media(max-width:980px){.prod-cols{grid-template-columns:1fr}}
+.flatcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;text-align:center;position:sticky;top:78px}
+.flatcard svg{width:100%;max-width:300px;height:auto}
+.flat-note{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.8px;color:var(--mute);margin-top:12px;line-height:1.5}
+.flat-ways{display:flex;gap:6px;justify-content:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.flat-ways .w{width:26px;height:26px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15);cursor:pointer;transition:.15s}
+.flat-ways .w:hover{transform:scale(1.1)}
+.flat-ways .w.sel{box-shadow:inset 0 0 0 1px rgba(255,255,255,.15),0 0 0 2px var(--weld)}
+.grp{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px}
+.grp-h{padding:13px 17px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.grp-h .dotm{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.grp-h .t{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.7px}
+.grp-h .n{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--mute)}
+.attr{display:flex;gap:12px;padding:9px 17px;border-bottom:1px solid rgba(44,49,58,.55);font-size:13px;align-items:baseline}
+.attr:last-child{border-bottom:none}
+.attr .k{width:150px;flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--mute)}
+.attr .v{flex:1;color:var(--chalk);min-width:0}
+.attr .src{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.7px;padding:2px 6px;border-radius:2px;white-space:nowrap}
+.src.inh{color:var(--ok);background:rgba(94,158,118,.1)}
+.src.des{color:var(--indigo);background:rgba(91,127,185,.1)}
+.src.ai{color:var(--weld);background:rgba(201,162,39,.1)}
+.aibar{padding:12px 17px;border-top:1px solid var(--line);display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.aibar .txt{flex:1;font-size:12.5px;color:var(--mute);min-width:180px}
+.aibar button{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.2px;padding:7px 12px;border-radius:2px;border:1px solid var(--line2);color:var(--raw)}
+.aibar button.go{background:var(--weld);color:#1A1400;border-color:transparent;font-weight:600}
+.aibar button:hover{filter:brightness(1.08)}
+.dests{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-top:6px}
+.dst{display:flex;align-items:center;gap:14px;padding:14px 17px;border-bottom:1px solid var(--line)}
+.dst:last-child{border-bottom:none}
+.dst .nm{width:150px;flex-shrink:0;font-size:14px;color:var(--chalk)}
+.dst .track{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden;min-width:60px}
+.dst .track i{display:block;height:100%;border-radius:3px;transition:width .7s cubic-bezier(.2,.7,.3,1)}
+.dst .pc{width:44px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500}
+.dst .gap{width:230px;font-size:11.5px;color:var(--mute);flex-shrink:0}
+.dst .pub{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.2px;padding:7px 13px;border-radius:2px;border:1px solid var(--line2);color:var(--raw);flex-shrink:0;transition:.15s}
+.dst .pub.ready{border-color:var(--indigo);color:var(--indigo)}
+.dst .pub.ready:hover{background:var(--indigo);color:#0C1016}
+.dst .pub.done{border-color:transparent;background:rgba(94,158,118,.14);color:var(--ok)}
+.dst .pub:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:820px){.dst{flex-wrap:wrap}.dst .nm{width:auto;flex:1}.dst .gap{width:100%;order:5}}
+.privacy{margin-top:14px;padding:14px 17px;background:rgba(91,127,185,.06);border:1px solid rgba(91,127,185,.2);
+  border-radius:var(--r);font-size:13px;color:var(--raw);line-height:1.55}
+.privacy b{color:var(--chalk)}
+
+
+.rawtog{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.1px;
+  padding:6px 11px;border-radius:2px;border:1px solid var(--line2);color:var(--mute);transition:.16s}
+.rawtog:hover{color:var(--raw);border-color:var(--indigo)}
+.rawtog.on{background:rgba(180,84,74,.14);border-color:var(--madder);color:var(--madder)}
+.rawnote{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--madder);margin-top:-8px;
+  margin-bottom:16px;display:none;line-height:1.5}
+.rawnote.on{display:block}
+.spec.raw b,.comp.raw{color:var(--madder)!important}
+
+
+.portal{font-size:8.5px;letter-spacing:1.8px;color:var(--mute);padding:0 7px 0 3px;opacity:.75}
+.portal.brand{color:var(--indigo);opacity:1}
+.pdiv{width:1px;height:20px;background:var(--line2);margin:0 8px;flex-shrink:0}
+@media(max-width:820px){.portal{display:none}.pdiv{margin:0 5px}}
+
+/* seen-before */
+.seen{background:var(--panel);border:1px solid rgba(201,162,39,.25);border-radius:var(--r);margin-top:16px}
+.seen-h{padding:13px 17px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.seen-h .t{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.7px;color:var(--weld)}
+.seen-b{padding:6px 17px 14px}
+.hist{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(44,49,58,.55);align-items:center}
+.hist:last-child{border-bottom:none}
+.hist .sq{width:34px;height:34px;border-radius:2px;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.hist .d{flex:1;min-width:0}
+.hist .d .t1{font-size:13.5px;color:var(--chalk);display:block}
+.hist .d .t2{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);margin-top:3px;display:block}
+.hist .tagx{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.8px;padding:3px 7px;border-radius:2px;white-space:nowrap}
+.tagx.live{color:var(--ok);background:rgba(94,158,118,.1)}
+.tagx.gone{color:var(--mute);background:rgba(126,133,146,.1)}
+.seen-cta{margin:4px 17px 16px;padding:13px 15px;background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.22);
+  border-radius:var(--r);font-size:13.5px;color:var(--chalk);line-height:1.5}
+.seen-cta b{color:var(--weld)}
+.millhist{padding:12px 17px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mute);line-height:1.55}
+.millhist b{color:var(--raw);font-weight:500}
+
+
+/* ══ FEEDS ══ */
+.feed-wrap{max-width:1240px;margin:0 auto;padding:26px 22px 90px}
+.feed-head{margin-bottom:20px}
+.feed-head .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2.2px;color:var(--weld);margin-bottom:9px}
+.feed-head h1{font-size:27px;font-variation-settings:'wdth' 115;margin-bottom:7px}
+.feed-head p{color:var(--mute);max-width:720px;font-size:14.5px}
+.dsel{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
+.dsel button{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:1.1px;padding:9px 15px;
+  border-radius:var(--r);border:1px solid var(--line2);color:var(--mute);transition:.16s}
+.dsel button:hover{color:var(--raw)}
+.dsel button.on{background:var(--panel2);color:var(--chalk);border-color:var(--indigo)}
+.dsel button .st{font-size:8.5px;margin-left:7px;opacity:.85}
+.dsel button.on .st.ok{color:var(--ok)} .dsel button.on .st.no{color:var(--madder)}
+.fbanner{padding:14px 17px;border-radius:var(--r);margin-bottom:16px;font-size:13.5px;line-height:1.55}
+.fbanner.ok{background:rgba(94,158,118,.08);border:1px solid rgba(94,158,118,.25);color:var(--raw)}
+.fbanner.no{background:rgba(180,84,74,.09);border:1px solid rgba(180,84,74,.3);color:var(--raw)}
+.fbanner b{color:var(--chalk)}
+.maptbl{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.mhead{display:flex;gap:14px;padding:11px 17px;border-bottom:1px solid var(--line2);
+  font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:var(--mute)}
+.mhead .c1{width:170px;flex-shrink:0}.mhead .c2{flex:1}.mhead .c3{width:240px;flex-shrink:0}
+.mrow{display:flex;gap:14px;padding:12px 17px;border-bottom:1px solid rgba(44,49,58,.5);align-items:flex-start;font-size:13px}
+.mrow:last-child{border-bottom:none}
+.mrow .c1{width:170px;flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--mute);padding-top:2px}
+.mrow .c2{flex:1;min-width:0;color:var(--chalk);word-break:break-word}
+.mrow .c3{width:240px;flex-shrink:0;font-size:11.5px;line-height:1.5;color:var(--mute)}
+.mrow.changed .c2{color:var(--weld)}
+.mrow.blocked .c2{color:var(--madder)}
+.mrow .c2 .was{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);
+  text-decoration:line-through;margin-top:3px}
+.rulechip{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.7px;padding:2px 6px;border-radius:2px;
+  margin-right:6px;white-space:nowrap}
+.rulechip.trunc{color:var(--weld);background:rgba(201,162,39,.11)}
+.rulechip.map{color:var(--indigo);background:rgba(91,127,185,.11)}
+.rulechip.strip{color:var(--madder);background:rgba(180,84,74,.11)}
+.rulechip.fmt{color:var(--ok);background:rgba(94,158,118,.1)}
+.srcnote{margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);line-height:1.6}
+@media(max-width:900px){
+  .mhead{display:none}
+  .mrow{flex-direction:column;gap:5px;padding:14px 15px}
+  .mrow .c1,.mrow .c3{width:auto}
+  .mrow .c3{padding-top:4px;border-top:1px dashed var(--line);margin-top:4px}
+}
+
+
+/* ══ SUPPLIERS + INSIGHTS ══ */
+.sup-wrap{max-width:1240px;margin:0 auto;padding:26px 22px 90px}
+.sup-head{margin-bottom:20px}
+.sup-head .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2.2px;color:var(--weld);margin-bottom:9px}
+.sup-head h1{font-size:27px;font-variation-settings:'wdth' 115;margin-bottom:7px}
+.sup-head p{color:var(--mute);max-width:700px;font-size:14.5px}
+.ins{background:var(--panel);border:1px solid rgba(201,162,39,.28);border-radius:var(--r);margin-bottom:24px}
+.ins-h{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ins-h .t{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.8px;color:var(--weld)}
+.ins-h .sub{font-size:12.5px;color:var(--mute)}
+.ins-h .n{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--mute)}
+.icard{display:flex;gap:14px;padding:15px 18px;border-bottom:1px solid rgba(44,49,58,.5);align-items:flex-start}
+.icard:last-child{border-bottom:none}
+.ibadge{width:6px;align-self:stretch;border-radius:3px;flex-shrink:0}
+.icard .body{flex:1;min-width:0}
+.icard .h{font-size:14.5px;color:var(--chalk);margin-bottom:4px;line-height:1.35}
+.icard .p{font-size:13px;color:var(--mute);line-height:1.55}
+.icard .p b{color:var(--raw);font-weight:500}
+.icard .acts{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
+.icard .acts button{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.1px;padding:7px 12px;
+  border-radius:2px;border:1px solid var(--line2);color:var(--raw);transition:.15s;white-space:nowrap}
+.icard .acts button:hover{border-color:var(--indigo);color:var(--indigo)}
+.icard .acts button.go{background:var(--weld);color:#1A1400;border-color:transparent;font-weight:600}
+.icard .acts button.done{background:rgba(94,158,118,.13);border-color:transparent;color:var(--ok)}
+@media(max-width:760px){.icard{flex-wrap:wrap}.icard .acts{width:100%;margin-top:4px}}
+.rulebox{margin:0 18px 16px;padding:13px 15px;background:#12141A;border:1px solid var(--line2);border-radius:var(--r);
+  font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--raw);line-height:1.6;display:none}
+.rulebox.on{display:block}
+.rulebox .kw{color:var(--indigo)}
+.rulebox .cm{color:var(--mute)}
+
+.supgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
+.scard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.scard .top{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.scard .nm{flex:1;min-width:0}
+.scard .nm .n1{font-size:15.5px;font-weight:600;color:var(--chalk);font-variation-settings:'wdth' 108}
+.scard .nm .n2{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mute);margin-top:3px}
+.scard .grade{font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:600;line-height:1}
+.smetrics{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;padding-top:13px;border-top:1px solid var(--line)}
+.sm{min-width:0}
+.sm .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--mute)}
+.sm .v{font-size:14.5px;color:var(--chalk);margin-top:3px}
+.sm .v span{font-size:11px;margin-left:5px}
+.up{color:var(--madder)} .down{color:var(--ok)} .flat{color:var(--mute)}
+.scard .foot{margin-top:13px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--mute);line-height:1.5}
+.scard .foot b{color:var(--raw);font-weight:500}
+.selfimp{margin-top:24px;background:var(--panel2);border:1px solid var(--line2);border-radius:var(--r);padding:20px 22px}
+.selfimp .t{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.8px;color:var(--indigo);margin-bottom:14px}
+.simgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px}
+.sim .big{font-family:Fraunces,Georgia,serif;font-size:27px;font-weight:600;color:var(--chalk);line-height:1}
+.sim .lbl{font-size:12px;color:var(--mute);margin-top:6px;line-height:1.45}
+.sim .lbl b{color:var(--ok)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.sw{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- ══ GUIDE ══ -->
+<div class="guide" id="guide">
+  <div class="guide-card">
+    <div class="guide-mark">Fruma<span class="dot">.</span></div>
+    <div class="guide-tag">FABRIC INTELLIGENCE · DEMO</div>
+    <div id="gstep"></div>
+    <div class="guide-steps"><span class="gs on"></span><span class="gs"></span><span class="gs"></span><span class="gs"></span><span class="gs"></span></div>
+    <div class="guide-actions">
+      <button class="btn primary" id="gnext">START</button>
+      <button class="guide-skip" id="gskip">skip to free roam →</button>
+    </div>
+  </div>
+</div>
+<div class="coach" id="coach"></div>
+
+<nav class="switch" role="tablist">
+  <span class="wm wordmark">Fruma<span class="dot">.</span><span class="sub">FABRIC INTELLIGENCE</span></span>
+  <span class="portal mono">FACTORY</span>
+  <button class="tab" role="tab" aria-selected="false" data-v="ingest">UPLOAD</button>
+  <button class="tab" role="tab" aria-selected="false" data-v="mill">PROFILE</button>
+  <span class="pdiv"></span>
+  <span class="portal brand mono">BRAND</span>
+  <button class="tab" role="tab" aria-selected="true" data-v="designer">DESIGN</button>
+  <button class="tab" role="tab" aria-selected="false" data-v="product">PRODUCT</button>
+  <button class="tab" role="tab" aria-selected="false" data-v="feeds">FEEDS</button>
+  <button class="tab" role="tab" aria-selected="false" data-v="suppliers">SUPPLIERS</button>
+  <div class="replay">
+    <span class="synth">DEMO DATA</span>
+    <button id="replay">↻ REPLAY TOUR</button>
+  </div>
+</nav>
+
+<!-- DESIGNER -->
+<section class="view on" id="v-designer">
+  <div class="brief"><div class="brief-in">
+    <div class="brief-lab">DESCRIBE THE PRODUCT</div>
+    <div class="brief-field"><span class="caret">›</span><textarea id="brief" rows="1" spellcheck="false"></textarea></div>
+    <div class="brief-meta" id="bmeta">
+      <span>reading: <b class="parsed" id="p1">—</b></span><span>weight <b id="p2">—</b></span>
+      <span>colour <b id="p3">—</b></span><span>MOQ <b id="p4">—</b></span>
+    </div>
+  </div></div>
+  <div class="results">
+    <div class="rhead"><h2 id="rcount">Searching…</h2><span class="sub" id="rsub"></span><button id="rawTog" class="rawtog mono">SHOW AS THE MILLS SENT IT</button></div>
+    <div class="rawnote mono" id="rawNote">This is what the same twelve fabrics look like before Fruma normalises them — three weight units, two width units, six ways of writing a composition. Nobody can compare these.</div>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="tray" id="tray"><div class="tray-in">
+    <span class="tray-lab">ON THE DESK · <b id="trayN">0</b></span>
+    <div class="tray-items" id="trayItems"></div>
+    <button class="order">ORDER SWATCHES</button>
+  </div></div>
+</section>
+
+<!-- INGEST -->
+<section class="view" id="v-ingest">
+  <div class="mill-wrap">
+    <div class="mill-head">
+      <div class="eyebrow">STEP 2 OF 3 · CHECK WHAT WE READ</div>
+      <h1>We read your file. Does this look right?</h1>
+      <p>You sent <span class="mono" style="color:var(--chalk)">Ocean-Lanka-hanger-list.pdf</span> — 214 qualities. We've matched your column names to ours. Only the uncertain ones need you.</p>
+    </div>
+    <div class="ing-cols">
+      <div>
+        <div class="card">
+          <div class="card-h"><span class="t">NEEDS A LOOK · 3</span></div>
+          <div class="card-b">
+            <div class="maprow"><div class="mapfrom"><div class="col mono">"Fin."</div><div class="samp mono">P/D · GARMENT · BIO</div></div><span class="mapar">→</span><div class="mapto"><div class="fld">finish treatment</div><div class="conf low mono">LOW CONFIDENCE</div></div><div class="mapact"><button class="act" data-ok>LOOKS RIGHT</button><button class="act ghost">CHANGE</button></div></div>
+            <div class="maprow"><div class="mapfrom"><div class="col mono">"W"</div><div class="samp mono">42 · 44 · 40</div></div><span class="mapar">→</span><div class="mapto"><div class="fld">width — inches?</div><div class="conf med mono">CHECK UNIT</div></div><div class="mapact"><button class="act" data-ok>INCHES</button><button class="act ghost">CM</button></div></div>
+            <div class="maprow"><div class="mapfrom"><div class="col mono">"Others"</div><div class="samp mono">VFB35860 · VFB35861</div></div><span class="mapar">→</span><div class="mapto"><div class="fld">unmapped</div><div class="conf low mono">WE DON'T KNOW THIS ONE</div></div><div class="mapact"><button class="act" data-ok>IT'S A YARN REF</button><button class="act ghost">IGNORE</button></div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <div class="card-h"><span class="t">MATCHED · 6 · NO ACTION NEEDED</span></div>
+          <div class="card-b">
+            <div class="maprow quiet"><div class="mapfrom"><div class="col mono">"Fabric No"</div><div class="samp mono">DPWR192924</div></div><span class="mapar">→</span><div class="mapto"><div class="fld">article code</div></div><div class="mapact"><span class="tickok">✓</span></div></div>
+            <div class="maprow quiet"><div class="mapfrom"><div class="col mono">"Construction"</div><div class="samp mono">P/D WAFFEL RIB</div></div><span class="mapar">→</span><div class="mapto"><div class="fld">structure <span class="infer">→ waffle rib</span></div></div><div class="mapact"><span class="tickok">✓</span></div></div>
+            <div class="maprow quiet"><div class="mapfrom"><div class="col mono">"Composition"</div><div class="samp mono">COTTON /SPN</div></div><span class="mapar">→</span><div class="mapto"><div class="fld">composition <span class="infer">→ cotton + elastane</span></div></div><div class="mapact"><span class="tickok">✓</span></div></div>
+            <div class="maprow quiet"><div class="mapfrom"><div class="col mono">"Weight"</div><div class="samp mono">285 G/M2</div></div><span class="mapar">→</span><div class="mapto"><div class="fld">weight (g/m²)</div></div><div class="mapact"><span class="tickok">✓</span></div></div>
+            <div class="maprow quiet"><div class="mapfrom"><div class="col mono">"Shrinkage"</div><div class="samp mono">— empty —</div></div><span class="mapar">→</span><div class="mapto"><div class="fld">shrinkage <span class="skip">left blank, that's fine</span></div></div><div class="mapact"><span class="tickok">✓</span></div></div>
+          </div>
+          <div class="hint">Shrinkage is blank on your cards. That's normal at this stage — buyers don't filter on it. <b>We won't ask again.</b></div>
+        </div>
+      </div>
+      <div class="card preview">
+        <div class="pv-head"><div class="t">WHAT HAPPENS WHEN YOU CONFIRM</div></div>
+        <div class="pv-body">
+          <div class="pv-card">
+            <div class="nm">214 qualities go live</div><div class="lo">FROM ONE FILE · NOTHING RETYPED</div>
+            <div class="meter" style="margin-top:14px"><div class="meter-t"><span>DESIGN-READY</span><b>198 of 214</b></div><div class="bar"><i style="width:92%"></i></div></div>
+            <div class="pv-note" style="margin-top:12px">16 qualities have no stock colours listed — they'll publish, but won't show in colour searches.</div>
+          </div>
+          <div class="nextup"><div class="nextup-t">AND NEXT TIME</div><p>We've saved how your file is laid out. Send the same format again — next season, next month — and it maps itself. <b>No questions, no checking.</b></p></div>
+          <button class="confirmbtn">CONFIRM AND PUBLISH</button>
+          <div class="freeforever">YOU CAN CHANGE ANY OF THIS LATER</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MILL PROFILE -->
+<section class="view" id="v-mill">
+  <div class="mill-wrap">
+    <div class="mill-head">
+      <div class="eyebrow">CLAIM YOUR PROFILE · FREE, PERMANENTLY</div>
+      <h1>Têxteis Vale do Ave, Lda</h1>
+      <p>We built this from public certification registries and brand disclosures. Check what we have, and add what we're missing — it takes about two minutes.</p>
+    </div>
+    <div class="cols">
+      <div>
+        <div class="card">
+          <div class="card-h"><span class="t">WHAT WE ALREADY FOUND</span></div>
+          <div class="card-b">
+            <div class="row"><span class="tick y">✓</span><span class="k"><div class="kn">GOTS certified</div><div class="kv">valid to March 2027 · scope: knitted apparel</div></span><button class="act done">CONFIRMED</button></div>
+            <div class="row"><span class="tick y">✓</span><span class="k"><div class="kn">OEKO-TEX Standard 100</div><div class="kv">valid to August 2027</div></span><button class="act done">CONFIRMED</button></div>
+            <div class="row"><span class="tick y">✓</span><span class="k"><div class="kn">983 people</div><div class="kv">from public supply-chain records</div></span><button class="act" data-fix>CORRECT</button></div>
+            <div class="row"><span class="tick y">✓</span><span class="k"><div class="kn">Listed by 5 brands</div><div class="kv">from their published supplier lists</div></span><button class="act" data-fix>REVIEW</button></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <div class="card-h"><span class="t">WHAT BUYERS ASK FOR THAT WE DON'T HAVE</span></div>
+          <div class="card-b">
+            <div class="row"><span class="tick n">?</span><span class="k"><div class="kn">Minimum order quantity</div><div class="kv">asked for in 9 of 10 searches</div></span><button class="act" data-add>ADD</button></div>
+            <div class="row"><span class="tick n">?</span><span class="k"><div class="kn">Lead time — stock and custom dye</div><div class="kv">asked for in 8 of 10 searches</div></span><button class="act" data-add>ADD</button></div>
+            <div class="row"><span class="tick n">?</span><span class="k"><div class="kn">Your fabric qualities</div><div class="kv">composition, weight, width, stock colours</div></span><button class="act" data-add>UPLOAD</button></div>
+          </div>
+          <div class="drop"><div class="big">Send whatever you already have</div><div class="small">LINE SHEET · HANGER LIST · SPEC PDF · PHOTO OF A CARD — ANY FORMAT</div></div>
+          <div class="hint">There's no form to fill in. Send the file exactly as it is and we'll structure it — then you check it once. <b>Every future list in that format maps itself.</b></div>
+        </div>
+      </div>
+      <div class="card preview">
+        <div class="pv-head"><div class="t">HOW BUYERS SEE YOU</div><div class="s">Updates as you add. This is the card a designer sees when they search.</div></div>
+        <div class="pv-body">
+          <div class="pv-card">
+            <div class="nm">Têxteis Vale do Ave, Lda</div><div class="lo">FAMALICÃO, PORTUGAL · 983 PEOPLE</div>
+            <div class="pv-tags">
+              <span class="chip cert">✓ GOTS 2027</span><span class="chip cert">✓ OEKO-TEX</span>
+              <span class="chip" id="pvMoq" style="opacity:.4">MOQ —</span><span class="chip" id="pvLead" style="opacity:.4">LEAD TIME —</span><span class="chip" id="pvFab" style="opacity:.4">0 QUALITIES</span>
+            </div>
+            <div class="meter"><div class="meter-t"><span>PROFILE COMPLETENESS</span><b id="pct">45%</b></div><div class="bar"><i id="barFill" style="width:45%"></i></div></div>
+            <div class="pv-note">Buyers filter on MOQ and lead time before they look at anything else. <b>Without them, you don't appear in most searches.</b></div>
+          </div>
+          <div class="freeforever">FREE TO CLAIM · FREE TO KEEP · YOUR DATA STAYS YOURS</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- PRODUCT -->
+<section class="view" id="v-product">
+  <div class="prod-wrap">
+    <div class="prod-head">
+      <div class="l">
+        <div class="eyebrow">BORN WHEN THE DESIGN WAS SENT · 14 MARCH</div>
+        <h1>Gulf Piqué Polo</h1>
+        <div class="meta">SS27 · GP-2701 · MALHAS GUIMARÃES SA, PORTUGAL · IN YOUR CATALOGUE ONLY</div>
+      </div>
+      <span class="state">READY — NOT PUBLISHED</span>
+    </div>
+
+    <div class="prod-cols">
+      <div class="flatcard">
+        <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" id="flatSvg">
+          <defs>
+            <pattern id="pq" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="7" height="7" fill="#2E4034" id="pqBase"/>
+              <path d="M0 0 L0 7" stroke="rgba(0,0,0,.32)" stroke-width="1.3"/>
+              <path d="M3.5 0 L3.5 7" stroke="rgba(255,255,255,.11)" stroke-width="1"/>
+            </pattern>
+            <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="rgba(0,0,0,.30)"/><stop offset=".26" stop-color="rgba(0,0,0,0)"/>
+              <stop offset=".74" stop-color="rgba(0,0,0,0)"/><stop offset="1" stop-color="rgba(0,0,0,.30)"/>
+            </linearGradient>
+          </defs>
+          <g stroke="#0E1013" stroke-width="1.7" stroke-linejoin="round">
+            <path d="M138 96 L66 128 L92 202 L140 184 Z" fill="url(#pq)"/>
+            <path d="M262 96 L334 128 L308 202 L260 184 Z" fill="url(#pq)"/>
+            <path d="M138 96 L172 96 Q200 118 228 96 L262 96 L260 184 L266 344 Q200 354 134 344 L140 184 Z" fill="url(#pq)"/>
+            <path d="M190 110 L190 178 M210 110 L210 178" fill="none" stroke="rgba(0,0,0,.42)" stroke-width="1.3"/>
+            <path d="M166 90 Q200 70 234 90 L206 126 L194 126 Z" fill="url(#pq)"/>
+            <path d="M200 92 L200 126" fill="none" stroke="rgba(0,0,0,.4)" stroke-width="1.2"/>
+            <path d="M172 96 Q200 82 228 96" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1.1"/>
+          </g>
+          <g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1">
+            <path d="M134 344 Q200 354 266 344"/><path d="M92 202 L140 184"/><path d="M308 202 L260 184"/>
+          </g>
+          <rect width="400" height="400" fill="url(#shade)" style="mix-blend-mode:multiply"/>
+          <g fill="#DDD5C3" opacity=".8"><circle cx="200" cy="140" r="2.9"/><circle cx="200" cy="162" r="2.9"/></g>
+        </svg>
+        <div class="flat-note">RENDERED FROM THE SPEC — THE CHOSEN FABRIC,<br>STRUCTURE AND COLOURWAY. NOT A PHOTOGRAPH.</div>
+        <div class="flat-ways" id="flatWays"></div>
+      </div>
+
+        <div class="seen">
+          <div class="seen-h"><span class="t">YOU HAVE USED THIS CLOTH BEFORE</span></div>
+          <div class="seen-b">
+            <div class="hist">
+              <span class="sq" style="background:#27364F"></span>
+              <span class="d"><span class="t1">Heavyweight Piqué Polo</span><span class="t2">AW26 · GP-2601 · NAVY</span></span>
+              <span class="tagx live">IN STORE NOW</span>
+            </div>
+            <div class="hist">
+              <span class="sq" style="background:#DED6C4"></span>
+              <span class="d"><span class="t1">Short Sleeve Piqué Shirt</span><span class="t2">SS26 · SH-2604 · ECRU</span></span>
+              <span class="tagx gone">SOLD THROUGH</span>
+            </div>
+            <div class="hist">
+              <span class="sq" style="background:#23252A"></span>
+              <span class="d"><span class="t1">Piqué Polo — Long Sleeve</span><span class="t2">AW25 · GP-2508 · BLACK</span></span>
+              <span class="tagx gone">ARCHIVED</span>
+            </div>
+          </div>
+          <div class="seen-cta">Same mill article <span class="mono">K4471T</span>. <b>GP-2601 is hanging in your stores now</b> — go and handle it before you sign off the sample.</div>
+          <div class="millhist">You have worked with <b>Malhas Guimarães SA</b> on <b>6 products</b> since 2024. Last order November 2025. Average sample turnaround <b>9 days</b>, average stock lead time <b>2.4 weeks</b>.</div>
+        </div>
+
+
+      <div>
+        <div class="grp">
+          <div class="grp-h"><span class="dotm" style="background:var(--ok)"></span><span class="t" style="color:var(--ok)">INHERITED FROM THE FABRIC</span><span class="n">NOT RE-ENTERED · LOCKED</span></div>
+          <div class="attr"><span class="k">composition</span><span class="v">70% organic cotton · 30% cotton</span><span class="src inh">FABRIC</span></div>
+          <div class="attr"><span class="k">structure</span><span class="v">Piqué, piece dyed</span><span class="src inh">FABRIC</span></div>
+          <div class="attr"><span class="k">weight</span><span class="v">278 g/m²</span><span class="src inh">FABRIC</span></div>
+          <div class="attr"><span class="k">certifications</span><span class="v">GOTS to Mar 2027 · OEKO-TEX 100 to Aug 2027</span><span class="src inh">FABRIC</span></div>
+          <div class="attr"><span class="k">origin</span><span class="v">Malhas Guimarães SA · Guimarães, Portugal</span><span class="src inh">FABRIC</span></div>
+          <div class="attr"><span class="k">mill article</span><span class="v">K4471T</span><span class="src inh">FABRIC</span></div>
+        </div>
+
+        <div class="grp">
+          <div class="grp-h"><span class="dotm" style="background:var(--indigo)"></span><span class="t" style="color:var(--indigo)">FROM THE DESIGN</span><span class="n">SENT TO THE FACTORY 14 MARCH</span></div>
+          <div class="attr"><span class="k">garment type</span><span class="v">Polo shirt, short sleeve</span><span class="src des">DESIGN</span></div>
+          <div class="attr"><span class="k">fit</span><span class="v">Regular · 3-button placket · ribbed collar</span><span class="src des">DESIGN</span></div>
+          <div class="attr"><span class="k">colourway</span><span class="v" id="cwName">Forest — 19-5513 TCX</span><span class="src des">DESIGN</span></div>
+          <div class="attr"><span class="k">size range</span><span class="v">XS–XXL · base size M</span><span class="src des">DESIGN</span></div>
+          <div class="attr"><span class="k">chest (M)</span><span class="v">54 cm half-chest</span><span class="src des">DESIGN</span></div>
+          <div class="attr"><span class="k">body length (M)</span><span class="v">71 cm HPS</span><span class="src des">DESIGN</span></div>
+          <div class="attr"><span class="k">trims</span><span class="v">Woven label · horn-effect buttons · side vents</span><span class="src des">DESIGN</span></div>
+        </div>
+
+        <div class="grp">
+          <div class="grp-h"><span class="dotm" style="background:var(--weld)"></span><span class="t" style="color:var(--weld)">ENRICHED BY FRUMA</span><span class="n" id="aiState">PROPOSED — NEEDS YOUR APPROVAL</span></div>
+          <div class="attr"><span class="k">product title</span><span class="v" id="aiTitle">—</span><span class="src ai">AI</span></div>
+          <div class="attr"><span class="k">description</span><span class="v" id="aiDesc">—</span><span class="src ai">AI</span></div>
+          <div class="attr"><span class="k">care instructions</span><span class="v" id="aiCare">—</span><span class="src ai">AI</span></div>
+          <div class="attr"><span class="k">search attributes</span><span class="v" id="aiAttrs">—</span><span class="src ai">AI</span></div>
+          <div class="attr"><span class="k">category path</span><span class="v" id="aiCat">—</span><span class="src ai">AI</span></div>
+          <div class="aibar">
+            <span class="txt" id="aiTxt">Fruma drafts from the facts above — never inventing what it doesn't have. Nothing publishes until you approve it.</span>
+            <button id="aiRun" class="go">GENERATE</button>
+            <button id="aiOk" disabled>APPROVE ALL</button>
+          </div>
+        </div>
+
+        <div class="grp" style="margin-bottom:0">
+          <div class="grp-h"><span class="dotm" style="background:var(--madder)"></span><span class="t" style="color:var(--madder)">READY FOR</span><span class="n">SCORED AGAINST EACH DESTINATION</span></div>
+          <div class="dests" style="border:none;margin:0">
+            <div class="dst" data-d="own"><span class="nm">Your own site</span><div class="track"><i style="width:100%;background:var(--ok)"></i></div><span class="pc" style="color:var(--ok)">100%</span><span class="gap">complete</span><button class="pub ready">PUBLISH</button></div>
+            <div class="dst" data-d="mkt"><span class="nm">Marketplace</span><div class="track"><i style="width:100%;background:var(--ok)"></i></div><span class="pc" style="color:var(--ok)">100%</span><span class="gap">complete</span><button class="pub ready">PUBLISH</button></div>
+            <div class="dst" data-d="r1"><span class="nm">Retailer A</span><div class="track"><i style="width:98%;background:var(--ok)"></i></div><span class="pc" style="color:var(--ok)">98%</span><span class="gap">needs extended size chart — asked the mill</span><button class="pub ready">PUBLISH</button></div>
+            <div class="dst" data-d="r2"><span class="nm">Retailer B</span><div class="track"><i style="width:96%;background:var(--weld)"></i></div><span class="pc" style="color:var(--weld)">96%</span><span class="gap">needs 2 more image angles — you to supply</span><button class="pub" disabled>BLOCKED</button></div>
+            <div class="dst" data-d="dpp"><span class="nm">Compliance pack</span><div class="track"><i style="width:97%;background:var(--ok)"></i></div><span class="pc" style="color:var(--ok)">97%</span><span class="gap">packaging dimensions pending</span><button class="pub ready">EXPORT</button></div>
+          </div>
+        </div>
+
+        <div class="privacy"><b>This product is in your catalogue only.</b> Nothing above has been sent anywhere. Fruma never publishes on your behalf — “ready” means you could, not that we did.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- FEEDS -->
+<section class="view" id="v-feeds">
+  <div class="feed-wrap">
+    <div class="feed-head">
+      <div class="eyebrow">ONE RECORD · FOUR DESTINATIONS</div>
+      <h1>The same product, shaped for wherever it sells</h1>
+      <p>Your own site is the source of truth. Every other destination is a translation of it — different title limits, different colour vocabularies, different image rules. Fruma holds the rules so nobody rewrites the product four times.</p>
+    </div>
+    <div class="dsel" id="dsel"></div>
+    <div id="fbanner"></div>
+    <div class="maptbl">
+      <div class="mhead"><span class="c1">FRUMA STANDARD</span><span class="c2">AS IT GOES OUT</span><span class="c3">WHY IT CHANGED</span></div>
+      <div id="maprows"></div>
+    </div>
+    <div class="srcnote" id="srcnote"></div>
+  </div>
+</section>
+
+
+<!-- SUPPLIERS -->
+<section class="view" id="v-suppliers">
+  <div class="sup-wrap">
+    <div class="sup-head">
+      <div class="eyebrow">FROM YOUR OWN ORDERS · NOT A DIRECTORY</div>
+      <h1>Your suppliers, scored on what actually happened</h1>
+      <p>Every figure here comes from your own order history — samples you waited for, lead times you were quoted against lead times you got. No mill can edit it.</p>
+    </div>
+
+    <div class="ins">
+      <div class="ins-h">
+        <span class="t">WHAT FRUMA NOTICED</span>
+        <span class="sub">You didn't ask for these — they came to you.</span>
+        <span class="n">4 THIS WEEK</span>
+      </div>
+
+      <div class="icard">
+        <span class="ibadge" style="background:var(--madder)"></span>
+        <div class="body">
+          <div class="h">Malhas Guimarães sample turnaround has slipped</div>
+          <div class="p">Nine days across your first four orders, <b>fourteen days across the last three</b>. Your SS27 critical path assumes nine. If it holds at fourteen you lose a week before you notice.</div>
+        </div>
+        <div class="acts"><button>SEE ORDERS</button><button>FLAG TO MILL</button></div>
+      </div>
+
+      <div class="icard">
+        <span class="ibadge" style="background:var(--weld)"></span>
+        <div class="body">
+          <div class="h">Three SS27 fabrics have certificates expiring before launch</div>
+          <div class="p">GOTS on <b>K4471T, B5502V and A8813X</b> expires March 2027. Your launch is 14 March. Retailers check the certificate date, not the order date — we've drafted the renewal request.</div>
+        </div>
+        <div class="acts"><button class="go">REVIEW REQUEST</button></div>
+      </div>
+
+      <div class="icard">
+        <span class="ibadge" style="background:var(--indigo)"></span>
+        <div class="body">
+          <div class="h">The same title edit, twelve times running</div>
+          <div class="p">Every product you send to John Lewis gets its title trimmed the same way. <b>That's a rule, not twelve decisions.</b> Set it once and it applies to everything after.</div>
+        </div>
+        <div class="acts"><button class="go" id="showRule">SEE THE RULE</button></div>
+      </div>
+      <div class="rulebox" id="ruleBox">
+        <span class="cm"># Anyone here can read and change this. No engineer needed.</span><br>
+        <span class="kw">when</span> destination <span class="kw">is</span> "John Lewis"<br>
+        &nbsp;&nbsp;<span class="kw">and</span> title <span class="kw">longer than</span> 50 characters<br>
+        <span class="kw">then</span> trim <span class="kw">to</span> 50 <span class="kw">on a</span> word boundary<br>
+        &nbsp;&nbsp;<span class="kw">and</span> keep the fabric name <span class="cm"># learned from your last 12 edits</span><br>
+        <span class="kw">never</span> drop the fit descriptor <span class="cm"># you restored it 3 times</span>
+      </div>
+
+      <div class="icard">
+        <span class="ibadge" style="background:var(--ok)"></span>
+        <div class="body">
+          <div class="h">A lower-MOQ alternative to a cloth you buy often</div>
+          <div class="p">You've run four heavyweight jerseys through Tekirdağ at <b>800m minimum</b>. Vale do Ave now lists a comparable 340gsm loopback at <b>150m</b> — same weight class, GOTS, two weeks' lead. Worth a swatch for the small drops.</div>
+        </div>
+        <div class="acts"><button>ORDER SWATCH</button><button>DISMISS</button></div>
+      </div>
+    </div>
+
+    <div class="supgrid">
+      <div class="scard">
+        <div class="top">
+          <div class="nm"><div class="n1">Malhas Guimarães SA</div><div class="n2">GUIMARÃES, PORTUGAL · 6 PRODUCTS SINCE 2024</div></div>
+          <div class="grade" style="color:var(--weld)">B+</div>
+        </div>
+        <div class="smetrics">
+          <div class="sm"><div class="k">SAMPLE TURNAROUND</div><div class="v">14 days <span class="up">▲ from 9</span></div></div>
+          <div class="sm"><div class="k">LEAD TIME vs QUOTED</div><div class="v">+3 days <span class="up">▲ slipping</span></div></div>
+          <div class="sm"><div class="k">CERTIFICATIONS</div><div class="v">GOTS · OEKO-TEX <span class="flat">both current</span></div></div>
+          <div class="sm"><div class="k">SPEC ACCURACY</div><div class="v">98% <span class="down">▲ good</span></div></div>
+        </div>
+        <div class="foot">Last order <b>Nov 2025</b>. Two of your live products use their cloth. <b>Turnaround trend is the thing to watch.</b></div>
+      </div>
+
+      <div class="scard">
+        <div class="top">
+          <div class="nm"><div class="n1">Têxteis Vale do Ave, Lda</div><div class="n2">FAMALICÃO, PORTUGAL · 11 PRODUCTS SINCE 2023</div></div>
+          <div class="grade" style="color:var(--ok)">A</div>
+        </div>
+        <div class="smetrics">
+          <div class="sm"><div class="k">SAMPLE TURNAROUND</div><div class="v">7 days <span class="down">▼ from 9</span></div></div>
+          <div class="sm"><div class="k">LEAD TIME vs QUOTED</div><div class="v">on time <span class="down">▼ 11 of 11</span></div></div>
+          <div class="sm"><div class="k">CERTIFICATIONS</div><div class="v">GOTS · OEKO-TEX <span class="flat">to 2028</span></div></div>
+          <div class="sm"><div class="k">SPEC ACCURACY</div><div class="v">100% <span class="down">▲ no deviations</span></div></div>
+        </div>
+        <div class="foot">Your most reliable mill. <b>Lowest MOQ of your Portuguese suppliers at 150m</b> — worth considering for the small drops.</div>
+      </div>
+
+      <div class="scard">
+        <div class="top">
+          <div class="nm"><div class="n1">Tekirdağ Örme Sanayi AŞ</div><div class="n2">TEKIRDAĞ, TÜRKIYE · 4 PRODUCTS SINCE 2025</div></div>
+          <div class="grade" style="color:var(--ok)">A−</div>
+        </div>
+        <div class="smetrics">
+          <div class="sm"><div class="k">SAMPLE TURNAROUND</div><div class="v">11 days <span class="flat">— steady</span></div></div>
+          <div class="sm"><div class="k">LEAD TIME vs QUOTED</div><div class="v">on time <span class="down">▼ 4 of 4</span></div></div>
+          <div class="sm"><div class="k">CERTIFICATIONS</div><div class="v">OEKO-TEX <span class="up">no GOTS</span></div></div>
+          <div class="sm"><div class="k">SPEC ACCURACY</div><div class="v">96% <span class="flat">1 weight deviation</span></div></div>
+        </div>
+        <div class="foot">Best price per metre in your base. <b>No GOTS</b> — rules them out of anything you market as organic.</div>
+      </div>
+    </div>
+
+    <div class="selfimp">
+      <div class="t">AND FRUMA ITSELF IS GETTING BETTER</div>
+      <div class="simgrid">
+        <div class="sim"><div class="big">64%</div><div class="lbl">of mill files now map with <b>no questions asked</b> — up from 12% in March</div></div>
+        <div class="sim"><div class="big">7</div><div class="lbl">corrections needed on your last 100 products — <b>down from 41</b></div></div>
+        <div class="sim"><div class="big">31</div><div class="lbl">new fabric terms learned from your mills and <b>added to the standard</b></div></div>
+        <div class="sim"><div class="big">2.1s</div><div class="lbl">average time to structure a line sheet — <b>was 40 minutes by hand</b></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* fabric texture per structure */
+function cloth(structure,hex){
+  const d='rgba(0,0,0,.30)',l='rgba(255,255,255,.13)';
+  const P={'pique':`repeating-linear-gradient(45deg,${d} 0 1px,transparent 1px 5px),repeating-linear-gradient(-45deg,${l} 0 1px,transparent 1px 5px)`,
+   'waffle':`repeating-linear-gradient(0deg,${d} 0 2px,transparent 2px 9px),repeating-linear-gradient(90deg,${d} 0 2px,transparent 2px 9px)`,
+   'rib 1x1':`repeating-linear-gradient(90deg,${d} 0 2px,transparent 2px 4px,${l} 4px 5px,transparent 5px 7px)`,
+   'rib 2x2':`repeating-linear-gradient(90deg,${d} 0 3px,transparent 3px 7px,${l} 7px 9px,transparent 9px 13px)`,
+   'single jersey':`repeating-linear-gradient(0deg,${d} 0 .5px,transparent .5px 3px)`,
+   'interlock':`repeating-linear-gradient(0deg,${d} 0 1px,transparent 1px 4px),repeating-linear-gradient(90deg,${l} 0 .5px,transparent .5px 4px)`,
+   'french terry':`repeating-radial-gradient(circle at 3px 3px,${d} 0 1px,transparent 1px 4px)`,
+   'loopback':`repeating-radial-gradient(circle at 4px 4px,${d} 0 1.5px,transparent 1.5px 6px)`,
+   'slub jersey':`repeating-linear-gradient(0deg,${d} 0 1px,transparent 1px 5px),repeating-linear-gradient(84deg,${l} 0 1px,transparent 1px 17px)`,
+   'twill':`repeating-linear-gradient(62deg,${d} 0 1.5px,transparent 1.5px 5px)`,
+   'corduroy':`repeating-linear-gradient(90deg,${d} 0 3px,transparent 3px 5px,${l} 5px 7px,transparent 7px 10px)`};
+  return (P[structure]||P['single jersey'])+`,linear-gradient(160deg,${hex},${shade(hex,-16)})`;
+}
+function shade(hex,p){const n=parseInt(hex.slice(1),16);let r=(n>>16)+p,g=((n>>8)&255)+p,b=(n&255)+p;const c=v=>Math.max(0,Math.min(255,v));return '#'+(c(r)<<16|c(g)<<8|c(b)).toString(16).padStart(6,'0');}
+const COL={'Black':'#23252A','White':'#EFEDE7','Navy':'#27364F','Ecru':'#DED6C4','Grey Marl':'#8A8D8F','Olive':'#5E6142','Burgundy':'#5E2733','Sky':'#8FB2CC','Sand':'#C4AE92','Forest':'#2E4034','Charcoal':'#3A3D42','Stone':'#B3ABA0','Rust':'#9A4F30','Sage':'#93A08A','Cobalt':'#2D4C86'};
+
+const F=[
+ {n:'Piqué 278',m:'Malhas Guimarães SA',c:'PORTUGAL',s:'pique',g:278,w:165,comp:'70% organic cotton · 30% cotton',moq:200,lead:2,pr:11.03,cert:['GOTS 2027','OEKO-TEX'],feel:['holds a collar','structured'],ways:['Navy','Ecru','Forest','Black','Sand'],base:'#27364F',raw:{"g": "285 GSM", "w": "42 INCH", "c": "COTTON /SPN", "m": "MIN 200MTR"}},
+ {n:'Piqué 261',m:'Famalicão Knit Works',c:'PORTUGAL',s:'pique',g:261,w:150,comp:'70% cotton · 30% polyester',moq:500,lead:4,pr:7.90,cert:['OEKO-TEX'],feel:['holds a collar','athleisure'],ways:['Cobalt','Ecru','White','Sky'],base:'#2D4C86',raw:{"g": "7.7 oz/yd\u00b2", "w": "59\"", "c": "CO70/PES30", "m": "500 mts"}},
+ {n:'Interlock 232',m:'Barcelos Têxtil SA',c:'PORTUGAL',s:'interlock',g:232,w:160,comp:'92% modal · 8% elastane',moq:300,lead:3,pr:9.40,cert:['OEKO-TEX'],feel:['drapes well','base layer'],ways:['Charcoal','Stone','Black','Sage'],base:'#3A3D42',raw:{"g": "232", "w": "160", "c": "MODAL 92 SPX 8", "m": "300M"}},
+ {n:'Rib 1x1 268',m:'Têxteis Vale do Ave Lda',c:'PORTUGAL',s:'rib 1x1',g:268,w:160,comp:'95% organic cotton · 5% elastane',moq:150,lead:2,pr:10.20,cert:['GOTS 2028','OEKO-TEX'],feel:['structured','holds a collar'],ways:['Burgundy','Black','Ecru','Olive','Navy','Sand'],base:'#5E2733',raw:{"g": "268 g", "w": "63 in", "c": "ORG.CTN/EL", "m": "min 150"}},
+ {n:'Waffle 285',m:'Vizela Malhas & Acabamentos',c:'PORTUGAL',s:'waffle',g:285,w:175,comp:'100% organic cotton',moq:300,lead:3,pr:12.80,cert:['GOTS 2027'],feel:['winter weight','structured'],ways:['Sage','Ecru','Charcoal'],base:'#93A08A',raw:{"g": "8.4 oz", "w": "69 INCH", "c": "100 ORG CO", "m": "300"}},
+ {n:'Single Jersey 185',m:'Têxteis Vale do Ave Lda',c:'PORTUGAL',s:'single jersey',g:185,w:180,comp:'100% organic cotton',moq:200,lead:1,pr:6.78,cert:['GOTS 2027','OEKO-TEX'],feel:['good for print','summer weight'],ways:['White','Black','Navy','Sky','Sand','Olive','Ecru'],base:'#EFEDE7',raw:{"g": "185GSM", "w": "71\"", "c": "ORGANIC COTTON", "m": "MOQ200"}},
+ {n:'French Terry 340',m:'Tekirdağ Örme Sanayi AŞ',c:'TÜRKIYE',s:'french terry',g:340,w:180,comp:'80% cotton · 20% polyester',moq:800,lead:3,pr:4.15,cert:['OEKO-TEX'],feel:['heavyweight tee','athleisure'],ways:['Grey Marl','Black','Navy','Forest'],base:'#8A8D8F',raw:{"g": "10.0 oz/yd", "w": "71 inch", "c": "CO 80 / PES 20", "m": "800 mtrs"}},
+ {n:'Slub Jersey 168',m:'Maglificio Toscano Srl',c:'ITALY',s:'slub jersey',g:168,w:150,comp:'100% merino wool',moq:100,lead:4,pr:24.60,cert:['OEKO-TEX'],feel:['drapes well','base layer'],ways:['Stone','Charcoal','Rust','Forest'],base:'#B3ABA0',raw:{"g": "168 gr", "w": "150 cm", "c": "100% WO", "m": "100"}},
+ {n:'Loopback 312',m:'Ho Chi Minh Knit Co',c:'VIETNAM',s:'loopback',g:312,w:180,comp:'100% cotton',moq:1000,lead:3,pr:3.22,cert:[],feel:['heavyweight tee','winter weight'],ways:['Black','Grey Marl','Ecru'],base:'#23252A',raw:{"g": "9.2 oz", "w": "71", "c": "COTTON 100", "m": "1000M"}},
+ {n:'Twill 265',m:'Bursa Kumaş Endüstri',c:'TÜRKIYE',s:'twill',g:265,w:150,comp:'98% cotton · 2% elastane',moq:800,lead:4,pr:5.60,cert:['OEKO-TEX'],feel:['structured'],ways:['Navy','Olive','Sand','Charcoal'],base:'#5E6142',raw:{"g": "7.8 oz/sq yd", "w": "59 in", "c": "CTN98/SP2", "m": "800"}},
+ {n:'Rib 2x2 290',m:'Malhas Guimarães SA',c:'PORTUGAL',s:'rib 2x2',g:290,w:160,comp:'100% organic cotton',moq:200,lead:2,pr:11.90,cert:['GOTS 2027','OEKO-TEX'],feel:['structured','winter weight'],ways:['Forest','Black','Burgundy','Ecru'],base:'#2E4034',raw:{"g": "290", "w": "63\"", "c": "ORG COTTON", "m": "MIN200"}},
+ {n:'Corduroy 320',m:'Denizli Dokuma AŞ',c:'TÜRKIYE',s:'corduroy',g:320,w:150,comp:'100% cotton',moq:500,lead:5,pr:6.90,cert:[],feel:['winter weight','structured'],ways:['Rust','Olive','Sand','Charcoal'],base:'#9A4F30',raw:{"g": "9.4 oz", "w": "59 INCH", "c": "%100 PAMUK", "m": "500 MT"}}
+];
+
+const BRIEF="Polo for summer, Gulf market — deep green, heavy piqué, structured enough to hold a collar. Small first run.";
+const briefEl=document.getElementById('brief'),grid=document.getElementById('grid');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function card(f,i){
+  const el=document.createElement('article');el.className='sw';el.style.transitionDelay=(i*55)+'ms';
+  const ways=f.ways.slice(0,5).map((w,j)=>`<span class="way${j>3?' out':''}" style="background:${COL[w]}" title="${w}"></span>`).join('');
+  el.innerHTML=`<div class="cloth-wrap"><div class="cloth" style="background-image:${cloth(f.s,f.base)}"></div><span class="punch"></span><span class="gsm mono">${f.g} g/m²</span></div>
+    <div class="label"><div class="mill">${f.m} · ${f.c}</div><div class="name">${f.n}</div><div class="comp">${f.comp}</div>
+      <div class="spec"><span>MOQ <b>${f.moq}m</b></span><span>£<b>${f.pr.toFixed(2)}</b>/m</span><span>stock <b>${f.lead}wk</b></span><span>w <b>${f.w}cm</b></span></div>
+      <div class="chips">${f.cert.map(c=>`<span class="chip cert">✓ ${c}</span>`).join('')}${f.feel.map(t=>`<span class="chip feel">${t}</span>`).join('')}</div>
+      <div class="ways">${ways}${f.ways.length>5?`<span class="more">+${f.ways.length-5}</span>`:''}</div>
+      <button class="addbtn mono" data-i="${i}">PUT ON THE DESK</button></div>`;
+  return el;
+}
+const desk=new Set();
+function renderTray(){
+  const t=document.getElementById('tray'),items=document.getElementById('trayItems');
+  document.getElementById('trayN').textContent=desk.size;t.classList.toggle('up',desk.size>0);
+  items.innerHTML=[...desk].map(i=>`<div class="tray-sw" data-i="${i}" title="${F[i].n}" style="background-image:${cloth(F[i].s,F[i].base)};background-size:cover"><span class="x">×</span></div>`).join('');
+  items.querySelectorAll('.tray-sw').forEach(s=>s.onclick=()=>{desk.delete(+s.dataset.i);renderTray();const b=grid.querySelector(`.addbtn[data-i="${s.dataset.i}"]`);if(b){b.classList.remove('added');b.textContent='PUT ON THE DESK';}});
+}
+function results(){
+  grid.innerHTML='';F.forEach((f,i)=>grid.appendChild(card(f,i)));
+  document.getElementById('rcount').textContent=`${F.length} qualities from ${new Set(F.map(f=>f.m)).size} mills`;
+  document.getElementById('rsub').textContent='NORMALISED TO THE FRUMA STANDARD · DIRECTLY COMPARABLE';
+  requestAnimationFrame(()=>grid.querySelectorAll('.sw').forEach(c=>c.classList.add('in')));
+  grid.querySelectorAll('.addbtn').forEach(b=>b.onclick=e=>{e.stopPropagation();const i=+b.dataset.i;
+    if(desk.has(i)){desk.delete(i);b.classList.remove('added');b.textContent='PUT ON THE DESK';}
+    else{desk.add(i);b.classList.add('added');b.textContent='✓ ON THE DESK';}renderTray();});
+  rawOn=false;const rt=document.getElementById('rawTog');
+  if(rt)rt.onclick=()=>{rawOn=!rawOn;applyRaw();};
+  const m=document.getElementById('bmeta');m.classList.add('on');
+  document.getElementById('p1').textContent='piqué, knit';document.getElementById('p2').textContent='260–300 g/m²';
+  document.getElementById('p3').textContent='deep green';document.getElementById('p4').textContent='under 500m';
+}
+
+let rawOn=false;
+function applyRaw(){
+  document.querySelectorAll('.sw').forEach((el,i)=>{
+    const f=F[i]; if(!f.raw)return;
+    const comp=el.querySelector('.comp'), spec=el.querySelector('.spec');
+    if(rawOn){
+      comp.textContent=f.raw.c; comp.classList.add('raw');
+      spec.innerHTML=`<span>${f.raw.m}</span><span>${f.raw.w}</span><span>${f.raw.g}</span>`;
+      spec.classList.add('raw');
+    } else {
+      comp.textContent=f.comp; comp.classList.remove('raw');
+      spec.innerHTML=`<span>MOQ <b>${f.moq}m</b></span><span>£<b>${f.pr.toFixed(2)}</b>/m</span><span>stock <b>${f.lead}wk</b></span><span>w <b>${f.w}cm</b></span>`;
+      spec.classList.remove('raw');
+    }
+    const g=el.querySelector('.gsm'); if(g)g.textContent=rawOn?f.raw.g:f.g+' g/m²';
+  });
+  document.getElementById('rawNote').classList.toggle('on',rawOn);
+  const b=document.getElementById('rawTog');
+  b.classList.toggle('on',rawOn);
+  b.textContent=rawOn?'← BACK TO THE FRUMA STANDARD':'SHOW AS THE MILLS SENT IT';
+}
+let ti=0;
+function fit(){briefEl.style.height='auto';briefEl.style.height=briefEl.scrollHeight+'px';}
+function type(){if(ti<=BRIEF.length){briefEl.value=BRIEF.slice(0,ti);fit();ti++;setTimeout(type,17);}else setTimeout(results,260);}
+function startDesigner(){ti=0;desk.clear();renderTray();document.getElementById('bmeta').classList.remove('on');
+  if(reduce){briefEl.value=BRIEF;fit();results();}else type();}
+
+/* view switching */
+function showView(v){
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.v===v));
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
+  document.getElementById('tray').classList.toggle('up',v==='designer'&&desk.size>0);
+  scrollTo(0,0);
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{showView(t.dataset.v);if(t.dataset.v==='designer'&&ti>BRIEF.length)startDesigner();});
+
+/* mill interactions */
+let pct=45;
+function wireMill(){
+  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{
+    if(b.classList.contains('done'))return;b.classList.add('done');b.textContent='ADDED';
+    pct=Math.min(100,pct+18);document.getElementById('pct').textContent=pct+'%';document.getElementById('barFill').style.width=pct+'%';
+    const lab=b.closest('.row').querySelector('.kn').textContent;
+    const map={'Minimum order quantity':['pvMoq','MOQ 150m'],'Lead time — stock and custom dye':['pvLead','LEAD 2WK'],'Your fabric qualities':['pvFab','362 QUALITIES']};
+    if(map[lab]){const el=document.getElementById(map[lab][0]);el.textContent=map[lab][1];el.style.opacity='1';el.classList.add('cert');}
+  });
+  document.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>{b.classList.add('done');b.textContent='THANKS';});
+  document.querySelectorAll('.mapact [data-ok]').forEach(b=>b.onclick=()=>{
+    const row=b.closest('.maprow');row.querySelectorAll('.mapact .act').forEach(x=>x.classList.remove('chosen'));b.classList.add('chosen');
+    const c=row.querySelector('.conf');if(c){c.textContent='CONFIRMED';c.className='conf mono';c.style.color='var(--ok)';}
+  });
+}
+
+/* ══ GUIDED TOUR ══ */
+const TOUR=[
+ {v:'designer',title:'A designer asks in plain language.',
+  body:'No filters, no dropdowns. They describe the product the way they’d say it out loud — and Fruma returns real fabrics from real mills, ranked on fit. <b>Weight, composition, colour, MOQ, and how it actually feels.</b>',
+  coach:{sel:'.brief',text:'The brief is read live — watch what Fruma understands',pos:'down',align:'right'}},
+ {v:'designer',title:'Every result is a real, orderable swatch.',
+  body:'Each card carries the mill, the spec, the certifications with dates, and the hand-feel that lives nowhere else. Put a few <b>on the desk</b> and order swatches — the moment an idea becomes something you can hold.',
+  coach:{sel:'.grid',text:'Texture is drawn per construction — piqué, rib, waffle all differ',pos:'up'}},
+ {v:'ingest',title:'None of it exists until a mill sends a file.',
+  body:'And we never send a form. The mill sends whatever they already have — a line sheet, a spec PDF, a photo of a card. Fruma reads it once, and asks only about the parts it isn’t sure of. <b>Next time, the same format maps itself.</b>',
+  coach:{sel:'.ing-cols',text:'Only the uncertain rows need a human — the rest is already matched',pos:'up'}},
+ {v:'product',title:'And this is what it was all for.',
+  body:'Fabric chosen, design sent, product born. It inherits everything factual from the fabric — composition, certifications, origin — then Fruma drafts the rest and scores it against every destination. <b>It sits in your catalogue until you choose to publish.</b>',
+  coach:{sel:'.dests',text:'Scored per destination — months before the goods land',pos:'up'}},
+ {v:'mill',title:'And the mill sees why it’s worth doing.',
+  body:'Their profile is half-built from public records before they arrive. They confirm what’s right, add what buyers actually filter on, and watch their completeness — and their visibility — climb. <b>Free to claim, free to keep.</b>',
+  coach:{sel:'.preview',text:'Adding data moves the buyer-facing card in real time',pos:'up'}},
+];
+let step=0;
+const guide=document.getElementById('guide'),gstep=document.getElementById('gstep'),gnext=document.getElementById('gnext'),coach=document.getElementById('coach');
+function renderStep(){
+  const t=TOUR[step];
+  gstep.innerHTML=`<h2>${t.title}</h2><p>${t.body}</p>`;
+  document.querySelectorAll('.gs').forEach((g,i)=>g.classList.toggle('on',i<=step));
+  gnext.textContent=step===TOUR.length-1?'ENTER FRUMA':'NEXT';
+}
+function positionCoach(t){
+  const el=document.querySelector(t.coach.sel);if(!el){coach.classList.remove('on');return;}
+  const r=el.getBoundingClientRect();coach.textContent=t.coach.text;coach.className='coach '+t.coach.pos;
+  if(t.coach.align==='right'){
+    coach.style.left='auto';coach.style.right=Math.max(14,window.innerWidth-r.right+18)+'px';
+  } else {
+    coach.style.right='auto';coach.style.left=Math.max(14,r.left+18)+'px';
+  }
+  coach.style.top=(t.coach.pos==='down'?r.top+r.height+12:Math.max(58,r.top-46))+'px';
+  requestAnimationFrame(()=>coach.classList.add('on'));
+}
+let guiding=false;
+function playStep(){
+  const t=TOUR[step];showView(t.v);
+  if(t.v==='designer'&&step===0)startDesigner();
+  guide.classList.remove('gone');renderStep();coach.classList.remove('on');
+}
+gnext.onclick=()=>{
+  if(!guiding){guiding=true;playStep();return;}
+  // showing card → hide card, show coach mark on the surface, let them look
+  guide.classList.add('gone');
+  const t=TOUR[step];showView(t.v);
+  if(t.v==='designer'&&step<=1&&ti>BRIEF.length){/* keep results */}
+  if(t.v==='designer'&&step===0)startDesigner();
+  setTimeout(()=>positionCoach(t),reduce?0:500);
+  setTimeout(()=>{
+    step++;
+    if(step<TOUR.length){coach.classList.remove('on');setTimeout(()=>{guide.classList.remove('gone');renderStep();},400);}
+    else{coach.classList.remove('on');guiding=false;}
+  }, reduce?1200:3400);
+};
+document.getElementById('gskip').onclick=()=>{guide.classList.add('gone');coach.classList.remove('on');guiding=false;step=0;showView('designer');if(ti===0)startDesigner();};
+document.getElementById('replay').onclick=()=>{step=0;guiding=true;playStep();};
+
+/* first-load intro card */
+gstep.innerHTML=`<h2>Fabric, made findable.</h2><p>Fruma turns what a factory already has — a line sheet, a photo of a card — into fabric a designer can search in plain language. <b>This is a working demo on real generated data.</b></p><p style="color:var(--mute);font-size:13.5px">Four quick steps, then explore freely.</p>`;
+
+
+/* ══ PRODUCT VIEW ══ */
+const CW=[{n:'Forest',t:'19-5513 TCX',hex:'#2E4034'},{n:'Navy',t:'19-4028 TCX',hex:'#27364F'},
+          {n:'Ecru',t:'11-0105 TCX',hex:'#DED6C4'},{n:'Black',t:'19-4005 TCX',hex:'#23252A'},
+          {n:'Sand',t:'14-1116 TCX',hex:'#C4AE92'}];
+let cwi=0;
+function renderWays(){
+  const box=document.getElementById('flatWays');if(!box)return;
+  box.innerHTML=CW.map((c,i)=>`<span class="w${i===cwi?' sel':''}" data-i="${i}" style="background:${c.hex}" title="${c.n}"></span>`).join('');
+  box.querySelectorAll('.w').forEach(w=>w.onclick=()=>{
+    cwi=+w.dataset.i;
+    document.getElementById('pqBase').setAttribute('fill',CW[cwi].hex);
+    document.getElementById('cwName').textContent=CW[cwi].n+' — '+CW[cwi].t;
+    renderWays();
+  });
+}
+const AI={
+  title:'Organic Cotton Piqué Polo — Regular Fit',
+  desc:'A structured piqué polo in GOTS-certified organic cotton, knitted in Portugal at 278 g/m². Heavy enough to hold its collar through the season.',
+  care:'Machine wash 30°C · do not tumble dry · warm iron · do not bleach',
+  attrs:'sleeve: short · neckline: polo collar · closure: button placket · fit: regular · season: spring/summer · weight class: midweight',
+  cat:'Menswear › Tops › Polo Shirts'
+};
+function typeInto(id,text,done){
+  const el=document.getElementById(id);let i=0;el.textContent='';
+  (function tick(){ if(i<=text.length){el.textContent=text.slice(0,i);i++;setTimeout(tick,9);} else if(done)done(); })();
+}
+function runAI(){
+  const btn=document.getElementById('aiRun');btn.textContent='READING THE FACTS…';btn.disabled=true;
+  document.getElementById('aiTxt').textContent='Drafting from composition, structure, weight, certifications and construction — nothing invented.';
+  setTimeout(()=>typeInto('aiTitle',AI.title,()=>
+    typeInto('aiDesc',AI.desc,()=>
+      typeInto('aiCare',AI.care,()=>
+        typeInto('aiAttrs',AI.attrs,()=>
+          typeInto('aiCat',AI.cat,()=>{
+            btn.textContent='REGENERATE';btn.disabled=false;
+            document.getElementById('aiOk').disabled=false;
+            document.getElementById('aiTxt').textContent='Drafted from the facts above. Edit anything, then approve — nothing publishes until you do.';
+          }))))), 650);
+}
+function wireProduct(){
+  renderWays();
+  const r=document.getElementById('aiRun');if(r)r.onclick=runAI;
+  const ok=document.getElementById('aiOk');
+  if(ok)ok.onclick=()=>{ok.textContent='APPROVED';ok.classList.add('go');ok.disabled=true;
+    document.getElementById('aiState').textContent='APPROVED BY YOU';
+    document.getElementById('aiState').style.color='var(--ok)';};
+  document.querySelectorAll('.dst .pub.ready').forEach(b=>b.onclick=()=>{
+    b.classList.remove('ready');b.classList.add('done');b.textContent='PUBLISHED';
+  });
+}
+wireProduct();
+
+/* ══ FEEDS ══ */
+const DEST={
+ own:{label:'YOUR OWN SITE',status:'ok',
+  banner:'<b>Source of truth.</b> Full depth, nothing trimmed — this is the record every other destination is translated from.',
+  note:'Your own taxonomy, mapped once at onboarding.',
+  rows:[
+   ['product title','Organic Cotton Piqué Polo — Regular Fit',null,'62 characters. No limit on your own site.'],
+   ['description','A structured piqué polo in GOTS-certified organic cotton, knitted in Portugal at 278 g/m². Heavy enough to hold its collar through the season.',null,'Full copy.'],
+   ['colour','Forest',null,'Your own colour name, as designed.'],
+   ['composition','70% organic cotton · 30% cotton',null,'As inherited from the fabric record.'],
+   ['category','Menswear › Tops › Polo Shirts',null,'Your taxonomy.'],
+   ['images','4 assets · 1400×1800 · white',null,'Your own art direction.'],
+   ['launch date','2027-03-14',null,'ISO.'],
+  ]},
+ jl:{label:'JOHN LEWIS',status:'ok',
+  banner:'<b>Ready.</b> Title trimmed to their 50-character limit and colour mapped to their filter vocabulary. Nothing needed from you.',
+  note:'Sourced from the John Lewis supplier portal and marketplace guide (Mirakl-based). Character limits and the standard-colour dropdown are their published requirements.',
+  rows:[
+   ['product title','Organic Cotton Piqué Polo — Regular<span class="was">Organic Cotton Piqué Polo — Regular Fit</span>','trunc','<b>Max 50 characters.</b> Trimmed on a word boundary so it still reads.'],
+   ['colour','Green','map','John Lewis filter their left-hand nav on a fixed colour list. <b>Forest → Green.</b>'],
+   ['supplier colour','Forest','map','Their separate field for your own colour name. Max 20 characters.'],
+   ['product composition','70% org cotton, 30% cotton','trunc','Internal field, <b>max 80 characters</b> — abbreviated.'],
+   ['material composition','70% organic cotton · 30% cotton. GOTS certified, knitted in Portugal.',null,'Displayed on the product page. Max 999 characters, so the full story fits.'],
+   ['selling text','A structured piqué polo in GOTS-certified organic cotton…',null,'Max 2,048 characters.'],
+   ['product reference','GP-2701',null,'Max 20 characters.'],
+   ['images','4 assets · JPEG · 1400×1800',null,'Minimum 1,000×1,000. Yours clear it.'],
+   ['embargo date','2027-03-14','fmt','Format yyyy-MM-dd.'],
+  ]},
+ very:{label:'THE VERY GROUP',status:'ok',
+  banner:'<b>Ready.</b> Mapped to their category tree and size vocabulary.',
+  note:'Illustrative of the pattern — their supplier specification is behind a partner portal, so these values show the shape of the mapping rather than published limits.',
+  rows:[
+   ['product title','Organic Cotton Piqué Polo','trunc','Shorter titles suit their listing layout.'],
+   ['colour','Green','map','Mapped to their colour filter set.'],
+   ['category','Men > Shirts & Polos > Polo Shirts','map','Their taxonomy, different tree to yours.'],
+   ['size scale','S / M / L / XL / XXL','map','Mapped to their size vocabulary from your XS–XXL range.'],
+   ['composition','70% organic cotton, 30% cotton',null,'As held.'],
+   ['images','4 assets',null,'Within spec.'],
+  ]},
+ asos:{label:'ASOS',status:'no',
+  banner:'<b>Blocked on images — not on data.</b> Every attribute is mapped and ready. ASOS require a specific shoot standard your current assets do not meet, so this one needs the studio, not the mill.',
+  note:'Sourced from the ASOS marketplace integration guide. The brand/colour naming rule and image specification are their published requirements.',
+  rows:[
+   ['product title','Piqué Polo — Regular Fit<span class="was">Organic Cotton Piqué Polo — Regular Fit</span>','strip','<b>ASOS append the brand and colour themselves</b>, so both must be removed from the name. Sending them causes duplication on the live listing.'],
+   ['buyrarchy','Men › Tops › Polo Shirts','map','ASOS\u2019 own department structure — their term, not ours.'],
+   ['colour','Forest',null,'Sent as its own attribute, not in the title.'],
+   ['size grid','MENS_TOPS_ALPHA','map','Merchant-specific size grid, then a size value per SKU.'],
+   ['production end use','Casual','map','ASOS-only attribute. Inferred from the design, confirmed by you.'],
+   ['prop 65','No',null,'US import flag. Not applicable to this product.'],
+   ['available to sell','14-Mar-27','fmt','Format DD-MMM-YY — different again from John Lewis.'],
+   ['images','1400×1800 · white background','blocked','<b>Needs 2116×2700 portrait, light grey background at ~240 RGB, 300 dpi, sRGB, no overlaid text.</b> Your current assets are the right shape but the wrong size and background.'],
+  ]},
+};
+let curD='own';
+function renderFeeds(){
+  const ds=document.getElementById('dsel'); if(!ds)return;
+  ds.innerHTML=Object.entries(DEST).map(([k,d])=>
+    `<button data-d="${k}" class="${k===curD?'on':''}">${d.label}<span class="st ${d.status}">${d.status==='ok'?'● READY':'● BLOCKED'}</span></button>`).join('');
+  ds.querySelectorAll('button').forEach(b=>b.onclick=()=>{curD=b.dataset.d;renderFeeds();
+const sr=document.getElementById('showRule');
+if(sr)sr.onclick=()=>{const rb=document.getElementById('ruleBox');const on=rb.classList.toggle('on');
+  sr.textContent=on?'HIDE THE RULE':'SEE THE RULE';};
+document.querySelectorAll('.icard .acts button').forEach(b=>{
+  if(b.id==='showRule')return;
+  b.onclick=()=>{b.classList.add('done');b.textContent=b.textContent.includes('DISMISS')?'DISMISSED':'DONE';};
+});});
+  const d=DEST[curD];
+  document.getElementById('fbanner').innerHTML=`<div class="fbanner ${d.status}">${d.banner}</div>`;
+  document.getElementById('maprows').innerHTML=d.rows.map(([k,v,rule,why])=>{
+    const cls=rule==='blocked'?'blocked':(rule?'changed':'');
+    const chip=rule&&rule!=='blocked'?`<span class="rulechip ${rule}">${rule==='trunc'?'TRIMMED':rule==='map'?'MAPPED':rule==='strip'?'REMOVED':'REFORMATTED'}</span>`:'';
+    return `<div class="mrow ${cls}"><span class="c1">${k}</span><span class="c2">${chip}${v}</span><span class="c3">${why}</span></div>`;
+  }).join('');
+  document.getElementById('srcnote').textContent=d.note;
+}
+renderFeeds();
+const sr=document.getElementById('showRule');
+if(sr)sr.onclick=()=>{const rb=document.getElementById('ruleBox');const on=rb.classList.toggle('on');
+  sr.textContent=on?'HIDE THE RULE':'SEE THE RULE';};
+document.querySelectorAll('.icard .acts button').forEach(b=>{
+  if(b.id==='showRule')return;
+  b.onclick=()=>{b.classList.add('done');b.textContent=b.textContent.includes('DISMISS')?'DISMISSED':'DONE';};
+});
+
+
+wireMill();startDesigner();
+window.addEventListener('resize',()=>{if(coach.classList.contains('on')&&guiding)positionCoach(TOUR[Math.min(step,TOUR.length-1)]);});
+</script>
+</body>
+</html>

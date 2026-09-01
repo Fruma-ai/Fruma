@@ -1,0 +1,202 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { FRUMA_MILL_FIELDS, IGNORE } from "@/lib/fruma/mill-ingest";
+import type { MillRoom } from "@/lib/fruma/types";
+import { cn } from "@/lib/utils";
+import { ModeSwitch } from "./ModeSwitch";
+import { Wordmark } from "./Wordmark";
+import { useFruma } from "./store";
+
+const STEPS: { id: MillRoom; label: string }[] = [
+  { id: "profile", label: "Profile" },
+  { id: "upload", label: "File" },
+  { id: "map", label: "Map" },
+  { id: "review", label: "Review" },
+  { id: "catalog", label: "Catalogue" },
+];
+
+export function MillShell({ children }: { children: React.ReactNode }) {
+  const {
+    millRoom,
+    setMillRoom,
+    millFile,
+    millMapConfirmed,
+    ingestPublished,
+    millApplyStatus,
+    millColumnMap,
+    millRowApproved,
+    catalog,
+    confirmMillMap,
+    ingestPublish,
+    setMillException,
+    enter,
+  } = useFruma();
+  const wide = millRoom === "catalog" || millRoom === "review";
+  const current = STEPS.findIndex((s) => s.id === millRoom);
+
+  const requiredMissing = FRUMA_MILL_FIELDS.some(
+    (f) => f.required && (millColumnMap[f.key] === IGNORE || !millColumnMap[f.key]),
+  );
+  const unapproved = catalog.filter(
+    (r) =>
+      (r.status === "review" || r.status === "ready" || r.status === "gap") &&
+      !millRowApproved[r.id],
+  );
+
+  const next = millNext({
+    millRoom,
+    millFile: Boolean(millFile),
+    millMapConfirmed,
+    millApplyStatus,
+    requiredMissing,
+    unapproved: unapproved.length,
+    ingestPublished,
+    setMillRoom,
+    confirmMillMap,
+    ingestPublish,
+    setMillException,
+    enter,
+  });
+
+  return (
+    <div data-mode="mill" className="min-h-dvh bg-background text-chalk">
+      <header className="mill-wizard">
+        <div className="mill-wizard-top">
+          <button
+            type="button"
+            className="shrink-0"
+            aria-label="Fruma workshop"
+            onClick={() => setMillRoom("profile")}
+          >
+            <Wordmark size="sm" />
+          </button>
+          <span className="chrome-rule" aria-hidden />
+          <span className="text-[12px] font-medium tracking-[-0.01em] text-weld">
+            Workshop
+          </span>
+          <div className="ml-auto flex items-center gap-3">
+            <div className="mill-wizard-status">
+              <span className="live-dot" aria-hidden />
+              <span>Demo · Vale do Ave</span>
+            </div>
+            <ModeSwitch />
+          </div>
+        </div>
+        <div className="mill-wizard-track">
+          <nav className="mill-step" aria-label="Factory ingest">
+            {STEPS.map((s, i) => {
+              const done =
+                (s.id === "profile" && i < current) ||
+                (s.id === "upload" && Boolean(millFile)) ||
+                (s.id === "map" && (millMapConfirmed || millApplyStatus === "ready")) ||
+                (s.id === "review" && ingestPublished) ||
+                (s.id === "catalog" && ingestPublished);
+              return (
+                <span key={s.id} className="mill-step-item">
+                  {i > 0 ? (
+                    <span
+                      className="mill-step-sep"
+                      data-on={i <= current || done ? "true" : undefined}
+                      aria-hidden
+                    />
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setMillRoom(s.id)}
+                    aria-current={millRoom === s.id ? "page" : undefined}
+                    data-done={done}
+                  >
+                    <span className="mill-dot">
+                      {done && millRoom !== s.id ? "✓" : i + 1}
+                    </span>
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </button>
+                </span>
+              );
+            })}
+          </nav>
+          <Button disabled={next.disabled} onClick={next.run}>
+            {next.label}
+          </Button>
+        </div>
+      </header>
+      <main
+        className={cn(
+          "room-fade mx-auto px-4 pb-20 pt-8 md:px-6 md:pt-10",
+          wide ? "max-w-[1440px]" : "max-w-[1080px]",
+        )}
+      >
+        {children}
+      </main>
+    </div>
+  );
+}
+
+function millNext({
+  millRoom,
+  millFile,
+  millMapConfirmed,
+  millApplyStatus,
+  requiredMissing,
+  unapproved,
+  ingestPublished,
+  setMillRoom,
+  confirmMillMap,
+  ingestPublish,
+  setMillException,
+  enter,
+}: {
+  millRoom: MillRoom;
+  millFile: boolean;
+  millMapConfirmed: boolean;
+  millApplyStatus: string;
+  requiredMissing: boolean;
+  unapproved: number;
+  ingestPublished: boolean;
+  setMillRoom: (room: MillRoom) => void;
+  confirmMillMap: () => void;
+  ingestPublish: () => void;
+  setMillException: (open: boolean) => void;
+  enter: (mode: "brand" | "mill") => void;
+}) {
+  if (millRoom === "profile") {
+    return { label: "Continue", disabled: false, run: () => setMillRoom("upload") };
+  }
+  if (millRoom === "upload") {
+    return {
+      label: "Continue to mapping",
+      disabled: !millFile,
+      run: () => setMillRoom("map"),
+    };
+  }
+  if (millRoom === "map") {
+    if (millApplyStatus === "running") {
+      return { label: "Mapping…", disabled: true, run: () => undefined };
+    }
+    if (millMapConfirmed || millApplyStatus === "ready") {
+      return {
+        label: "Continue to review",
+        disabled: false,
+        run: () => setMillRoom("review"),
+      };
+    }
+    return {
+      label: "Apply mapping",
+      disabled: requiredMissing,
+      run: confirmMillMap,
+    };
+  }
+  if (millRoom === "review") {
+    return {
+      label: "Continue to catalogue",
+      disabled: false,
+      run: () => (unapproved > 0 ? setMillException(true) : ingestPublish()),
+    };
+  }
+  return {
+    label: "Open studio",
+    disabled: !ingestPublished,
+    run: () => enter("brand"),
+  };
+}

@@ -1,0 +1,377 @@
+{
+  "capturedAt": "2026-08-25",
+  "market": "UK (GBP unless noted)",
+  "brand": {
+    "name": "Sunspel",
+    "founded": "1860",
+    "hq": "Long Eaton, England",
+    "whyThisBrand": "Best live match for a Fruma fabric-intelligence demo: a mill-and-brand story where the hero polo exists because they rejected dense piqué. In 1955 Peter Hill found piqué polos too hot on the French Riviera, went back to Long Eaton, and revived lacemaking machines to knit Q75 cotton warp-knit mesh (from earlier Q14 cellular cotton). The same style was later slimmed for Daniel Craig in Casino Royale. Own-site copy still says the refined collar holds its own under a jumper or jacket. Made in Portugal from extra-long staple California Supima cotton. Live UK/EU listings of the same style code MPOL1026 show exactly the mapping problems Fruma is for: mesh sold as piqué, slim sold as regular, Navy sold as Blue, Charcoal tagged Grey, titles truncated or misspelled, sale prices vs £140 RRP.",
+    "note": "reference only, unaffiliated",
+    "notOrganicGots": "Sunspel markets traceable, sustainably farmed Supima — not GOTS organic. Use that gap in the demo: retailers still need a cert field even when the brand story is traceability rather than organic.",
+    "idealRetailerPattern": "Preference was own-site + John Lewis + Mr Porter. On 2026-08-25 John Lewis brand page is empty (no SKUs) and no live Mr Porter product URL for this polo was found. Substituted live equivalent UK/EU destinations: Liberty, END., Selfridges, Farfetch, Harrods, plus gravitypope (CA)."
+  },
+  "hero": {
+    "name": "Riviera Polo Shirt",
+    "styleCode": "MPOL1026",
+    "sku": "MPOL1026-BUAA",
+    "composition": "100% extra-long staple Supima cotton, traceable to a single farm in California",
+    "structure": "In-house Q75 cotton warp-knit mesh (not piqué). Designed as a cooler alternative to dense piqué. Spread collar, button placket, chest patch pocket, slim fit. Made in Portugal.",
+    "weight": "Lightweight mesh. Shopify shipping weight 150g. Fabric GSM is not published on the product page.",
+    "fit": "Slim",
+    "madeIn": "Portugal",
+    "care": "Gentle wash at 30°C with similar colours. Do not tumble dry. Dry cleanable.",
+    "description": "Developed in the 1950s for warm days on the French Riviera, the Riviera Polo is one of Sunspel’s most recognisable styles. Made from a lightweight mesh cotton developed in-house, it is breathable, comfortable and cut with a slim, modern silhouette. The style was later adapted for Daniel Craig’s first appearance as James Bond in Casino Royale, and it remains a key piece in the collection today.",
+    "longCopyExcerpt": "The refined collar ensures it will hold its own under a jumper or even a jacket.",
+    "colours": [
+      {
+        "name": "Navy",
+        "sku": "MPOL1026-BUAA",
+        "url": "https://www.sunspel.com/products/mens-cotton-riviera-polo-shirt-navy-mpol1026",
+        "price": "£140",
+        "role": "hero"
+      },
+      {
+        "name": "Charcoal",
+        "sku": "MPOL1026-GYAB",
+        "url": "https://www.sunspel.com/products/mens-short-sleeve-riviera-polo-charcoal-mpol1026",
+        "price": "£140",
+        "role": "related-colourway"
+      },
+      {
+        "name": "White",
+        "sku": "MPOL1026-WHAA",
+        "url": "https://www.sunspel.com/products/mens-cotton-riviera-polo-shirt-white-mpol1026",
+        "price": "£140",
+        "role": "related-colourway"
+      },
+      {
+        "name": "Grey Melange",
+        "sku": "MPOL1026-GYAA",
+        "url": "https://www.sunspel.com/products/mens-cotton-riviera-polo-shirt-in-grey-melange",
+        "price": "£140",
+        "role": "related-colourway",
+        "note": "Selfridges default colour on the equivalent listing"
+      }
+    ],
+    "ownSite": {
+      "destination": "own-site",
+      "url": "https://www.sunspel.com/products/mens-cotton-riviera-polo-shirt-navy-mpol1026",
+      "title": "Men's Riviera Polo Shirt in Navy",
+      "onPageHeading": "Riviera Polo Shirt",
+      "colour": "Navy",
+      "price": "£140",
+      "sku": "MPOL1026-BUAA",
+      "productType": "Mens Polo Shirt",
+      "sizes": ["XS", "S", "M", "L", "XL", "XXL", "XXXL"],
+      "images": [
+        "images/sunspel-riviera-polo-navy-own-01-packshot.jpg",
+        "images/sunspel-riviera-polo-navy-own-02-front.jpg",
+        "images/sunspel-riviera-polo-navy-own-03-back.jpg",
+        "images/sunspel-riviera-polo-navy-own-04-collar-detail.jpg",
+        "images/sunspel-riviera-polo-navy-own-05-side.jpg",
+        "images/sunspel-riviera-polo-navy-own-06-pocket.jpg"
+      ]
+    }
+  },
+  "relatedGarment": {
+    "name": "Classic T-shirt",
+    "why": "Second mill story in the same brand: handmade in Long Eaton, England, from two-fold Q82 Supima jersey. Useful if the demo needs a heavy/tee path beside the polo.",
+    "sku": "MTSH0001-WHAA",
+    "composition": "100% extra-long staple two-fold Supima cotton",
+    "structure": "Q82 circular-knit jersey, handmade in England",
+    "weight": "Shopify shipping weight 122g. Fabric GSM not published.",
+    "ownSite": {
+      "url": "https://www.sunspel.com/products/mens-short-sleeve-crew-neck-t-shirt-white",
+      "title": "Men's Classic T-shirt in White",
+      "onPageHeading": "Classic T-shirt",
+      "colour": "White",
+      "price": "£95",
+      "sku": "MTSH0001-WHAA"
+    },
+    "images": [
+      "images/sunspel-classic-tee-white-own-01-packshot.jpg",
+      "images/sunspel-classic-tee-white-own-02-front.jpg",
+      "images/sunspel-classic-tee-white-own-04-neck-detail.jpg"
+    ]
+  },
+  "listings": [
+    {
+      "destination": "own-site",
+      "url": "https://www.sunspel.com/products/mens-cotton-riviera-polo-shirt-navy-mpol1026",
+      "title": "Men's Riviera Polo Shirt in Navy",
+      "colour": "Navy",
+      "price": "£140",
+      "sku": "MPOL1026-BUAA",
+      "availability": "in-stock",
+      "differencesFromSource": [],
+      "images": [
+        "images/sunspel-riviera-polo-navy-own-01-packshot.jpg",
+        "images/sunspel-riviera-polo-navy-own-02-front.jpg",
+        "images/sunspel-riviera-polo-navy-own-04-collar-detail.jpg"
+      ]
+    },
+    {
+      "destination": "own-site",
+      "url": "https://www.sunspel.com/products/mens-short-sleeve-riviera-polo-charcoal-mpol1026",
+      "title": "Men's Riviera Polo Shirt in Charcoal",
+      "colour": "Charcoal",
+      "price": "£140",
+      "sku": "MPOL1026-GYAB",
+      "availability": "in-stock",
+      "role": "related-colourway",
+      "differencesFromSource": [
+        "Colourway of the same style, not the Navy hero SKU"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-charcoal-own-01-packshot.jpg",
+        "images/sunspel-riviera-polo-charcoal-own-02-front.jpg",
+        "images/sunspel-riviera-polo-charcoal-own-04-collar-detail.jpg"
+      ]
+    },
+    {
+      "destination": "own-site",
+      "url": "https://www.sunspel.com/products/mens-cotton-riviera-polo-shirt-white-mpol1026",
+      "title": "Men's Riviera Polo Shirt in White",
+      "colour": "White",
+      "price": "£140",
+      "sku": "MPOL1026-WHAA",
+      "availability": "in-stock",
+      "role": "related-colourway",
+      "differencesFromSource": [
+        "Colourway of the same style, not the Navy hero SKU"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-white-own-01-packshot.jpg",
+        "images/sunspel-riviera-polo-white-own-02-front.jpg"
+      ]
+    },
+    {
+      "destination": "liberty",
+      "url": "https://www.libertylondon.com/uk/rivieria-mesh-polo-shirt-000705405.html",
+      "title": "Sunspel Rivieria Mesh Polo Shirt",
+      "onPageHeading": "Rivieria Mesh Polo Shirt",
+      "colour": "White (default); Navy also offered on the same PDP",
+      "price": "From £135.00",
+      "sku": "000705405",
+      "barcode": "5059419387146",
+      "availability": "in-stock",
+      "category": "Polo shirts",
+      "differencesFromSource": [
+        "Title misspells Riviera as Rivieria",
+        "Drops Men's and the colour from the title; uses Mesh Polo Shirt instead",
+        "Price From £135 vs own-site £140",
+        "Fit listed as Regular; own site says Slim",
+        "Composition shown as 100% Cotton (drops Supima / extra-long staple / California traceability)",
+        "SKU remapped to Liberty style 000705405 / barcode, not MPOL1026-WHAA",
+        "Same product page carries White and Navy rather than a per-colour URL"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-white-liberty-01.jpg",
+        "images/sunspel-riviera-polo-white-liberty-02.jpg",
+        "images/sunspel-riviera-polo-white-liberty-03.jpg",
+        "images/sunspel-riviera-polo-white-liberty-04.jpg",
+        "images/sunspel-riviera-polo-navy-liberty-01.jpg",
+        "images/sunspel-riviera-polo-navy-liberty-02.jpg",
+        "images/sunspel-riviera-polo-navy-liberty-03.jpg"
+      ]
+    },
+    {
+      "destination": "end-clothing",
+      "url": "https://www.endclothing.com/gb/sunspel-riviera-polo-mpol1026-buaa.html",
+      "title": "Sunspel Riviera Polo",
+      "ogTitle": "Sunspel Riviera Polo Navy | END.",
+      "colour": "Navy",
+      "price": "£75",
+      "priceWas": "£125 listed in product:price:amount meta; own-site RRP £140",
+      "sku": "MPOL1026-BUAA",
+      "availability": "sold-out",
+      "category": "Polos",
+      "differencesFromSource": [
+        "Title truncated to Sunspel Riviera Polo (no Men's, no Shirt, colour only in subtitle/OG)",
+        "Sale price £75 vs own-site £140",
+        "Listing is sold out but the PDP is still live",
+        "Copy says 100% Cotton / 3 Button Placket / Ribbed Trims — drops mesh, Supima, Q75, Bond story",
+        "Contains a copy typo SuSupima in the long description"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-navy-end-01.jpg",
+        "images/sunspel-riviera-polo-navy-end-02.jpg",
+        "images/sunspel-riviera-polo-navy-end-03.jpg"
+      ]
+    },
+    {
+      "destination": "end-clothing",
+      "url": "https://www.endclothing.com/gb/sunspel-riviera-polo-mpol1026-gyab.html",
+      "title": "Sunspel Riviera Polo",
+      "ogTitle": "Sunspel Riviera Polo Charcoal | END.",
+      "colour": "Charcoal (schema also exposes color: Grey)",
+      "price": "£69",
+      "sku": "MPOL1026-GYAB",
+      "availability": "sold-out",
+      "category": "Polos",
+      "role": "related-colourway",
+      "differencesFromSource": [
+        "Same truncated title pattern as the Navy END listing",
+        "Sale price £69 vs own-site £140",
+        "Internal color field mapped to Grey while customer-facing colour is Charcoal",
+        "Sold out, PDP still live",
+        "Exact own-site SKU MPOL1026-GYAB is preserved in the URL and schema"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-charcoal-end-01.jpg",
+        "images/sunspel-riviera-polo-charcoal-end-02.jpg",
+        "images/sunspel-riviera-polo-charcoal-end-03.jpg",
+        "images/sunspel-riviera-polo-charcoal-end-04.jpg"
+      ]
+    },
+    {
+      "destination": "selfridges",
+      "url": "https://www.selfridges.com/GB/en/product/sunspel-riviera-cotton-piqu-polo-shirt_R03756503/",
+      "title": "SUNSPEL Riviera cotton-piqué polo shirt",
+      "colour": "GREY MELANGE (default); NAVY also on the same PDP",
+      "price": "£140.00",
+      "sku": "R03756503",
+      "availability": "live listing (colour/size selectable)",
+      "category": "Polo shirts",
+      "differencesFromSource": [
+        "Fabric mapped from mesh to cotton-piqué in the title and bullets — the most useful Fruma listing error",
+        "Hero colour on this URL is GREY MELANGE (own-site MPOL1026-GYAA), with NAVY as a sibling colour, not a separate URL",
+        "Title is ALL-CAPS brand + truncated product name; URL slug loses the é (piqu)",
+        "Bullets say 100% cotton, lightweight, stretchy — drop Supima, traceability, Q75 mesh, Bond story",
+        "SKU remapped to Selfridges ref R03756503",
+        "Retailer photos were not downloaded (page is bot-gated in this environment); use own-site Grey Melange / Navy files for previews"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-grey-melange-own-01-packshot.jpg",
+        "images/sunspel-riviera-polo-navy-own-01-packshot.jpg"
+      ],
+      "imagesNote": "Fallback own-site photos. Selfridges CDN assets were not captured."
+    },
+    {
+      "destination": "farfetch",
+      "url": "https://www.farfetch.com/uk/shopping/men/sunspel-riviera-polo-shirt-item-14143983.aspx",
+      "title": "Sunspel Riviera polo shirt",
+      "colour": "Blue (page title); navy blue in body copy",
+      "price": "£140",
+      "sku": "14143983",
+      "brandStyleId": "MPOL1026BUAA",
+      "availability": "in-stock (size selectable, delivery 28 Aug–2 Sept 2026)",
+      "category": "Polo shirts",
+      "differencesFromSource": [
+        "Colour shown as Blue in the title, navy blue in the description",
+        "Brand style ID drops the hyphen (MPOL1026BUAA vs MPOL1026-BUAA)",
+        "Copy says two button placket; END lists 3 Button Placket; own-site does not specify a count",
+        "Composition Cotton 100% — drops Supima / mesh / Made in Portugal",
+        "Tone of copy is jokey Bond pastiche, not the mill/fabric story",
+        "Retailer images were not downloaded (Farfetch CDN returned HTTP 429); source URLs recorded below"
+      ],
+      "sourceImageUrls": [
+        "https://cdn-images.farfetch-contents.com/14/14/39/83/14143983_38338922_1000.jpg",
+        "https://cdn-images.farfetch-contents.com/14/14/39/83/14143983_38287962_1000.jpg"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-navy-own-01-packshot.jpg"
+      ],
+      "imagesNote": "Fallback own-site Navy packshot. Farfetch files not stored locally."
+    },
+    {
+      "destination": "harrods",
+      "url": "https://www.harrods.com/en-gb/p/sunspel-supima-cotton-riviera-polo-shirt-000000000006834050",
+      "title": "Sunspel Supima Cotton Riviera Polo Shirt",
+      "pageTitle": "Sunspel Navy Supima Cotton Riviera Polo Shirt | Harrods UK",
+      "colour": "Navy (colour codes on sibling markets include BUAA / WHAA / BKAA)",
+      "price": "£140.00 (from Harrods designer polo listing; PDP captured as out of stock, no price on the empty PDP)",
+      "sku": "000000000006834050",
+      "availability": "out-of-stock on this PDP; still indexed on https://www.harrods.com/en-gb/designers/sunspel/men-clothing/polo-shirts",
+      "category": "Men Clothing / Polo Shirts",
+      "differencesFromSource": [
+        "Title inserts Supima Cotton and drops Men's",
+        "Fit listed as Regular; own site says Slim",
+        "Copy says designed to combat the Italian heat — own site / journal say French Riviera",
+        "Does mention cotton mesh and a family-owned Portuguese jersey specialist",
+        "HTML title is Navy; H1 omits the colour"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-navy-own-01-packshot.jpg"
+      ],
+      "imagesNote": "Harrods GB PDP blocked image scrape (403). Navy own-site packshot used as fallback. Dark Clay photos from the UA Harrods PDP of the same style are stored separately."
+    },
+    {
+      "destination": "harrods",
+      "url": "https://www.harrods.com/en-ua/p/sunspel-riviera-polo-shirt-000000000007715157",
+      "title": "Sunspel Riviera Polo Shirt",
+      "colour": "DARK CLAY",
+      "price": "£135.00",
+      "sku": "000000000007715157",
+      "availability": "live on UA storefront when captured",
+      "category": "Polo Shirts",
+      "role": "related-colourway",
+      "differencesFromSource": [
+        "Seasonal colour Dark Clay, not a core own-site colourway captured here",
+        "Price £135 vs own-site £140",
+        "Editor copy calls the fabric a unique mesh-like texture in a modern upgrade to traditional piqué — useful listing language even when the construction is mesh, not piqué",
+        "Model size given as 48 rather than S–XXL"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-dark-clay-harrods-01.jpg",
+        "images/sunspel-riviera-polo-dark-clay-harrods-02.jpg"
+      ]
+    },
+    {
+      "destination": "gravitypope",
+      "url": "https://www.gravitypope.com/products/sunspel-mpol1026-nvy",
+      "title": "Riviera Polo Shirt",
+      "colour": "Navy",
+      "price": "CA$230.00",
+      "sku": "11E3Q50",
+      "styleIdOnPage": "MPOL1026-NVY",
+      "availability": "in-stock (M / L / XL)",
+      "category": "Men's Clothing / polos",
+      "differencesFromSource": [
+        "Canadian specialist retailer; currency CAD not GBP",
+        "Internal SKU remapped to 11E3Q50; style ID MPOL1026-NVY vs own-site MPOL1026-BUAA",
+        "Title drops Men's and the colour (colour is a variant option)",
+        "Copy says two button placket",
+        "Uses brand long-copy (Bond / Supima / mesh) more faithfully than department stores"
+      ],
+      "images": [
+        "images/sunspel-riviera-polo-navy-gravitypope-01.jpg",
+        "images/sunspel-riviera-polo-navy-gravitypope-02.jpg",
+        "images/sunspel-riviera-polo-navy-gravitypope-03.jpg"
+      ]
+    },
+    {
+      "destination": "john-lewis",
+      "url": "https://www.johnlewis.com/brand/sunspel/_/N-1z13qc8",
+      "title": "Sunspel",
+      "colour": "",
+      "price": "",
+      "availability": "not-listed",
+      "differencesFromSource": [
+        "John Lewis brand page is live but empty: It might be temporarily out of stock",
+        "No Riviera polo (or any Sunspel SKU) was found on johnlewis.com on 2026-08-25",
+        "Do not mock a John Lewis listing from this URL — there is no product to preview"
+      ],
+      "images": []
+    },
+    {
+      "destination": "mr-porter",
+      "url": "https://www.mrporter.com/en-gb/journal/fashion/partnership-sunspel-british-classic-10746508",
+      "title": "Why Sunspel Remains A British Classic With Enduring Appeal",
+      "colour": "",
+      "price": "",
+      "availability": "not-listed",
+      "differencesFromSource": [
+        "No live Mr Porter product URL for the Riviera polo (MPOL1026) was found on 2026-08-25",
+        "Mr Porter has editorial coverage and previously ran a Sunspel capsule; that is not a current SKU listing",
+        "Do not mock a Mr Porter product card from the journal URL"
+      ],
+      "images": []
+    }
+  ],
+  "imageIndex": {
+    "directory": "brand-ref/images/",
+    "publicCopies": "public/products/",
+    "note": "JSON image paths are relative to brand-ref/. Matching filenames also exist under /products/ for the Next app. Do not hotlink retailer CDNs in UI. Farfetch and Selfridges retailer originals were not stored."
+  }
+}
