@@ -60,26 +60,30 @@ Captured 25 August 2026 in [`brand-ref/listings.json`](./brand-ref/listings.json
 
 Farfetch returned HTTP 429 and Selfridges HTML is bot-gated. Those listings still have real URLs and titles; previews use own-site Navy / Grey Melange files as stand-ins. Do not hotlink retailer CDNs.
 
+## Public site vs prototype
+
+`/` is public: mission (origin as source of truth) and apply. **`/origin`** is the factory index — Open Supply Hub live when `OPEN_SUPPLY_HUB_TOKEN` is set, otherwise an apparel/textile starter index linked out to OS Hub. No product walkthrough. The working prototype is at `/app` and is **not public**.
+
+Only **Owen, Chris and Sam** sign in at `/enter`. Applicants get a walkthrough on request.
+
+In Vercel (or `.env.local`):
+
+```
+FRUMA_PASS_OWEN=
+FRUMA_PASS_CHRIS=
+FRUMA_PASS_SAM=
+INTEREST_EMAIL=owen@fruma.ai
+OPEN_SUPPLY_HUB_TOKEN=
+```
+
+If a named password is empty, it falls back to `FRUMA_DEMO_PASSWORD`, then to `fruma` locally. Change that. Apply form posts go to `owen@fruma.ai` via Formsubmit (override with `INTEREST_EMAIL`). The first live submit sends a confirmation link to that inbox — click it, or later applications will not arrive. `OPEN_SUPPLY_HUB_TOKEN` is an Open Supply Hub API token (My Account → Settings → API). Without it, `/origin` uses the local apparel/textile index and links each row to OS Hub.
+
 ## Run locally
 
 ```bash
 npm install
-npm run dev
+npm run build
+npx next start --port 43147 --hostname 0.0.0.0
 ```
 
-Opens at [http://127.0.0.1:43147](http://127.0.0.1:43147).
-
-## Share the demo
-
-This is a Next.js app with no auth and no API keys. Anyone with the repo can run it:
-
-```bash
-git clone https://origin.cursor.com/git/owen-jones/tmp-b675bbe7b526e3f3
-cd tmp-b675bbe7b526e3f3
-npm install
-npm run dev
-```
-
-The live Cloudflare URL from a Cloud Agent session is temporary — it only lasts while that agent is running. For a lasting partner link, deploy the same app (Vercel, Netlify, or any Node host) from `main`.
-
-Type a brief and attach a sketch. Select mill qualities — each renders as a product option. Compare up to three on the Desk, pick one for Product, approve the Fruma standard, then map it onto destination PDPs. Workshop **Catalogue** is the mill’s working file: bulk-apply the Fruma standard, AI suggestions, learning.
+Dev: `npm run dev` (defaults to port 3000). Production preview: [https://fruma.vercel.app](https://fruma.vercel.app).

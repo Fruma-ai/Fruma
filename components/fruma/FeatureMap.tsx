@@ -13,8 +13,8 @@ export function FeatureMap() {
           </Link>
           <span className="chrome-rule" aria-hidden />
           <span className="text-[12px] font-medium text-mute">Feature & data map</span>
-          <Link href="/" className="ml-auto text-[12px] font-medium text-mute hover:text-ink">
-            Open the demo
+          <Link href="/app" className="ml-auto text-[12px] font-medium text-mute hover:text-ink">
+            Open the prototype
           </Link>
         </div>
       </header>

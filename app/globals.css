@@ -231,6 +231,135 @@ button {
   }
 }
 
+.manifest-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 52px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.manifest-bar-inner {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 0 20px;
+}
+
+.manifest-lockup {
+  font-family: var(--font-archivo), sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.manifest-nav {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.manifest-nav:hover {
+  color: #fff;
+}
+
+.manifest-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  background: #000;
+}
+
+.manifest-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.22) 42%,
+    rgba(0, 0, 0, 0.08) 100%
+  );
+}
+
+.manifest-copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100dvh;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 88px 20px 64px;
+}
+
+.manifest-stack {
+  font-family: var(--font-archivo), sans-serif;
+  font-weight: 400;
+  font-size: clamp(14px, 1.85vw, 18px);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  line-height: 1.72;
+  color: #fff;
+  font-variation-settings: "wdth" 92;
+}
+
+.manifest-stack span {
+  display: block;
+}
+
+.manifest-stack-sub {
+  font-size: clamp(12px, 1.45vw, 14px);
+  letter-spacing: 0.28em;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.manifest-rule {
+  display: block;
+  width: 42px;
+  height: 1px;
+  margin: 22px 0;
+  background: #fff;
+}
+
+.manifest-cta {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  border-bottom: 1px solid #fff;
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.manifest-cta:hover {
+  opacity: 0.7;
+}
+
+.splash-title {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-optical-sizing: auto;
+  font-weight: 560;
+  font-size: clamp(2.4rem, 7.2vw, 5.35rem);
+  letter-spacing: -0.048em;
+  line-height: 1.02;
+}
+
 .chrome-rule {
   width: 1px;
   height: 16px;

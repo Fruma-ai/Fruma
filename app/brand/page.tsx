@@ -27,8 +27,8 @@ export default function BrandPage() {
           </Link>
           <span className="chrome-rule" aria-hidden />
           <span className="text-[12px] font-medium text-mute">System</span>
-          <Link href="/" className="ml-auto text-[12px] font-medium text-mute hover:text-ink">
-            App
+          <Link href="/app" className="ml-auto text-[12px] font-medium text-mute hover:text-ink">
+            Prototype
           </Link>
         </div>
       </header>

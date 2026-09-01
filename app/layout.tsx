@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: "%s — Fruma",
   },
   description:
-    "Search mill files, compare fabrics, and see how a product is listed at each retailer.",
+    "Brands and retailers live from origin. Redefining the industry. Ethical, sustainable factories that meet EU and UK sourcing law.",
   icons: { icon: "/icon.svg" },
 };
 
