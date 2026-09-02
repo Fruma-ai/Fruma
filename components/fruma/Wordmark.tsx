@@ -9,7 +9,9 @@ export function Wordmark({
 }) {
   return (
     <span className={cn("brand-lockup", className)} aria-label="Fruma">
-      F<span className="lockup-optical">RUMA</span>
+      <span aria-hidden="true">
+        F<span className="lockup-optical">RUMA</span>
+      </span>
     </span>
   );
 }
