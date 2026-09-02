@@ -2,6 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import { FRUMA_MILL_FIELDS, IGNORE } from "@/lib/fruma/mill-ingest";
+import {
+  millCatalogueState,
+  millFileState,
+  millMapState,
+  millProfileState,
+  millReviewState,
+  weldForStep,
+} from "@/lib/fruma/honesty";
 import type { MillRoom } from "@/lib/fruma/types";
 import { cn } from "@/lib/utils";
 import { ModeSwitch } from "./ModeSwitch";
@@ -22,10 +30,10 @@ export function MillShell({ children }: { children: React.ReactNode }) {
     setMillRoom,
     millFile,
     millMapConfirmed,
-    ingestPublished,
     millApplyStatus,
     millColumnMap,
     millRowApproved,
+    millClaimed,
     catalog,
     confirmMillMap,
     ingestPublish,
@@ -33,7 +41,6 @@ export function MillShell({ children }: { children: React.ReactNode }) {
     enter,
   } = useFruma();
   const wide = millRoom === "catalog" || millRoom === "review";
-  const current = STEPS.findIndex((s) => s.id === millRoom);
 
   const requiredMissing = FRUMA_MILL_FIELDS.some(
     (f) => f.required && (millColumnMap[f.key] === IGNORE || !millColumnMap[f.key]),
@@ -43,6 +50,25 @@ export function MillShell({ children }: { children: React.ReactNode }) {
       (r.status === "review" || r.status === "ready" || r.status === "gap") &&
       !millRowApproved[r.id],
   );
+  const confirmed = catalog.filter((r) => r.status === "confirmed").length;
+  const unknownRemains = catalog.filter((r) => r.status === "gap").length;
+  const mapped = millMapConfirmed || millApplyStatus === "ready";
+  const onStandard = catalog.filter((r) =>
+    millClaimed && millFile?.source === "upload" && mapped && r.status === "confirmed",
+  ).length;
+
+  const stepState: Record<MillRoom, string> = {
+    profile: millProfileState(millClaimed),
+    upload: millFileState(millFile),
+    map: millMapState(millFile, mapped),
+    review: millReviewState({
+      mapped,
+      confirmed,
+      unconfirmed: unapproved.length,
+      unknownRemains,
+    }),
+    catalog: millCatalogueState(onStandard),
+  };
 
   const next = millNext({
     millRoom,
@@ -51,7 +77,6 @@ export function MillShell({ children }: { children: React.ReactNode }) {
     millApplyStatus,
     requiredMissing,
     unapproved: unapproved.length,
-    ingestPublished,
     setMillRoom,
     confirmMillMap,
     ingestPublish,
@@ -76,28 +101,23 @@ export function MillShell({ children }: { children: React.ReactNode }) {
             Workshop
           </span>
           <div className="ml-auto flex items-center gap-3">
-            <div className="mill-wizard-status">
-              <span className="live-dot" aria-hidden />
-              <span>Demo · Vale do Ave</span>
-            </div>
+            <p className="mill-wizard-status" aria-live="polite">
+              {stepState[millRoom]}
+            </p>
             <ModeSwitch />
           </div>
         </div>
         <div className="mill-wizard-track">
           <nav className="mill-step" aria-label="Factory ingest">
             {STEPS.map((s, i) => {
-              const done =
-                (s.id === "profile" && i < current) ||
-                (s.id === "upload" && Boolean(millFile)) ||
-                (s.id === "map" && (millMapConfirmed || millApplyStatus === "ready")) ||
-                (s.id === "review" && ingestPublished) ||
-                (s.id === "catalog" && ingestPublished);
+              const stateLabel = stepState[s.id];
+              const weld = weldForStep(stateLabel);
               return (
                 <span key={s.id} className="mill-step-item">
                   {i > 0 ? (
                     <span
                       className="mill-step-sep"
-                      data-on={i <= current || done ? "true" : undefined}
+                      data-on={weld ? "true" : undefined}
                       aria-hidden
                     />
                   ) : null}
@@ -105,11 +125,10 @@ export function MillShell({ children }: { children: React.ReactNode }) {
                     type="button"
                     onClick={() => setMillRoom(s.id)}
                     aria-current={millRoom === s.id ? "page" : undefined}
-                    data-done={done}
+                    data-weld={weld ? "true" : undefined}
+                    title={stateLabel}
                   >
-                    <span className="mill-dot">
-                      {done && millRoom !== s.id ? "✓" : i + 1}
-                    </span>
+                    <span className="mill-dot">{i + 1}</span>
                     <span className="hidden sm:inline">{s.label}</span>
                   </button>
                 </span>
@@ -140,7 +159,6 @@ function millNext({
   millApplyStatus,
   requiredMissing,
   unapproved,
-  ingestPublished,
   setMillRoom,
   confirmMillMap,
   ingestPublish,
@@ -153,7 +171,6 @@ function millNext({
   millApplyStatus: string;
   requiredMissing: boolean;
   unapproved: number;
-  ingestPublished: boolean;
   setMillRoom: (room: MillRoom) => void;
   confirmMillMap: () => void;
   ingestPublish: () => void;
@@ -196,7 +213,7 @@ function millNext({
   }
   return {
     label: "Open studio",
-    disabled: !ingestPublished,
+    disabled: false,
     run: () => enter("brand"),
   };
 }

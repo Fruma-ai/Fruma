@@ -96,7 +96,7 @@ export function formatCare(f: Pick<Fabric, "care">) {
 }
 
 export function formatFibreOrigin(f: Pick<Fabric, "fibreOrigin" | "country">) {
-  return f.fibreOrigin?.trim() || f.country;
+  return f.fibreOrigin?.trim() || "Unknown";
 }
 
 export function formatCerts(f: Pick<Fabric, "certs">) {

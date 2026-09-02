@@ -197,8 +197,8 @@ export function DesignView() {
         <p className="mt-3 max-w-[62ch] text-[12.5px] leading-relaxed text-mute">
           This is stage 2 of the design process: match mill files before a
           hanger moves. Brief plus sketch used to be couriered to factories.
-          Fruma reads both against the mill catalogue — including qualities
-          Vale do Ave already mapped onto the Fruma standard.
+          Fruma reads both against the mill index. Digital is not a hanger.
+          Seeded workshop rows are not mill identities. Sunspel is unaffiliated.
         </p>
         <div className="composer-meta">
           <span className="meta-chip">
@@ -298,7 +298,7 @@ export function DesignView() {
                 {rawFromMills
                   ? "As the mills sent it"
                   : millHits
-                    ? `Normalised · ${millHits} from mill files`
+                    ? `Normalised · ${millHits} on the standard`
                     : "Normalised · ranked on the brief"}
               </span>
               <button
@@ -375,11 +375,11 @@ function ClothCard({
       )}
       <div className="mt-4 flex flex-1 flex-col">
         <p className="ui-label">
-          {f.source === "mill-file" ? "From mill file · Fruma standard" : `${f.mill} · ${f.country}`}
+          {f.source === "mill-file" ? "On the standard" : `${f.mill} · ${f.country}`}
         </p>
         {f.source === "mill-file" ? (
           <p className="mt-0.5 spec text-[11px] text-mute">
-            {f.mill} · {f.country} · hanger list
+            {f.mill} · {f.country} · mill file
           </p>
         ) : null}
         <h3 className="cloth-name mt-1 text-[24px] md:text-[26px]">{f.name}</h3>

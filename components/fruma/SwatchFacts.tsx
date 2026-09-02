@@ -41,7 +41,7 @@ export function SwatchFacts({
       ];
 
   return (
-    <dl className="mt-3" aria-label="Digital swatch card">
+    <dl className="mt-3" aria-label="Digital swatch card — not a hanger">
       {rows.map((row) => (
         <div key={row.k} className="kv">
           <dt className="kv-k">{row.k}</dt>

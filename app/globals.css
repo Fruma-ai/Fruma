@@ -522,7 +522,7 @@ button {
 }
 
 .mill-step-sep[data-on="true"] {
-  background: var(--ok);
+  background: var(--weld);
 }
 
 .mill-step button {
@@ -559,19 +559,25 @@ button {
 }
 
 .mill-step button[aria-current="page"] .mill-dot {
+  border-color: var(--chalk);
+  background: transparent;
+  color: var(--chalk);
+}
+
+.mill-step button[data-weld="true"] {
+  color: var(--weld);
+}
+
+.mill-step button[data-weld="true"] .mill-dot {
   border-color: var(--weld);
   background: var(--weld);
   color: #1a1400;
 }
 
-.mill-step button[data-done="true"]:not([aria-current="page"]) {
-  color: var(--ok);
-}
-
-.mill-step button[data-done="true"]:not([aria-current="page"]) .mill-dot {
-  border-color: var(--ok);
-  background: color-mix(in srgb, var(--ok) 18%, transparent);
-  color: var(--ok);
+.mill-step button[aria-current="page"][data-weld="true"] .mill-dot {
+  border-color: var(--weld);
+  background: var(--weld);
+  color: #1a1400;
 }
 
 @media (max-width: 640px) {
@@ -596,7 +602,7 @@ button {
 
 .mill-drop:hover,
 .mill-drop:focus-visible {
-  border-color: var(--weld);
+  border-color: var(--chalk);
 }
 
 .mill-card {

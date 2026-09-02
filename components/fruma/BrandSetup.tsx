@@ -42,7 +42,7 @@ export function BrandSetup() {
         <div className="app-chrome-inner">
           <Wordmark size="sm" />
           <span className="chrome-rule" aria-hidden />
-          <span className="text-[11px] uppercase tracking-[0.22em] text-mute">Demo account · Sunspel</span>
+          <span className="text-[11px] uppercase tracking-[0.22em] text-mute">Sunspel · unaffiliated</span>
         </div>
       </header>
       <main className="mx-auto max-w-[720px] px-4 py-10 md:px-6 md:py-14">
