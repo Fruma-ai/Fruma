@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     String(body.email ?? body.username ?? body.who ?? ""),
   );
   const given = String(body.password ?? "");
-  if (!who || given !== passwordFor(who)) {
+  if (!who || !given || given !== passwordFor(who)) {
     return NextResponse.json(
       { error: "Wrong email or password." },
       { status: 401 },

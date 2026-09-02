@@ -18,7 +18,7 @@ export function passwordFor(who: Founder) {
     sam: process.env.FRUMA_PASS_SAM,
   }[who]?.trim();
   if (named) return named;
-  return process.env.FRUMA_DEMO_PASSWORD?.trim() || "fruma";
+  return process.env.FRUMA_DEMO_PASSWORD?.trim() || "";
 }
 
 export async function sessionToken(who: Founder) {
@@ -33,5 +33,6 @@ export async function sessionFounder(cookie: string | undefined) {
   if (!cookie) return null;
   const who = cookie.split(".")[0];
   if (!isFounder(who)) return null;
+  if (!passwordFor(who)) return null;
   return cookie === (await sessionToken(who)) ? who : null;
 }

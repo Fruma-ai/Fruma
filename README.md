@@ -66,13 +66,9 @@ Farfetch returned HTTP 429 and Selfridges HTML is bot-gated. Those listings stil
 
 Archivo is the Fruma lockup and UI on both the public site and the platform. Fraunces is for cloth names only. IBM Plex Mono is for SKU, GSM, and price. Public pages and the mill workshop sit on black; the brand studio stays on paper.
 
-Only three logins exist:
+Demo gate passwords live in environment/secrets only (`FRUMA_PASS_OWEN`, `FRUMA_PASS_CHRIS`, `FRUMA_PASS_SAM`, or `FRUMA_DEMO_PASSWORD`). They are never committed. If none of those are set, the gate fails closed.
 
-- `owen@fruma.ai`
-- `chris@fruma.ai`
-- `sam@fruma.ai`
-
-Password is `fruma` until you set `FRUMA_PASS_OWEN` / `FRUMA_PASS_CHRIS` / `FRUMA_PASS_SAM` in Vercel. Apply submissions from brands, retailers and factories always email **owen@fruma.ai**. Applicants do not get a login.
+Apply submissions from brands, retailers and factories always email **owen@fruma.ai**. Applicants do not get a login.
 
 In Vercel (or `.env.local`):
 
@@ -80,10 +76,11 @@ In Vercel (or `.env.local`):
 FRUMA_PASS_OWEN=
 FRUMA_PASS_CHRIS=
 FRUMA_PASS_SAM=
+FRUMA_DEMO_PASSWORD=
 OPEN_SUPPLY_HUB_TOKEN=
 ```
 
-If a named password is empty, it falls back to `FRUMA_DEMO_PASSWORD`, then to `fruma` locally. Change that. The first live Apply submit sends a Formsubmit confirmation to `owen@fruma.ai` — click it, or later applications will not arrive. `OPEN_SUPPLY_HUB_TOKEN` fills the factory index from the live production-location feed; without it, `/origin` uses the local Fruma index. Mill cards stay on this site either way.
+A named variable, if set, is used for that operator. Otherwise the gate uses `FRUMA_DEMO_PASSWORD` if set. The first live Apply submit sends a Formsubmit confirmation to `owen@fruma.ai` — click it, or later applications will not arrive. `OPEN_SUPPLY_HUB_TOKEN` fills the factory index from the live production-location feed; without it, `/origin` uses the local Fruma index. Mill cards stay on this site either way.
 
 ## Run locally
 
