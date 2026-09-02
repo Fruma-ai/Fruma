@@ -158,6 +158,14 @@ export function asSentMapWorkingSet(
   return { deposit, qualities: asSentQualities([deposit]) };
 }
 
+/** Review / Catalogue title — same as-sent deposit name Map already uses. */
+export function millWorkingFileName(
+  deposits: MillDepositResponse[],
+  millFile?: { name: string } | null,
+): string | null {
+  return asSentMapWorkingSet(deposits)?.deposit.filename ?? millFile?.name ?? null;
+}
+
 /** Article samples Map may show — millArticleCode as sent, not VDA-####. */
 export function asSentArticleSamples(qualities: AsSentQualityRow[]): string {
   const articles = [

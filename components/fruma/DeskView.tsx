@@ -6,6 +6,7 @@ import {
   formatGsm,
 } from "@/lib/fruma/cloth";
 import { workingDraft } from "@/lib/fruma/data";
+import { searchClothKicker } from "@/lib/fruma/honesty";
 import type { Fabric, SwatchStage } from "@/lib/fruma/types";
 import { cn } from "@/lib/utils";
 import { ClothPlane } from "./ClothPlane";
@@ -155,8 +156,13 @@ function DeskOption({
         Option {index + 1} · {draft.style} · not in shops
       </p>
       <p className="ui-label mt-1">
-        {f.mill} · {f.country}
+        {searchClothKicker(f.source)}
       </p>
+      {f.source === "mill-file" ? (
+        <p className="ui-label mill-name mt-1">
+          {f.mill} · {f.country}
+        </p>
+      ) : null}
       <h2 className="cloth-name mt-1 text-[22px]">{f.name}</h2>
       <p className={cn("mt-1 spec text-[12px]", raw ? "text-madder" : "text-ink")}>
         {raw ? f.raw.c : f.composition}

@@ -7,5 +7,11 @@ export function Wordmark({
   size?: "sm" | "md" | "lg";
   mark?: boolean;
 }) {
-  return <span className={cn("brand-lockup", className)}>Fruma</span>;
+  return (
+    <span className={cn("brand-lockup", className)} aria-label="Fruma">
+      <span aria-hidden="true">
+        F<span className="lockup-optical">RUMA</span>
+      </span>
+    </span>
+  );
 }

@@ -47,9 +47,15 @@ export default function Home() {
           <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-[1fr_minmax(0,420px)] lg:items-end">
             <div>
               <p className="manifest-stack">
-                <span>Mills</span>
-                <span>Brands</span>
-                <span>Retailers</span>
+                <Link href="/mills">
+                  <span>Mills</span>
+                </Link>
+                <Link href="/brands">
+                  <span>Brands</span>
+                </Link>
+                <Link href="/retailers">
+                  <span>Retailers</span>
+                </Link>
               </p>
               <p className="mt-6 max-w-[36ch] text-[14px] leading-relaxed text-white/50">
                 Keep mill catalogues at source, and give every quality an

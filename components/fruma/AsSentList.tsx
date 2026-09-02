@@ -3,6 +3,7 @@
 import {
   asSentDropHonesty,
   PROVENANCE,
+  showWeldTick,
 } from "@/lib/fruma/honesty";
 import {
   asSentQualities,
@@ -10,20 +11,25 @@ import {
   formatMillDepositException,
   type MillDepositResponse,
 } from "@/lib/fruma/mill-deposit";
+import { WeldTick } from "./WeldTick";
 
 export function AsSentList({
   deposits,
   kicker = "As sent",
+  mapped = false,
+  confirmed = false,
 }: {
   deposits: MillDepositResponse[];
   kicker?: string;
+  mapped?: boolean;
+  confirmed?: boolean;
 }) {
   const honesty = asSentDropHonesty();
   const rows = asSentQualities(deposits);
   const exceptions = depositExceptions(deposits);
 
   return (
-    <section className="space-y-4">
+    <section className="register-as-sent space-y-4">
       <div>
         <p className="ui-label">{kicker}</p>
         <p className="mt-1 text-[13px] text-mute">
@@ -74,7 +80,16 @@ export function AsSentList({
                 <tr key={`${row.depositId}-${row.baseQualityId}`}>
                   <td>
                     <p className="spec text-[12px] text-chalk">{row.millArticleCode}</p>
-                    <p className="mt-0.5 spec text-[11px] text-mute">{PROVENANCE.asSent}</p>
+                    <p className="mt-0.5 spec text-[11px] text-mute">
+                      {PROVENANCE.asSent}{" "}
+                      <WeldTick
+                        show={showWeldTick({
+                          provenance: "as-sent",
+                          mapped,
+                          confirmed,
+                        })}
+                      />
+                    </p>
                   </td>
                   <td className="spec text-[12px] text-mute">{row.colourwayIds.length}</td>
                   <td className="spec text-[12px] text-mute">{row.visibility}</td>

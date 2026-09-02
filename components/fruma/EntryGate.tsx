@@ -26,8 +26,11 @@ export function EntryGate() {
               <span>Workshop</span>
             </p>
             <span className="manifest-rule" />
-            <p className="font-medium tracking-[-0.015em] text-white/72">
+            <p className="mill-name font-medium tracking-[-0.015em] text-white/72">
               Têxteis Vale do Ave, Lda
+            </p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-white/45">
+              Not a partner
             </p>
             <p className="mt-4 max-w-[40ch] text-[13.5px] leading-relaxed text-white/50">
               Claim the mill profile, drop the hanger list you already have, map

@@ -8,6 +8,7 @@ import {
   formatGsm,
 } from "@/lib/fruma/cloth";
 import { DEMO_BRIEF, DRAFT_PRODUCT } from "@/lib/fruma/data";
+import { searchClothKicker } from "@/lib/fruma/honesty";
 import type { Fabric } from "@/lib/fruma/types";
 import { cn } from "@/lib/utils";
 import { ClothPlane } from "./ClothPlane";
@@ -375,10 +376,10 @@ function ClothCard({
       )}
       <div className="mt-4 flex flex-1 flex-col">
         <p className="ui-label">
-          {f.source === "mill-file" ? "On the standard" : `${f.mill} · ${f.country}`}
+          {searchClothKicker(f.source)}
         </p>
         {f.source === "mill-file" ? (
-          <p className="mt-0.5 spec text-[11px] text-mute">
+          <p className="mill-name mt-0.5 spec text-[11px] text-mute">
             {f.mill} · {f.country} · mill file
           </p>
         ) : null}

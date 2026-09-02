@@ -161,6 +161,24 @@ button {
   color: inherit;
 }
 
+/* Optical tracking on R–U–M–A only. Same tracking as the lockup — no other restyle. */
+.lockup-optical {
+  letter-spacing: 0.28em;
+}
+
+.mill-name {
+  font-family: var(--font-archivo), sans-serif;
+  font-variation-settings: "wdth" 104;
+}
+
+.register-seeded {
+  color: var(--mute);
+}
+
+.register-as-sent {
+  color: var(--chalk);
+}
+
 .cloth-name {
   font-family: var(--font-fraunces), Georgia, serif;
   font-optical-sizing: auto;

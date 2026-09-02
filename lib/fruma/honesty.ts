@@ -4,6 +4,15 @@ import type { CatalogStatus, MillFile } from "./types";
 export const FILE_RECEIVED_COPY =
   "File received. Not mapped. Not in the live catalogue.";
 
+/** Origin mill-card back/filter. Was “All factories”. */
+export const INDEX_FILTER_LABEL = "All on the index.";
+
+/** Studio banner until named grants exist. Do not build grants in this SPEC. */
+export const SEED_BANNER_COPY =
+  "Seeded. Not mill identity. Named grants are not in this build.";
+
+export const VDA_NOT_PARTNER = "Têxteis Vale do Ave is not a partner.";
+
 export const SEEDED_FILE_COPY =
   "Seeded. Not mapped. Not in the live catalogue.";
 
@@ -131,4 +140,35 @@ export function reviewRowLabel(status: CatalogStatus): ReviewHonesty {
 /** Weld styling only on Mapped / Confirmed — never on Seeded. */
 export function weldForStep(state: string): boolean {
   return state === "Mapped" || state === "Confirmed";
+}
+
+/**
+ * 10mm origin-dot+weld tick. Mapped + confirmed as-sent rows only.
+ * Never Seeded. Never a score.
+ */
+export function showWeldTick(args: {
+  provenance: RowProvenance | ProvenanceLabel;
+  mapped: boolean;
+  confirmed: boolean;
+}): boolean {
+  const asSent =
+    args.provenance === "as-sent" || args.provenance === PROVENANCE.asSent;
+  return asSent && args.mapped && args.confirmed;
+}
+
+/** Mill-card weld is provenance only: on file / mapped. Never a score. */
+export function millCardProvenance(args: {
+  onFile: boolean;
+  mapped: boolean;
+}): "mapped" | "on-file" | "index" {
+  if (args.mapped) return "mapped";
+  if (args.onFile) return "on-file";
+  return "index";
+}
+
+/** Search must not present seed as mill identity. */
+export function searchClothKicker(
+  source?: "index" | "mill-file",
+): "On the standard" | typeof PROVENANCE.seeded {
+  return source === "mill-file" ? "On the standard" : PROVENANCE.seeded;
 }

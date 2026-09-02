@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { rangeMatches, rangeSummary } from "@/lib/fruma/range";
 import { useFruma } from "./store";
+import { SeedBanner } from "./SeedBanner";
 import { Wordmark } from "./Wordmark";
 
 export function BrandSetup() {
@@ -45,6 +46,7 @@ export function BrandSetup() {
           <span className="text-[11px] uppercase tracking-[0.22em] text-mute">Sunspel · unaffiliated</span>
         </div>
       </header>
+      <SeedBanner />
       <main className="mx-auto max-w-[720px] px-4 py-10 md:px-6 md:py-14">
         <p className="ui-label">Brand setup</p>
         <h1 className="page-title mt-2">Bring the range in first.</h1>
