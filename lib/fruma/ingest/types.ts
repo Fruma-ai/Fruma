@@ -1,5 +1,7 @@
 /** Isolated SPEC 6 ingest types. Not the Workshop catalogue reducer. */
 
+import type { IngestExceptionCode } from "./exceptions";
+
 export const VISIBILITY_PRIVATE = "Private" as const;
 export const VISIBILITY_GRANTED = "Granted" as const;
 export const VISIBILITY_REVOKED = "Revoked" as const;

@@ -4,6 +4,8 @@
  */
 export { IngestEngine } from "./engine";
 export { IngestException, isIngestException } from "./exceptions";
+export { handleMillDepositRequest, SYNTHETIC_MILL_ORG_ID } from "./deposits-http";
+export type { MillDepositHttpResult } from "./deposits-http";
 export { baseQualityId, colourwayId, articleAsWritten } from "./identity";
 export { parseMillBytes, detectMillFormat } from "./parse";
 export { buildXlsx } from "./parse-xlsx";
