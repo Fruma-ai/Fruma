@@ -14,8 +14,9 @@ import {
   PROVENANCE,
   reviewRowLabel,
   rowProvenance,
+  showWeldTick,
 } from "@/lib/fruma/honesty";
-import { asSentMapWorkingSet } from "@/lib/fruma/mill-deposit";
+import { asSentMapWorkingSet, millWorkingFileName } from "@/lib/fruma/mill-deposit";
 import { EXCEPTION_GROUPS, frumaPath } from "@/lib/fruma/mill-ingest";
 import { rankMillOptions } from "@/lib/fruma/mill-learn";
 import type { CatalogField } from "@/lib/fruma/types";
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { AsSentList } from "./AsSentList";
 import { SurfaceState } from "./SurfaceState";
 import { useFruma } from "./store";
+import { WeldTick } from "./WeldTick";
 
 export function MillReviewView() {
   const {
@@ -46,11 +48,11 @@ export function MillReviewView() {
   const [query, setQuery] = useState("");
 
   const counts = catalogCounts(catalog);
-  const provenance = rowProvenance();
   const working = asSentMapWorkingSet(millDeposits);
+  const workingTitle = millWorkingFileName(millDeposits, millFile);
   const workingLine = working
     ? `${PROVENANCE.asSent} working file · ${working.deposit.filename}`
-    : `${provenance} working file${millFile ? ` · ${millFile.name}` : ""}`;
+    : `${PROVENANCE.seeded} working file${millFile ? ` · ${millFile.name}` : ""}`;
   const pending = catalog.filter(
     (r) => r.status === "review" || r.status === "ready" || r.status === "gap",
   );
@@ -106,7 +108,7 @@ export function MillReviewView() {
         <div className="max-w-[46rem]">
           <p className="ui-label">Step 4 of 5 · manage by exception</p>
           <h1 className="page-title mt-2 md:text-[28px]">
-            Approve the mappings that still need a look.
+            {workingTitle ?? "Approve the mappings that still need a look."}
           </h1>
           <p className="page-lede mt-3">
             Review by exception. {workingLine}. No inferred GOTS or origin.
@@ -131,12 +133,12 @@ export function MillReviewView() {
 
       {millDeposits.length > 0 ? (
         <div className="mb-8 border-b border-line pb-8">
-          <AsSentList deposits={millDeposits} kicker="As-sent exceptions" />
+          <AsSentList deposits={millDeposits} kicker="As-sent exceptions" mapped={millMapConfirmed} />
         </div>
       ) : null}
 
       {working ? (
-        <p className="ui-label mb-3">Seeded</p>
+        <p className="ui-label mb-3">{PROVENANCE.seeded}</p>
       ) : null}
 
       <div className="mb-5 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
@@ -202,12 +204,12 @@ export function MillReviewView() {
             aria-label="Search qualities"
             className="mb-4 h-9 w-full border border-line bg-transparent px-3 text-[13px] text-chalk placeholder:text-mute"
           />
-          <div className="overflow-x-auto mill-card">
+          <div className="overflow-x-auto mill-card register-seeded">
             <table className="data-table min-w-[920px]">
               <thead>
                 <tr>
                   <th>Quality</th>
-                  <th>{provenance}</th>
+                  <th>{PROVENANCE.seeded}</th>
                   <th>Fruma mapping</th>
                   <th className="w-[96px]" />
                 </tr>
@@ -226,7 +228,8 @@ export function MillReviewView() {
                     )}
                     onField={setCatalogField}
                     onApprove={() => approveMillRow(row.id)}
-                    provenance={provenance}
+                    provenance={rowProvenance(row)}
+                    mapped={millMapConfirmed}
                   />
                 ))}
               </tbody>
@@ -292,6 +295,7 @@ function ReviewRow({
   onField,
   onApprove,
   provenance,
+  mapped,
 }: {
   row: CatalogRow;
   approved: boolean;
@@ -299,15 +303,22 @@ function ReviewRow({
   onField: (id: string, field: CatalogField, value: string) => void;
   onApprove: () => void;
   provenance: string;
+  mapped: boolean;
 }) {
   const structure = row.values.structure || "";
   const review = reviewRowLabel(row.status);
+  const tick = showWeldTick({
+    provenance: row.provenance,
+    mapped,
+    confirmed: review === "Confirmed",
+  });
   return (
     <tr>
       <td>
         <p className="spec text-[12px] text-chalk">{row.article}</p>
         <p className="mt-0.5 spec text-[11px] text-mute">
-          {review} · {provenance}
+          {review} · {provenance}{" "}
+          <WeldTick show={tick} />
         </p>
       </td>
       <td>

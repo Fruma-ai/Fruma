@@ -4,6 +4,7 @@ import { Columns3, Globe, Search, Shirt, Warehouse } from "lucide-react";
 import { rangeSummary } from "@/lib/fruma/range";
 import type { BrandRoom } from "@/lib/fruma/types";
 import { ModeSwitch } from "./ModeSwitch";
+import { SeedBanner } from "./SeedBanner";
 import { Wordmark } from "./Wordmark";
 import { useFruma } from "./store";
 
@@ -56,6 +57,7 @@ export function BrandShell({ children }: { children: React.ReactNode }) {
           <ModeSwitch />
         </div>
       </header>
+      <SeedBanner />
       <main
         className={
           dense

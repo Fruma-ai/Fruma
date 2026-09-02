@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Wordmark } from "./Wordmark";
 
 export function PublicBar({
   active,
@@ -9,8 +10,8 @@ export function PublicBar({
   return (
     <header className="manifest-bar">
       <div className="manifest-bar-inner">
-        <Link href="/" className="manifest-lockup">
-          Fruma
+        <Link href="/" className="manifest-lockup" aria-label="Fruma home">
+          <Wordmark />
         </Link>
         <nav className="ml-auto flex items-center gap-5 sm:gap-6">
           <Link
@@ -22,7 +23,7 @@ export function PublicBar({
           >
             Origin
           </Link>
-          <a
+          <Link
             href="/#apply"
             className={cn(
               "manifest-nav",
@@ -30,7 +31,7 @@ export function PublicBar({
             )}
           >
             Apply
-          </a>
+          </Link>
           <Link
             href="/app"
             className={cn(

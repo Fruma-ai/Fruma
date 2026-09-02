@@ -12,6 +12,7 @@ import {
   isMillDepositResponse,
   millDepositFailureFromBody,
   MILL_DEPOSITS_PATH,
+  millWorkingFileName,
   postMillDeposit,
   toMillDepositResponse,
 } from "./mill-deposit";
@@ -125,6 +126,9 @@ describe("SPEC 8 mill-deposit Workshop client helpers", () => {
       0,
     );
     assert.equal(SAMPLE.fileStepSentence, FILE_RECEIVED_COPY);
+    assert.equal(millWorkingFileName([SAMPLE], { name: "Vale-do-Ave-hanger-list.xlsx" }), "synthetic-hanger.csv");
+    assert.equal(millWorkingFileName([], { name: "Vale-do-Ave-hanger-list.xlsx" }), "Vale-do-Ave-hanger-list.xlsx");
+    assert.equal(millWorkingFileName([]), null);
   });
 
   it("latest drop is the Map working set when several deposits exist", () => {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MillCardProvenance } from "@/components/fruma/MillCardProvenance";
 import { millKind } from "@/lib/fruma/origin-mill";
 import { millKey, type OriginFacility } from "@/lib/oshub/types";
 
@@ -23,7 +24,7 @@ export function OriginList({ facilities }: { facilities: OriginFacility[] }) {
               <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
                 {millKind(f)}
               </p>
-              <p className="mt-3 text-[16px] font-medium tracking-[-0.02em] text-white">
+              <p className="mill-name mt-3 text-[16px] font-medium tracking-[-0.02em] text-white">
                 {f.name}
               </p>
               <p className="mt-2 text-[13px] leading-relaxed text-white/50">
@@ -36,9 +37,7 @@ export function OriginList({ facilities }: { facilities: OriginFacility[] }) {
                 </p>
               ) : null}
             </div>
-            <span className="text-[11px] uppercase tracking-[0.22em] text-white/55">
-              On the index · Open mill
-            </span>
+            <MillCardProvenance />
           </Link>
         </li>
       ))}

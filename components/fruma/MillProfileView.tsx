@@ -2,11 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  millFileState,
-  millProfileState,
-  workshopReady,
-} from "@/lib/fruma/honesty";
+import { millFileState, millProfileState, VDA_NOT_PARTNER, workshopReady } from "@/lib/fruma/honesty";
 import {
   EVIDENCE,
   MARKET_LABEL,
@@ -133,10 +129,10 @@ export function MillProfileView() {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-[44rem]">
           <p className="ui-label">Step 1 of 5 · mill profile</p>
-          <h1 className="page-title mt-2 md:text-[28px]">Têxteis Vale do Ave, Lda</h1>
+          <h1 className="page-title mill-name mt-2 md:text-[28px]">Têxteis Vale do Ave, Lda</h1>
           <p className="page-lede mt-3">
-            {claimed}. Public records are not a claim. Completeness is not a
-            live catalogue — never complete a blank.
+            {claimed}. Public records are not a claim. {VDA_NOT_PARTNER}{" "}
+            Completeness is not a live catalogue — never complete a blank.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -283,15 +279,28 @@ export function MillProfileView() {
               Digital is not a hanger.
             </p>
             <div className="mt-4 mill-card p-5">
-              <p className="text-[16px] font-semibold tracking-[-0.02em] text-chalk">
+              <p className="mill-name text-[16px] font-semibold tracking-[-0.02em] text-chalk">
                 Têxteis Vale do Ave, Lda
               </p>
               <p className="mt-1 spec text-[11px] text-mute">
-                Famalicão, Portugal · public record · circular knit
+                Famalicão, Portugal · public record · circular knit · not a partner
               </p>
               <div className="mt-4 flex flex-wrap gap-1.5">
                 <span className="src-pill border border-line2 text-mute">{claimed}</span>
-                <span className="src-pill border border-line2 text-mute">{fileState}</span>
+                <span
+                  className={
+                    fileState === "File received"
+                      ? "src-pill border-weld text-weld"
+                      : "src-pill border border-line2 text-mute"
+                  }
+                >
+                  {fileState}
+                </span>
+                {millMapConfirmed ? (
+                  <span className="src-pill border-weld text-weld">Mapped</span>
+                ) : (
+                  <span className="src-pill border border-line2 text-mute">Not mapped</span>
+                )}
                 {ready ? (
                   <span className="src-pill bg-ok/10 text-ok">Ready</span>
                 ) : (

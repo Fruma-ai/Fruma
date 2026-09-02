@@ -16,17 +16,20 @@ import {
   millFileState,
   millMapState,
   millProfileState,
+  PROVENANCE,
   reviewRowLabel,
   rowIsAsSent,
   rowProvenance,
+  showWeldTick,
   workshopReady,
 } from "@/lib/fruma/honesty";
 import { rankMillOptions } from "@/lib/fruma/mill-learn";
-import { asSentQualities } from "@/lib/fruma/mill-deposit";
+import { asSentQualities, millWorkingFileName } from "@/lib/fruma/mill-deposit";
 import type { CatalogField, CatalogFilter } from "@/lib/fruma/types";
 import { cn } from "@/lib/utils";
 import { AsSentList } from "./AsSentList";
 import { useFruma } from "./store";
+import { WeldTick } from "./WeldTick";
 
 const FIXES: { needle: string; label: (n: number) => string }[] = [
   { needle: "width in inches", label: (n) => `${n} still in inches — apply cm` },
@@ -75,6 +78,7 @@ export function CatalogView() {
   });
   const catalogueState = millCatalogueState(onStandard);
   const asSentCount = asSentQualities(millDeposits).length;
+  const workingTitle = millWorkingFileName(millDeposits, millFile);
   const hit =
     millLearn.picks === 0
       ? null
@@ -93,7 +97,7 @@ export function CatalogView() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="ui-label">Step 5 of 5 · working file</p>
-          <h1 className="page-title mt-1">Catalogue</h1>
+          <h1 className="page-title mt-1">{workingTitle ?? "Catalogue"}</h1>
           <p className="page-lede mt-2">
             Two lists. {counts.total} seeded qualities · {asSentCount} as-sent
             {asSentCount === 1 ? " quality" : " qualities"}. {catalogueState}.
@@ -206,8 +210,8 @@ export function CatalogView() {
         </div>
       )}
 
-      <section className="mt-6">
-        <p className="ui-label">Seeded</p>
+      <section className="mt-6 register-seeded">
+        <p className="ui-label">{PROVENANCE.seeded}</p>
         <p className="mt-1 mb-3 text-[13px] text-mute">
           {counts.total} VDA qualities from the working file. Cannot reach On
           the standard.
@@ -227,7 +231,7 @@ export function CatalogView() {
                   />
                 </th>
                 <th>Article</th>
-                <th>Seeded</th>
+                <th>{PROVENANCE.seeded}</th>
                 <th>Structure</th>
                 <th>Composition</th>
                 <th>Weight</th>
@@ -258,7 +262,7 @@ export function CatalogView() {
       </section>
 
       <div className="mt-10 border-t border-line pt-8">
-        <AsSentList deposits={millDeposits} />
+        <AsSentList deposits={millDeposits} mapped={mapped} />
       </div>
     </div>
   );
@@ -289,7 +293,11 @@ function CatalogRowView({
     rowConfirmed: row.status === "confirmed",
     asSent: rowIsAsSent(row),
   });
-  const weld = mapped && review === "Confirmed" && provenance !== "Seeded";
+  const weld = showWeldTick({
+    provenance: row.provenance,
+    mapped,
+    confirmed: review === "Confirmed",
+  });
   const tone = onStandard
     ? "text-ok"
     : weld
@@ -303,7 +311,9 @@ function CatalogRowView({
       </td>
       <td>
         <p className="spec text-[12px] text-chalk">{row.article}</p>
-        <p className="mt-0.5 spec text-[11px] text-mute">{provenance}</p>
+        <p className="mt-0.5 spec text-[11px] text-mute">
+          {provenance} <WeldTick show={weld} />
+        </p>
       </td>
       <td>
         <p className="spec text-[12px] text-raw">{row.raw.construction}</p>

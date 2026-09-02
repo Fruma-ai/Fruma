@@ -6,6 +6,7 @@ import {
   asSentArticleSamples,
   asSentColourwaySamples,
   asSentMapWorkingSet,
+  millWorkingFileName,
 } from "@/lib/fruma/mill-deposit";
 import {
   APPLY_STEPS,
@@ -48,7 +49,7 @@ export function MillMapView() {
   const working = asSentMapWorkingSet(millDeposits);
   const dropped = millFile.source === "upload";
   const mappingAsSent = dropped || Boolean(working);
-  const workingName = working?.deposit.filename ?? millFile.name;
+  const workingName = millWorkingFileName(millDeposits, millFile) ?? millFile.name;
   const workingRows = working
     ? working.qualities.length
     : dropped

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type Kind = "brand" | "retailer" | "mill";
+export type Kind = "brand" | "retailer" | "mill";
 type Status = "idle" | "loading" | "ok" | "error";
 
 const KINDS: [Kind, string][] = [
@@ -14,8 +14,8 @@ const KINDS: [Kind, string][] = [
   ["mill", "Mills"],
 ];
 
-export function InterestForm() {
-  const [kind, setKind] = useState<Kind | "">("");
+export function InterestForm({ presetKind }: { presetKind?: Kind }) {
+  const [kind, setKind] = useState<Kind | "">(presetKind ?? "");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
