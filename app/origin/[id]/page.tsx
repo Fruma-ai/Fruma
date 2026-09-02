@@ -54,7 +54,7 @@ export default async function OriginMillPage({
             />
             <Fact k="Market evidence" v="Not on file" />
             <Fact k="Hanger list" v="Not mapped to the Fruma standard" />
-            <Fact k="Fruma score" v="Index only — not ready" />
+            <Fact k="Status" v="Index only — not ready" />
           </div>
           <OriginContact mill={mill.name} />
         </div>
