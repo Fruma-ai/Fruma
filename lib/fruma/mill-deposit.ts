@@ -1,8 +1,8 @@
 import { FILE_RECEIVED_COPY } from "./honesty";
 
 /**
- * Mill-deposit JSON DTO for Workshop / client. Do not import lib/fruma/ingest
- * from this file — the Route Handler maps ingest onto this shape.
+ * Mill-deposit JSON DTO for Workshop / client. Do not import the Node ingest
+ * engine from this file — the Route Handler maps deposit results onto this shape.
  */
 export const MILL_DEPOSIT_VISIBILITY = "Private" as const;
 
