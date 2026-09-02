@@ -113,8 +113,8 @@ export function countOnTheStandard(
 }
 
 /**
- * Working-file rows in this demo are the seed catalogue. A mill deposit appends
- * as-sent qualities on a separate list — never inferred into buildCatalog().
+ * Map's working file after File drop is the as-sent mill deposit. Seeded
+ * catalogue stays a separate list — never inferred into buildCatalog().
  */
 export function rowProvenance(row?: { provenance?: RowProvenance }): ProvenanceLabel {
   if (row?.provenance === "as-sent") return PROVENANCE.asSent;

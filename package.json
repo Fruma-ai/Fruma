@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --port 43147 --hostname 0.0.0.0",
     "lint": "eslint",
-    "test": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts lib/fruma/mill-deposit.test.ts",
+    "test": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts lib/fruma/mill-deposit.test.ts lib/fruma/mill-ingest.test.ts",
     "test:ingest": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts"
   },
   "dependencies": {

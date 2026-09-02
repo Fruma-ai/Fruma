@@ -277,7 +277,7 @@ const initial: State = {
 };
 
 function millLive(state: State): Fabric[] {
-  // Seeded catalogue only. As-sent millDeposits are never unioned into brand search.
+  // Seeded catalogue only. Map's as-sent working set is never unioned into brand search.
   return liveCatalogFabrics(state.catalog, {
     claimed: state.millClaimed,
     mapped: state.millMapConfirmed,

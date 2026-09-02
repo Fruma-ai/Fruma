@@ -4,6 +4,7 @@ export const DEMO_MILL_FILE = {
   rows: 72,
 } as const;
 
+/** Seeded VDA column samples. Map overlays as-sent DTO samples after File drop. */
 export const MILL_COLUMNS = [
   { id: "Fabric No", samples: "DPWR192924 · VDA-2401" },
   { id: "Construction", samples: "P/D WAFFEL RIB · PIQUE 20/1" },
@@ -121,6 +122,33 @@ export const FRUMA_MILL_FIELDS: FrumaMillField[] = [
 ];
 
 export const IGNORE = "__ignore__";
+
+/**
+ * After a File drop, Map overlays as-sent DTO samples onto mill columns.
+ * Seeded VDA samples on MILL_COLUMNS stay for the Seeded path only.
+ * Unknown mill cells stay "—" — the deposit DTO does not carry source values.
+ */
+export function millColumnsFromAsSent(args: {
+  articleSamples: string;
+  colourwaySamples: string;
+}): { id: string; samples: string }[] {
+  return MILL_COLUMNS.map((col) => {
+    if (col.id === "Fabric No") return { id: col.id, samples: args.articleSamples };
+    if (col.id === "Colours") return { id: col.id, samples: args.colourwaySamples };
+    return { id: col.id, samples: "—" };
+  });
+}
+
+export function millFieldsFromAsSent(args: {
+  articlePreview: string;
+  colourPreview: string;
+}): FrumaMillField[] {
+  return FRUMA_MILL_FIELDS.map((field) => {
+    if (field.key === "article") return { ...field, preview: args.articlePreview };
+    if (field.key === "colours") return { ...field, preview: args.colourPreview };
+    return { ...field, preview: "—" };
+  });
+}
 
 export function defaultMillMap(): Record<string, string> {
   return Object.fromEntries(FRUMA_MILL_FIELDS.map((f) => [f.key, f.suggested]));

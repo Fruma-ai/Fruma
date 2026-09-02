@@ -1,11 +1,19 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { PROVENANCE } from "@/lib/fruma/honesty";
+import {
+  asSentArticleSamples,
+  asSentColourwaySamples,
+  asSentMapWorkingSet,
+} from "@/lib/fruma/mill-deposit";
 import {
   APPLY_STEPS,
   FRUMA_MILL_FIELDS,
   IGNORE,
   MILL_COLUMNS,
+  millColumnsFromAsSent,
+  millFieldsFromAsSent,
 } from "@/lib/fruma/mill-ingest";
 import { cn } from "@/lib/utils";
 import { SurfaceState } from "./SurfaceState";
@@ -14,6 +22,7 @@ import { useFruma } from "./store";
 export function MillMapView() {
   const {
     millFile,
+    millDeposits,
     millColumnMap,
     millTemplateName,
     millApplyStatus,
@@ -36,11 +45,44 @@ export function MillMapView() {
     );
   }
 
+  const working = asSentMapWorkingSet(millDeposits);
+  const dropped = millFile.source === "upload";
+  const mappingAsSent = dropped || Boolean(working);
+  const workingName = working?.deposit.filename ?? millFile.name;
+  const workingRows = working
+    ? working.qualities.length
+    : dropped
+      ? 0
+      : millFile.rows;
+  const columns = mappingAsSent
+    ? millColumnsFromAsSent({
+        articleSamples: asSentArticleSamples(working?.qualities ?? []),
+        colourwaySamples: asSentColourwaySamples(working?.qualities ?? []),
+      })
+    : MILL_COLUMNS;
+  const fields = mappingAsSent
+    ? millFieldsFromAsSent({
+        articlePreview: asSentArticleSamples(working?.qualities ?? []),
+        colourPreview: asSentColourwaySamples(working?.qualities ?? []),
+      })
+    : FRUMA_MILL_FIELDS;
+  const previewHeader = mappingAsSent ? PROVENANCE.asSent : "Seeded preview";
+  const fileKicker = mappingAsSent
+    ? `${PROVENANCE.asSent} working file`
+    : PROVENANCE.seeded;
+
   if (millApplyStatus === "running") {
-    return <ApplyingCard step={millApplyStep} file={millFile.name} rows={millFile.rows} />;
+    return (
+      <ApplyingCard
+        step={millApplyStep}
+        file={workingName}
+        rows={workingRows}
+        asSent={mappingAsSent}
+      />
+    );
   }
 
-  const requiredMissing = FRUMA_MILL_FIELDS.some(
+  const requiredMissing = fields.some(
     (f) => f.required && (millColumnMap[f.key] === IGNORE || !millColumnMap[f.key]),
   );
 
@@ -68,12 +110,14 @@ export function MillMapView() {
       </div>
 
       <section className="mill-card mb-6 p-5">
-        <p className="ui-label">Your uploaded file</p>
+        <p className="ui-label">{fileKicker}</p>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[14px] font-medium text-chalk">{millFile.name}</p>
+            <p className="text-[14px] font-medium text-chalk">{workingName}</p>
             <p className="mt-1 spec text-[12px] text-mute">
-              {millFile.size} · {millFile.rows} qualities
+              {mappingAsSent
+                ? `${workingRows} ${workingRows === 1 ? "quality" : "qualities"} · ${PROVENANCE.asSent}`
+                : `${millFile.size} · ${workingRows} qualities · ${PROVENANCE.seeded}`}
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setMillRoom("upload")}>
@@ -108,11 +152,11 @@ export function MillMapView() {
               <tr>
                 <th className="w-[240px]">Fruma field</th>
                 <th>Your column</th>
-                <th>Seeded preview</th>
+                <th>{previewHeader}</th>
               </tr>
             </thead>
             <tbody>
-              {FRUMA_MILL_FIELDS.map((field) => {
+              {fields.map((field) => {
                 const value = millColumnMap[field.key] ?? field.suggested;
                 return (
                   <tr key={field.key}>
@@ -134,7 +178,7 @@ export function MillMapView() {
                         onChange={(e) => setMillMapField(field.key, e.target.value)}
                         aria-label={`Column for ${field.label}`}
                       >
-                        {MILL_COLUMNS.map((col) => (
+                        {columns.map((col) => (
                           <option key={col.id} value={col.id}>
                             {col.id === field.suggested ? `Suggested — ${col.id}` : col.id}
                           </option>
@@ -161,7 +205,7 @@ export function MillMapView() {
                     <td>
                       <p className="spec text-[13px] text-chalk">{field.preview}</p>
                       <p className="mt-0.5 spec text-[11px] text-mute">
-                        {MILL_COLUMNS.find((c) => c.id === value)?.samples ?? "—"}
+                        {columns.find((c) => c.id === value)?.samples ?? "—"}
                       </p>
                     </td>
                   </tr>
@@ -175,7 +219,17 @@ export function MillMapView() {
   );
 }
 
-function ApplyingCard({ step, file, rows }: { step: number; file: string; rows: number }) {
+function ApplyingCard({
+  step,
+  file,
+  rows,
+  asSent,
+}: {
+  step: number;
+  file: string;
+  rows: number;
+  asSent: boolean;
+}) {
   const pct = Math.round(((step + 1) / APPLY_STEPS.length) * 100);
   return (
     <div className="mx-auto max-w-[560px]">
@@ -185,13 +239,15 @@ function ApplyingCard({ step, file, rows }: { step: number; file: string; rows: 
           Mapping {rows} qualities
         </h1>
         <p className="mt-2 text-[13.5px] leading-relaxed text-mute">
-          Applying your template from {file}. Exceptions wait on Review. Seeded
-          rows stay Seeded — not in the live catalogue.
+          Applying your template from {file}
+          {asSent ? ` · ${PROVENANCE.asSent} working file` : ` · ${PROVENANCE.seeded}`}.
+          Exceptions wait on Review. Seeded rows stay Seeded — not in the live
+          catalogue.
         </p>
         <div className="mill-bar mt-5">
           <i style={{ width: `${pct}%` }} />
         </div>
-        <p className="mt-2 spec text-[11px] text-mute">{pct}%</p>
+        <p className="mt-2 spec text-[11px]">{pct}%</p>
         <ol className="mt-5">
           {APPLY_STEPS.map((label, i) => (
             <li key={label} className="flex items-center gap-3 border-b border-line py-2.5 last:border-0">

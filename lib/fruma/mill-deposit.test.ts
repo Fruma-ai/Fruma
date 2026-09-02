@@ -3,6 +3,9 @@ import { describe, it } from "node:test";
 import { buildCatalog, liveCatalogFabrics } from "./catalog";
 import { FILE_RECEIVED_COPY } from "./honesty";
 import {
+  asSentArticleSamples,
+  asSentColourwaySamples,
+  asSentMapWorkingSet,
   asSentQualities,
   depositExceptions,
   formatMillDepositException,
@@ -103,6 +106,48 @@ describe("SPEC 8 mill-deposit Workshop client helpers", () => {
     } finally {
       globalThis.fetch = original;
     }
+  });
+
+  it("Map working set is the latest as-sent deposit qualities, not seeded VDA", () => {
+    const catalog = buildCatalog();
+    const working = asSentMapWorkingSet([SAMPLE]);
+    assert.ok(working);
+    assert.equal(working.deposit.filename, "synthetic-hanger.csv");
+    assert.equal(working.qualities.length, 1);
+    assert.equal(working.qualities[0]?.millArticleCode, "SYN-QA-100");
+    assert.equal(asSentArticleSamples(working.qualities), "SYN-QA-100");
+    assert.equal(asSentColourwaySamples(working.qualities), "1 colourway");
+    assert.equal(asSentArticleSamples(working.qualities).includes("VDA-"), false);
+    assert.ok(catalog.every((row) => row.article !== "SYN-QA-100"));
+    assert.ok(catalog.some((row) => /^VDA-24/.test(row.article)));
+    assert.equal(
+      liveCatalogFabrics(catalog, { claimed: true, mapped: true }).length,
+      0,
+    );
+    assert.equal(SAMPLE.fileStepSentence, FILE_RECEIVED_COPY);
+  });
+
+  it("latest drop is the Map working set when several deposits exist", () => {
+    const second = toMillDepositResponse({
+      depositId: "dep_later",
+      filename: "later-hanger.csv",
+      receivedAt: "2026-09-02T12:00:00.000Z",
+      sha256: "def",
+      qualities: [
+        {
+          baseQualityId: "bq:org_mill_synthetic:SYN-QA-200",
+          millArticleCode: "SYN-QA-200",
+          colourwayIds: ["cw:white", "cw:navy"],
+        },
+      ],
+      exceptions: [],
+    });
+    const working = asSentMapWorkingSet([SAMPLE, second]);
+    assert.ok(working);
+    assert.equal(working.deposit.depositId, "dep_later");
+    assert.equal(working.qualities.length, 1);
+    assert.equal(working.qualities[0]?.millArticleCode, "SYN-QA-200");
+    assert.equal(asSentColourwaySamples(working.qualities), "2 colourways");
   });
 
   it("unparsed 4xx is a failure, not a millReadStatus ready payload", async () => {

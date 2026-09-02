@@ -11,9 +11,11 @@ import {
 import {
   countOnTheStandard,
   millCatalogueState,
+  PROVENANCE,
   reviewRowLabel,
   rowProvenance,
 } from "@/lib/fruma/honesty";
+import { asSentMapWorkingSet } from "@/lib/fruma/mill-deposit";
 import { EXCEPTION_GROUPS, frumaPath } from "@/lib/fruma/mill-ingest";
 import { rankMillOptions } from "@/lib/fruma/mill-learn";
 import type { CatalogField } from "@/lib/fruma/types";
@@ -45,6 +47,10 @@ export function MillReviewView() {
 
   const counts = catalogCounts(catalog);
   const provenance = rowProvenance();
+  const working = asSentMapWorkingSet(millDeposits);
+  const workingLine = working
+    ? `${PROVENANCE.asSent} working file · ${working.deposit.filename}`
+    : `${provenance} working file${millFile ? ` · ${millFile.name}` : ""}`;
   const pending = catalog.filter(
     (r) => r.status === "review" || r.status === "ready" || r.status === "gap",
   );
@@ -103,8 +109,7 @@ export function MillReviewView() {
             Approve the mappings that still need a look.
           </h1>
           <p className="page-lede mt-3">
-            Review by exception. {provenance} working file
-            {millFile ? ` · ${millFile.name}` : ""}. No inferred GOTS or origin.
+            Review by exception. {workingLine}. No inferred GOTS or origin.
             Confirming a seeded row is not On the standard. As-sent deposit
             exceptions stay on their own list — empty-article is not a catalogue
             row.
@@ -128,6 +133,10 @@ export function MillReviewView() {
         <div className="mb-8 border-b border-line pb-8">
           <AsSentList deposits={millDeposits} kicker="As-sent exceptions" />
         </div>
+      ) : null}
+
+      {working ? (
+        <p className="ui-label mb-3">Seeded</p>
       ) : null}
 
       <div className="mb-5 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">

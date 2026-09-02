@@ -146,6 +146,35 @@ export function asSentQualities(deposits: MillDepositResponse[]): AsSentQualityR
   );
 }
 
+/**
+ * Map's working set after File drop: that deposit's as-sent DTO qualities.
+ * Never the seeded VDA catalogue. Latest drop is the working file.
+ */
+export function asSentMapWorkingSet(
+  deposits: MillDepositResponse[],
+): { deposit: MillDepositResponse; qualities: AsSentQualityRow[] } | null {
+  const deposit = deposits[deposits.length - 1];
+  if (!deposit) return null;
+  return { deposit, qualities: asSentQualities([deposit]) };
+}
+
+/** Article samples Map may show — millArticleCode as sent, not VDA-####. */
+export function asSentArticleSamples(qualities: AsSentQualityRow[]): string {
+  const articles = [
+    ...new Set(qualities.map((q) => q.millArticleCode).filter(Boolean)),
+  ];
+  return articles.slice(0, 2).join(" · ") || "—";
+}
+
+/** Colourway counts from the DTO. No mill cell source values. */
+export function asSentColourwaySamples(qualities: AsSentQualityRow[]): string {
+  if (qualities.length === 0) return "—";
+  const bits = [...new Set(qualities.map((q) => q.colourwayIds.length))]
+    .slice(0, 2)
+    .map((n) => `${n} colourway${n === 1 ? "" : "s"}`);
+  return bits.join(" · ") || "—";
+}
+
 export function depositExceptions(
   deposits: MillDepositResponse[],
 ): Array<MillDepositException & { filename: string; depositId: string }> {
