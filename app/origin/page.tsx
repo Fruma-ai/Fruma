@@ -49,14 +49,13 @@ export default async function OriginPage({ searchParams }: PageProps<"/origin">)
         </p>
         <span className="manifest-rule" />
         <h1 className="max-w-[36ch] text-[18px] font-medium leading-snug tracking-[-0.03em] text-white/80 md:text-[22px]">
-          Each mill is a Fruma card. Index records help us find who to bring
-          onto the standard. A mill is ready when they claim the profile, file
-          market evidence, and drop a hanger list.
+          An index card is not a score. Each mill is a Fruma card. Index
+          records help us find who to bring onto the standard. A mill is ready
+          when they claim the profile, file market evidence, and drop a hanger
+          list.
         </h1>
         <p className="mt-4 max-w-[52ch] text-[13px] leading-relaxed text-white/45">
-          {result.count.toLocaleString("en-GB")} sites in this cut. Fruma works
-          with factories that are ethical, sustainable, and meet EU and UK
-          sourcing law. An index card is not that score.
+          {result.count.toLocaleString("en-GB")} sites in this cut.
         </p>
         {result.error ? (
           <p className="mt-3 text-[13px] text-white/55" role="alert">

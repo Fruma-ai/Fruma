@@ -11,7 +11,7 @@ type Status = "idle" | "loading" | "ok" | "error";
 const KINDS: [Kind, string][] = [
   ["brand", "Brand"],
   ["retailer", "Retailer"],
-  ["mill", "Factory"],
+  ["mill", "Mills"],
 ];
 
 export function InterestForm() {

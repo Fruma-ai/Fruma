@@ -7,7 +7,7 @@ import { PublicBar } from "@/components/fruma/PublicBar";
 export const metadata: Metadata = {
   title: "Fruma",
   description:
-    "Brands and retailers live from origin. Redefining the industry. Ethical, sustainable factories that meet EU and UK sourcing law.",
+    "The mill’s catalogue, as sent, on a standard buyers can use.",
 };
 
 export default function Home() {
@@ -20,29 +20,18 @@ export default function Home() {
           <div className="manifest-scrim" aria-hidden />
           <div className="manifest-copy">
             <h1 className="manifest-stack">
-              <span>Brands</span>
-              <span>and retailers</span>
-              <span>live from</span>
-              <span>origin</span>
+              <span>The mill’s catalogue,</span>
+              <span>as sent,</span>
+              <span>on a standard</span>
+              <span>buyers can use.</span>
             </h1>
             <span className="manifest-rule" />
-            <p className="manifest-stack manifest-stack-sub">
-              <span>Redefining</span>
-              <span>the industry</span>
-            </p>
-            <p className="mt-6 text-[11px] font-medium uppercase tracking-[0.32em] text-white/55">
-              Agentic sourcing optimisation
-            </p>
-            <p className="mt-5 max-w-[26ch] text-[13px] leading-snug tracking-[0.03em] text-white/55">
-              From factories that are ethical, sustainable, and meet EU and UK
-              sourcing law.
-            </p>
             <div className="mt-10 flex flex-wrap items-center gap-6">
               <a href="#apply" className="manifest-cta">
                 Apply
               </a>
               <Link href="/origin" className="manifest-cta border-white/30">
-                The factories
+                Origin
               </Link>
               <Link href="/app" className="manifest-cta border-white/30">
                 Platform
@@ -58,12 +47,13 @@ export default function Home() {
           <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-[1fr_minmax(0,420px)] lg:items-end">
             <div>
               <p className="manifest-stack">
+                <span>Mills</span>
                 <span>Brands</span>
-                <span>retailers</span>
-                <span>factories</span>
+                <span>Retailers</span>
               </p>
               <p className="mt-6 max-w-[36ch] text-[14px] leading-relaxed text-white/50">
-                Apply. We walk you through.
+                Keep mill catalogues at source, and give every quality an
+                identity that can travel.
               </p>
             </div>
             <InterestForm />
