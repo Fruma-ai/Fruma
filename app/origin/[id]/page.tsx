@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { OriginContact } from "@/components/fruma/OriginContact";
 import { PublicBar } from "@/components/fruma/PublicBar";
 import { millKind } from "@/lib/fruma/origin-mill";
 import { getOriginFacility } from "@/lib/oshub/search";
@@ -43,20 +42,17 @@ export default async function OriginMillPage({
           this mill ready.
         </p>
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start">
-          <div className="space-y-px bg-white/10">
-            <Fact k="Identity" v={mill.name} />
-            <Fact k="Place" v={`${mill.address}${mill.countryName ? ` · ${mill.countryName}` : ""}`} />
-            <Fact k="Type" v={kind} />
-            <Fact
-              k="What they make"
-              v={mill.productTypes.length ? mill.productTypes.join(" · ") : mill.sectors.join(" · ") || "—"}
-            />
-            <Fact k="Market evidence" v="Not on file" />
-            <Fact k="Hanger list" v="Not mapped to the Fruma standard" />
-            <Fact k="Status" v="Index only — not ready" />
-          </div>
-          <OriginContact mill={mill.name} />
+        <div className="mt-12 space-y-px bg-white/10">
+          <Fact k="Identity" v={mill.name} />
+          <Fact k="Place" v={`${mill.address}${mill.countryName ? ` · ${mill.countryName}` : ""}`} />
+          <Fact k="Type" v={kind} />
+          <Fact
+            k="What they make"
+            v={mill.productTypes.length ? mill.productTypes.join(" · ") : mill.sectors.join(" · ") || "—"}
+          />
+          <Fact k="Market evidence" v="Not on file" />
+          <Fact k="Hanger list" v="Not mapped to the Fruma standard" />
+          <Fact k="Status" v="Index only — not ready" />
         </div>
 
         <p className="mt-14">
