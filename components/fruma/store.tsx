@@ -27,6 +27,12 @@ import {
   rowIsAsSent,
 } from "@/lib/fruma/honesty";
 import { type SellMarket } from "@/lib/fruma/market-score";
+import {
+  fileSizeLabel,
+  postMillDeposit,
+  type MillDepositFailure,
+  type MillDepositResponse,
+} from "@/lib/fruma/mill-deposit";
 import { APPLY_STEPS, defaultMillMap, DEMO_MILL_FILE } from "@/lib/fruma/mill-ingest";
 import {
   emptyMillLearn,
@@ -112,6 +118,9 @@ type State = {
   millLearn: MillLearn;
   previewById: Record<string, { status: ImageStatus; src: string | null }>;
   millFile: MillFile | null;
+  millDeposits: MillDepositResponse[];
+  millDepositError: MillDepositFailure | null;
+  millDepositPosting: boolean;
   millReadStatus: MillReadStatus;
   millReadStep: number;
   millApplyStatus: MillApplyStatus;
@@ -156,6 +165,9 @@ type Action =
   | { type: "ingestChoose"; i: number; choice: "ok" | "alt" }
   | { type: "ingestPublish" }
   | { type: "millFile"; file: MillFile }
+  | { type: "millDepositBegin" }
+  | { type: "millDeposit"; file: MillFile; deposit: MillDepositResponse }
+  | { type: "millDepositError"; failure: MillDepositFailure }
   | { type: "millApplyStart" }
   | { type: "millApplyTick"; step: number }
   | { type: "millApplyDone" }
@@ -249,6 +261,9 @@ const initial: State = {
   millLearn: emptyMillLearn(),
   previewById: {},
   millFile: null,
+  millDeposits: [],
+  millDepositError: null,
+  millDepositPosting: false,
   millReadStatus: "idle",
   millReadStep: 0,
   millApplyStatus: "idle",
@@ -262,6 +277,7 @@ const initial: State = {
 };
 
 function millLive(state: State): Fabric[] {
+  // Seeded catalogue only. As-sent millDeposits are never unioned into brand search.
   return liveCatalogFabrics(state.catalog, {
     claimed: state.millClaimed,
     mapped: state.millMapConfirmed,
@@ -530,6 +546,8 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         millFile: action.file,
+        millDepositError: null,
+        millDepositPosting: false,
         millReadStatus: "idle",
         millReadStep: 0,
         millApplyStatus: "idle",
@@ -541,6 +559,39 @@ function reducer(state: State, action: Action): State {
         millRowApproved: {},
         toast:
           action.file.source === "upload" ? FILE_RECEIVED_COPY : SEEDED_FILE_COPY,
+      };
+    case "millDepositBegin":
+      return {
+        ...state,
+        millDepositPosting: true,
+        millDepositError: null,
+        millReadStatus: "idle",
+      };
+    case "millDeposit":
+      return {
+        ...state,
+        millFile: action.file,
+        millDeposits: [...state.millDeposits, action.deposit],
+        millDepositError: null,
+        millDepositPosting: false,
+        millReadStatus: "idle",
+        millReadStep: 0,
+        millApplyStatus: "idle",
+        millApplyStep: 0,
+        millMapConfirmed: false,
+        millColumnMap: defaultMillMap(),
+        millTemplateName: action.file.name.replace(/\.[^.]+$/, ""),
+        millRoom: "upload",
+        millRowApproved: {},
+        catalog: state.catalog,
+        toast: action.deposit.fileStepSentence,
+      };
+    case "millDepositError":
+      return {
+        ...state,
+        millDepositPosting: false,
+        millDepositError: action.failure,
+        millReadStatus: "idle",
       };
     case "millApplyStart":
       return { ...state, millApplyStatus: "running", millApplyStep: 0 };
@@ -775,6 +826,7 @@ type Store = State & {
   ingestChoose: (i: number, choice: "ok" | "alt") => void;
   ingestPublish: () => void;
   attachMillFile: (file?: MillFile) => void;
+  depositMillFile: (file: File) => Promise<void>;
   setMillMapField: (key: string, column: string) => void;
   setMillTemplateName: (name: string) => void;
   confirmMillMap: () => void;
@@ -1036,6 +1088,24 @@ export function FrumaProvider({ children }: { children: ReactNode }) {
       dispatch({
         type: "millFile",
         file: next.source === "upload" ? { ...next, rows: 0 } : next,
+      });
+    },
+    depositMillFile: async (file) => {
+      dispatch({ type: "millDepositBegin" });
+      const result = await postMillDeposit(file);
+      if (!result.ok) {
+        dispatch({ type: "millDepositError", failure: result.failure });
+        return;
+      }
+      dispatch({
+        type: "millDeposit",
+        deposit: result.deposit,
+        file: {
+          name: file.name,
+          size: fileSizeLabel(file.size),
+          rows: 0,
+          source: "upload",
+        },
       });
     },
     setMillMapField: (key, column) => dispatch({ type: "millMapField", key, column }),

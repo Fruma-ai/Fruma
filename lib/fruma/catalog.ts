@@ -499,7 +499,8 @@ function millFinish(construction: string) {
 
 /**
  * Qualities a designer can search only when claimed + mapped + confirmed on an
- * as-sent (parsed) row. Seeded VDA-#### rows never qualify. Upload is not as-sent.
+ * as-sent (parsed) row. Seeded VDA-#### rows never qualify. Deposit DTO
+ * qualities are not unioned here — File drop is not a live catalogue.
  */
 export function liveCatalogFabrics(
   rows: CatalogRow[],

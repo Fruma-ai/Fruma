@@ -22,8 +22,10 @@ import {
   workshopReady,
 } from "@/lib/fruma/honesty";
 import { rankMillOptions } from "@/lib/fruma/mill-learn";
+import { asSentQualities } from "@/lib/fruma/mill-deposit";
 import type { CatalogField, CatalogFilter } from "@/lib/fruma/types";
 import { cn } from "@/lib/utils";
+import { AsSentList } from "./AsSentList";
 import { useFruma } from "./store";
 
 const FIXES: { needle: string; label: (n: number) => string }[] = [
@@ -53,6 +55,7 @@ export function CatalogView() {
     millFile,
     millMapConfirmed,
     millClaimed,
+    millDeposits,
   } = useFruma();
 
   const counts = catalogCounts(catalog);
@@ -71,7 +74,7 @@ export function CatalogView() {
     mapped,
   });
   const catalogueState = millCatalogueState(onStandard);
-  const provenance = rowProvenance();
+  const asSentCount = asSentQualities(millDeposits).length;
   const hit =
     millLearn.picks === 0
       ? null
@@ -92,8 +95,9 @@ export function CatalogView() {
           <p className="ui-label">Step 5 of 5 · working file</p>
           <h1 className="page-title mt-1">Catalogue</h1>
           <p className="page-lede mt-2">
-            {counts.total} qualities · {provenance}. {catalogueState}. Live is
-            not complete.
+            Two lists. {counts.total} seeded qualities · {asSentCount} as-sent
+            {asSentCount === 1 ? " quality" : " qualities"}. {catalogueState}.
+            Live is not complete.
           </p>
         </div>
         <Button variant="outline" onClick={() => setMillRoom("upload")}>
@@ -105,8 +109,8 @@ export function CatalogView() {
         <span className="banner-bar" />
         <p>
           {millProfileState(millClaimed)} · {millFileState(millFile)} ·{" "}
-          {millMapState(millFile, mapped)}. {catalogueState}. Seeded rows are
-          not Vale do Ave as-sent.{" "}
+          {millMapState(millFile, mapped)}. {catalogueState}. Seeded rows cannot
+          reach On the standard. As-sent deposit qualities start Not mapped.{" "}
           <button
             type="button"
             className="font-medium text-chalk underline decoration-line underline-offset-2"
@@ -202,49 +206,60 @@ export function CatalogView() {
         </div>
       )}
 
-      <div className="mt-2 overflow-x-auto">
-        <table className="data-table min-w-[1080px]">
-          <thead>
-            <tr>
-              <th className="w-8">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  onChange={() =>
-                    allVisibleSelected ? clearCatalogSelection() : selectCatalogFiltered()
-                  }
-                  aria-label="Select visible rows"
+      <section className="mt-6">
+        <p className="ui-label">Seeded</p>
+        <p className="mt-1 mb-3 text-[13px] text-mute">
+          {counts.total} VDA qualities from the working file. Cannot reach On
+          the standard.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="data-table min-w-[1080px]">
+            <thead>
+              <tr>
+                <th className="w-8">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={() =>
+                      allVisibleSelected ? clearCatalogSelection() : selectCatalogFiltered()
+                    }
+                    aria-label="Select visible rows"
+                  />
+                </th>
+                <th>Article</th>
+                <th>Seeded</th>
+                <th>Structure</th>
+                <th>Composition</th>
+                <th>Weight</th>
+                <th>Width</th>
+                <th>MOQ</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((row) => (
+                <CatalogRowView
+                  key={row.id}
+                  row={row}
+                  provenance={rowProvenance(row)}
+                  claimed={millClaimed}
+                  mapped={mapped}
+                  selected={catalogSelected.includes(row.id)}
+                  onToggle={() => toggleCatalogRow(row.id)}
+                  onField={setCatalogField}
                 />
-              </th>
-              <th>Article</th>
-              <th>{provenance}</th>
-              <th>Structure</th>
-              <th>Composition</th>
-              <th>Weight</th>
-              <th>Width</th>
-              <th>MOQ</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((row) => (
-              <CatalogRowView
-                key={row.id}
-                row={row}
-                provenance={rowProvenance(row)}
-                claimed={millClaimed}
-                mapped={mapped}
-                selected={catalogSelected.includes(row.id)}
-                onToggle={() => toggleCatalogRow(row.id)}
-                onField={setCatalogField}
-              />
-            ))}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {visible.length === 0 && (
+          <p className="mt-6 text-[13px] text-mute">Nothing in this filter.</p>
+        )}
+      </section>
+
+      <div className="mt-10 border-t border-line pt-8">
+        <AsSentList deposits={millDeposits} />
       </div>
-      {visible.length === 0 && (
-        <p className="mt-6 text-[13px] text-mute">Nothing in this filter.</p>
-      )}
     </div>
   );
 }
