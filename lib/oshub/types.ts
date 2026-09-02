@@ -28,5 +28,17 @@ export type OriginResult = {
 };
 
 export const ORIGIN_PAGE_SIZE = 50;
-export const OSHUB_PROFILE = "https://opensupplyhub.org/facilities/";
-export const OSHUB_SEARCH = "https://opensupplyhub.org/";
+
+function slugPart(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function millKey(f: OriginFacility) {
+  if (f.osId) return f.osId;
+  return `${slugPart(f.countryCode)}-${slugPart(f.name)}`.slice(0, 80);
+}

@@ -57,8 +57,8 @@ export const MAP_STAGES: MapStage[] = [
         now: "next",
       },
       {
-        text: "Certifications and in-house dye / lab-dip claimed on the mill profile, then inherited by qualities.",
-        now: "partial",
+        text: "Market evidence score: mill ticks EU/UK (and US), then puts the required statements and certs on file. Ready is a filter, not an audit of the floor. GOTS stays mill-programme — it does not land on a quality that is only traceable cotton.",
+        now: "demo",
       },
     ],
     data: [

@@ -276,6 +276,27 @@ button {
   background: #000;
 }
 
+.manifest-poster {
+  z-index: 0;
+}
+
+.manifest-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .manifest-video {
+    display: none;
+  }
+}
+
 .manifest-scrim {
   position: absolute;
   inset: 0;

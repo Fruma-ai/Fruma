@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
+import { HeroCloth } from "@/components/fruma/HeroCloth";
 import { InterestForm } from "@/components/fruma/InterestForm";
 import { PublicBar } from "@/components/fruma/PublicBar";
 
@@ -16,14 +16,7 @@ export default function Home() {
       <PublicBar />
       <main>
         <section className="manifest-hero">
-          <Image
-            src="/splash/black-cloth.jpg"
-            alt=""
-            fill
-            preload
-            sizes="100vw"
-            className="object-cover object-center"
-          />
+          <HeroCloth />
           <div className="manifest-scrim" aria-hidden />
           <div className="manifest-copy">
             <h1 className="manifest-stack">

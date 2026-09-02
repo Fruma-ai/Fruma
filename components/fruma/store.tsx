@@ -20,6 +20,7 @@ import {
   type CatalogRow,
 } from "@/lib/fruma/catalog";
 import { DEMO_BRIEF, DRAFT_PRODUCT, FABRIC_BY_ID, MAX_DESK } from "@/lib/fruma/data";
+import { seedEvidence, type SellMarket } from "@/lib/fruma/market-score";
 import { APPLY_STEPS, defaultMillMap, DEMO_MILL_FILE } from "@/lib/fruma/mill-ingest";
 import {
   emptyMillLearn,
@@ -87,6 +88,8 @@ type State = {
   millAdded: Record<string, boolean>;
   millFixed: Record<string, boolean>;
   millPct: number;
+  millMarkets: Record<SellMarket, boolean>;
+  millEvidence: Record<string, boolean>;
   ingestChoices: Record<number, "ok" | "alt">;
   ingestPublished: boolean;
   insightDone: Record<string, string>;
@@ -140,6 +143,8 @@ type Action =
   | { type: "publish"; dest: string }
   | { type: "millAdd"; key: string }
   | { type: "millFix"; key: string }
+  | { type: "millToggleMarket"; market: SellMarket }
+  | { type: "millEvidence"; id: string }
   | { type: "ingestChoose"; i: number; choice: "ok" | "alt" }
   | { type: "ingestPublish" }
   | { type: "millFile"; file: MillFile }
@@ -218,6 +223,8 @@ const initial: State = {
   millAdded: {},
   millFixed: {},
   millPct: 45,
+  millMarkets: { eu: true, uk: true, us: false },
+  millEvidence: seedEvidence(),
   ingestChoices: {},
   ingestPublished: false,
   insightDone: {},
@@ -459,6 +466,24 @@ function reducer(state: State, action: Action): State {
         ...state,
         millAdded: { ...state.millAdded, [action.key]: true },
         millPct: Math.min(100, state.millPct + 5),
+        millMarkets:
+          action.key === "markets"
+            ? { eu: true, uk: true, us: true }
+            : state.millMarkets,
+      };
+    case "millToggleMarket":
+      return {
+        ...state,
+        millMarkets: {
+          ...state.millMarkets,
+          [action.market]: !state.millMarkets[action.market],
+        },
+      };
+    case "millEvidence":
+      if (state.millEvidence[action.id]) return state;
+      return {
+        ...state,
+        millEvidence: { ...state.millEvidence, [action.id]: true },
       };
     case "millFix":
       if (state.millFixed[action.key]) return state;
@@ -708,6 +733,8 @@ type Store = State & {
   publish: (dest: string) => void;
   millAdd: (key: string) => void;
   millFix: (key: string) => void;
+  millToggleMarket: (market: SellMarket) => void;
+  millAddEvidence: (id: string) => void;
   ingestChoose: (i: number, choice: "ok" | "alt") => void;
   ingestPublish: () => void;
   attachMillFile: (file?: MillFile) => void;
@@ -956,6 +983,8 @@ export function FrumaProvider({ children }: { children: ReactNode }) {
     publish: (dest) => dispatch({ type: "publish", dest }),
     millAdd: (key) => dispatch({ type: "millAdd", key }),
     millFix: (key) => dispatch({ type: "millFix", key }),
+    millToggleMarket: (market) => dispatch({ type: "millToggleMarket", market }),
+    millAddEvidence: (id) => dispatch({ type: "millEvidence", id }),
     ingestChoose: (i, choice) => dispatch({ type: "ingestChoose", i, choice }),
     ingestPublish: () => dispatch({ type: "ingestPublish" }),
     attachMillFile: (file) => {

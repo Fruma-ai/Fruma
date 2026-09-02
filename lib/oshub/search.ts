@@ -1,6 +1,7 @@
 import { ORIGIN_INDEX } from "./snapshot";
 import {
   ORIGIN_PAGE_SIZE,
+  millKey,
   type OriginFacility,
   type OriginResult,
   type OriginSearch,
@@ -104,7 +105,7 @@ export async function searchOrigin(opts: OriginSearch): Promise<OriginResult> {
     } catch (err) {
       const fallback = searchSnapshot(opts, page);
       fallback.error =
-        err instanceof Error ? err.message : "Open Supply Hub did not respond. Showing the local index.";
+        err instanceof Error ? err.message : "The live index did not respond. Showing the Fruma index.";
       return fallback;
     }
   }
@@ -161,7 +162,7 @@ async function searchLive(key: string, opts: OriginSearch, page: number): Promis
   if (sector && sector !== "all") legacy.set("sector", sector);
   const alt = await fetch(`${LEGACY}?${legacy}`, { headers, cache: "no-store" });
   if (!alt.ok) {
-    throw new Error(`Open Supply Hub returned ${res.status}.`);
+    throw new Error(`Live index returned ${res.status}.`);
   }
   const geo = (await alt.json()) as Record<string, unknown>;
   const features = Array.isArray(geo.features) ? geo.features : [];
@@ -175,4 +176,23 @@ async function searchLive(key: string, opts: OriginSearch, page: number): Promis
     pageSize: ORIGIN_PAGE_SIZE,
     source: "opensupplyhub",
   };
+}
+
+export async function getOriginFacility(id: string): Promise<OriginFacility | null> {
+  const key = decodeURIComponent(id).trim();
+  if (!key) return null;
+  const local = ORIGIN_INDEX.find((f) => millKey(f) === key || f.osId === key);
+  if (local) return local;
+  const tokenKey = token();
+  if (!tokenKey) return null;
+  try {
+    const found = await searchLive(tokenKey, { q: key, sector: "all" }, 1);
+    return (
+      found.facilities.find((f) => millKey(f) === key || f.osId === key) ??
+      found.facilities[0] ??
+      null
+    );
+  } catch {
+    return null;
+  }
 }

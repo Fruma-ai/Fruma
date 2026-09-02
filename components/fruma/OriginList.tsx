@@ -1,41 +1,45 @@
-import { OSHUB_PROFILE, OSHUB_SEARCH, type OriginFacility } from "@/lib/oshub/types";
-
-function href(f: OriginFacility) {
-  if (f.osId) return `${OSHUB_PROFILE}${f.osId}`;
-  return `${OSHUB_SEARCH}?q=${encodeURIComponent(f.name)}`;
-}
+import Link from "next/link";
+import { millKind } from "@/lib/fruma/origin-mill";
+import { millKey, type OriginFacility } from "@/lib/oshub/types";
 
 export function OriginList({ facilities }: { facilities: OriginFacility[] }) {
   if (!facilities.length) {
     return (
       <p className="mt-12 max-w-[42ch] text-[14px] leading-relaxed text-white/55">
-        Nothing in this cut of the map. Try another name, country, or sector.
+        Nothing in this cut. Try another name, country, or mill type.
       </p>
     );
   }
 
   return (
-    <ul className="mt-10 divide-y divide-white/10 border-t border-white/10">
+    <ul className="mt-10 grid gap-px bg-white/10 sm:grid-cols-2">
       {facilities.map((f) => (
-        <li key={`${f.osId || f.name}-${f.address}`}>
-          <a
-            href={href(f)}
-            target="_blank"
-            rel="noreferrer"
-            className="grid gap-1 py-4 text-white/90 transition-colors hover:text-white md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.7fr)_auto] md:items-baseline md:gap-6"
+        <li key={millKey(f)} className="bg-black">
+          <Link
+            href={`/origin/${encodeURIComponent(millKey(f))}`}
+            className="flex h-full flex-col justify-between gap-6 px-5 py-5 transition-colors hover:bg-white/[0.04]"
           >
-            <span className="text-[15px] font-medium tracking-[-0.02em]">{f.name}</span>
-            <span className="text-[12px] tracking-[0.04em] text-white/50">
-              {f.address}
-              {f.countryName ? ` · ${f.countryName}` : ""}
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
+                {millKind(f)}
+              </p>
+              <p className="mt-3 text-[16px] font-medium tracking-[-0.02em] text-white">
+                {f.name}
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-white/50">
+                {f.address}
+                {f.countryName ? ` · ${f.countryName}` : ""}
+              </p>
+              {f.productTypes.length ? (
+                <p className="mt-3 text-[11px] uppercase tracking-[0.16em] text-white/40">
+                  {f.productTypes.slice(0, 4).join(" · ")}
+                </p>
+              ) : null}
+            </div>
+            <span className="text-[11px] uppercase tracking-[0.22em] text-white/55">
+              On the index · Open mill
             </span>
-            <span className="text-[11px] uppercase tracking-[0.16em] text-white/40">
-              {f.sectors.join(" · ") || "—"}
-            </span>
-            <span className="font-mono text-[11px] tracking-[0.04em] text-white/35">
-              {f.osId || "OS Hub"}
-            </span>
-          </a>
+          </Link>
         </li>
       ))}
     </ul>

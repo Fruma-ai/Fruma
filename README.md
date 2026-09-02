@@ -16,7 +16,7 @@ This is a working **reference demo** built around **Sunspel’s Riviera Polo Shi
 
 Workshop is a factory ingest: **Profile → File → Map → Review → Catalogue**.
 
-**Profile** — claim the mill. Confirm identity and certs, then add production and commercial data (gauges, fibres, constructions, dye, finishing, MOQ, lead, sampling, markets). Completeness is what Design search filters on.
+**Profile** — claim the mill. Tick EU / UK / US. Put evidence on file for those markets (restricted substances, due diligence contact, UK Modern Slavery statement or below-threshold, forced labour policy). Optional boosts (GOTS programme, ZDHC, GRS) raise the Fruma score; they never rewrite a quality that does not have that cert. Completeness is what Design search filters on. The score is evidence on file — not an audit.
 
 **File** — drop the hanger list you already have (csv, xlsx, pdf, or a photo). Demo file included. No retyping.
 
@@ -62,9 +62,17 @@ Farfetch returned HTTP 429 and Selfridges HTML is bot-gated. Those listings stil
 
 ## Public site vs prototype
 
-`/` is public: mission (origin as source of truth) and apply. **`/origin`** is the factory index — Open Supply Hub live when `OPEN_SUPPLY_HUB_TOKEN` is set, otherwise an apparel/textile starter index linked out to OS Hub. No product walkthrough. The working prototype is at `/app` and is **not public**.
+`/` is public: mission and apply. The hero is a silent looping cloth film (poster still if the browser prefers reduced motion). **`/origin`** is the factory index as Fruma mill cards. A live production-location token fills the index when set; otherwise a starter apparel/textile index. Cards live on Fruma. A mill is ready when they claim the profile, file market evidence, and drop a hanger list. An index card is not a Fruma score.
 
-Only **Owen, Chris and Sam** sign in at `/enter`. Applicants get a walkthrough on request.
+Archivo is the Fruma lockup and UI on both the public site and the platform. Fraunces is for cloth names only. IBM Plex Mono is for SKU, GSM, and price. Public pages and the mill workshop sit on black; the brand studio stays on paper.
+
+Only three logins exist:
+
+- `owen@fruma.ai`
+- `chris@fruma.ai`
+- `sam@fruma.ai`
+
+Password is `fruma` until you set `FRUMA_PASS_OWEN` / `FRUMA_PASS_CHRIS` / `FRUMA_PASS_SAM` in Vercel. Apply submissions from brands, retailers and factories always email **owen@fruma.ai**. Applicants do not get a login.
 
 In Vercel (or `.env.local`):
 
@@ -72,11 +80,10 @@ In Vercel (or `.env.local`):
 FRUMA_PASS_OWEN=
 FRUMA_PASS_CHRIS=
 FRUMA_PASS_SAM=
-INTEREST_EMAIL=owen@fruma.ai
 OPEN_SUPPLY_HUB_TOKEN=
 ```
 
-If a named password is empty, it falls back to `FRUMA_DEMO_PASSWORD`, then to `fruma` locally. Change that. Apply form posts go to `owen@fruma.ai` via Formsubmit (override with `INTEREST_EMAIL`). The first live submit sends a confirmation link to that inbox — click it, or later applications will not arrive. `OPEN_SUPPLY_HUB_TOKEN` is an Open Supply Hub API token (My Account → Settings → API). Without it, `/origin` uses the local apparel/textile index and links each row to OS Hub.
+If a named password is empty, it falls back to `FRUMA_DEMO_PASSWORD`, then to `fruma` locally. Change that. The first live Apply submit sends a Formsubmit confirmation to `owen@fruma.ai` — click it, or later applications will not arrive. `OPEN_SUPPLY_HUB_TOKEN` fills the factory index from the live production-location feed; without it, `/origin` uses the local Fruma index. Mill cards stay on this site either way.
 
 ## Run locally
 

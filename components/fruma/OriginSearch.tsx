@@ -1,10 +1,10 @@
 import { originCountries } from "@/lib/oshub/search";
 
 const SECTORS = [
-  ["Apparel", "Apparel"],
-  ["Textile", "Textile"],
+  ["Apparel", "Factory"],
+  ["Textile", "Mill"],
   ["Footwear", "Footwear"],
-  ["all", "All sectors"],
+  ["all", "All"],
 ] as const;
 
 export function OriginSearch({
@@ -20,7 +20,7 @@ export function OriginSearch({
   return (
     <form method="get" className="mt-10 grid gap-3 sm:grid-cols-[1fr_160px_160px_auto] sm:items-end">
       <label className="block">
-        <span className="manifest-nav text-white/45">Name or OS ID</span>
+        <span className="manifest-nav text-white/45">Name</span>
         <input
           name="q"
           defaultValue={q}
@@ -44,7 +44,7 @@ export function OriginSearch({
         </select>
       </label>
       <label className="block">
-        <span className="manifest-nav text-white/45">Sector</span>
+        <span className="manifest-nav text-white/45">Type</span>
         <select
           name="sector"
           defaultValue={sector || "all"}

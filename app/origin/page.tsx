@@ -7,9 +7,9 @@ import { searchOrigin } from "@/lib/oshub/search";
 import { ORIGIN_PAGE_SIZE } from "@/lib/oshub/types";
 
 export const metadata: Metadata = {
-  title: "Origin",
+  title: "Factories",
   description:
-    "Factories for brands and retailers. Mapped by Open Supply Hub.",
+    "Mills and factories on Fruma. Index cards first; mill files and market evidence make a mill ready.",
 };
 
 export const dynamic = "force-dynamic";
@@ -48,21 +48,15 @@ export default async function OriginPage({ searchParams }: PageProps<"/origin">)
           <span>and retailers</span>
         </p>
         <span className="manifest-rule" />
-        <h1 className="max-w-[32ch] text-[18px] font-medium leading-snug tracking-[-0.03em] text-white/80 md:text-[22px]">
-          The open map, from{" "}
-          <a
-            href="https://opensupplyhub.org/"
-            className="underline decoration-white/30 underline-offset-4 hover:decoration-white"
-          >
-            Open Supply Hub
-          </a>
-          . Fruma works with factories that are ethical, sustainable, and meet
-          EU and UK sourcing law.
+        <h1 className="max-w-[36ch] text-[18px] font-medium leading-snug tracking-[-0.03em] text-white/80 md:text-[22px]">
+          Each mill is a Fruma card. Index records help us find who to bring
+          onto the standard. A mill is ready when they claim the profile, file
+          market evidence, and drop a hanger list.
         </h1>
         <p className="mt-4 max-w-[52ch] text-[13px] leading-relaxed text-white/45">
-          {result.source === "opensupplyhub"
-            ? `${result.count.toLocaleString("en-GB")} production locations in this cut of the live OS Hub map.`
-            : "A starter index of apparel and textile sites, each linked to Open Supply Hub. Connect an OS Hub API token to search the full live map (millions of locations)."}
+          {result.count.toLocaleString("en-GB")} sites in this cut. Fruma works
+          with factories that are ethical, sustainable, and meet EU and UK
+          sourcing law. An index card is not that score.
         </p>
         {result.error ? (
           <p className="mt-3 text-[13px] text-white/55" role="alert">
@@ -93,8 +87,8 @@ export default async function OriginPage({ searchParams }: PageProps<"/origin">)
           </nav>
         ) : null}
         <p className="mt-14 max-w-[54ch] text-[11px] leading-relaxed text-white/30">
-          Production locations © their contributors, published on Open Supply Hub.
-          Fruma does not claim these factories as customers.{" "}
+          Index records are public production locations. Fruma does not claim
+          these factories as customers.{" "}
           <Link href="/" className="underline underline-offset-2">
             Back
           </Link>

@@ -16,6 +16,8 @@ export async function POST(request: Request) {
   const company = String(body.company ?? "").trim();
   const kind = String(body.kind ?? "").trim();
 
+  const mill = String(body.mill ?? "").trim();
+
   if (!name || name.length > 120) {
     return NextResponse.json({ error: "Add your name." }, { status: 400 });
   }
@@ -24,6 +26,9 @@ export async function POST(request: Request) {
   }
   if (!company || company.length > 160) {
     return NextResponse.json({ error: "Add the organisation." }, { status: 400 });
+  }
+  if (mill.length > 160) {
+    return NextResponse.json({ error: "Mill name is too long." }, { status: 400 });
   }
   if (!KINDS.has(kind)) {
     return NextResponse.json({ error: "Tell us which you are." }, { status: 400 });
@@ -36,11 +41,14 @@ export async function POST(request: Request) {
       Accept: "application/json",
     },
     body: JSON.stringify({
-      _subject: `Fruma interest — ${kind}`,
+      _subject: mill
+        ? `Fruma interest — ${kind} — ${mill}`
+        : `Fruma interest — ${kind}`,
       name,
       email,
       company,
       kind,
+      mill: mill || undefined,
     }),
   });
   if (!sent.ok) {
@@ -50,7 +58,7 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
-  console.info("interest", { name, email, company, kind, inbox: INBOX });
+  console.info("interest", { name, email, company, kind, mill: mill || undefined, inbox: INBOX });
 
   return NextResponse.json({ ok: true });
 }

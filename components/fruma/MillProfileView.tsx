@@ -2,6 +2,12 @@
 
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  EVIDENCE,
+  MARKET_LABEL,
+  SELL_MARKETS,
+  scoreMarket,
+} from "@/lib/fruma/market-score";
 import { cn } from "@/lib/utils";
 import { useFruma } from "./store";
 
@@ -54,11 +60,6 @@ const FOUND = [
   },
 ] as const;
 
-const CERTS = [
-  { title: "GOTS certified", sub: "Valid to March 2027 · knitted apparel" },
-  { title: "OEKO-TEX Standard 100", sub: "Valid to August 2027" },
-];
-
 const PRODUCTION = [
   { key: "gauges", title: "Machine gauges", sub: "18–28gg circular", action: "Add 18–28gg", added: "18–28gg circular" },
   { key: "machines", title: "Machine park", sub: "So weight and width searches can rank you", action: "Add 86 circular", added: "86 circular machines" },
@@ -100,8 +101,28 @@ const CARD: Record<string, { on: string; off: string }> = {
 };
 
 export function MillProfileView() {
-  const { millAdded, millFixed, millPct, millAdd, millFix, setMillRoom, millFile } = useFruma();
+  const {
+    millAdded,
+    millFixed,
+    millPct,
+    millAdd,
+    millFix,
+    millMarkets,
+    millEvidence,
+    millToggleMarket,
+    millAddEvidence,
+    setMillRoom,
+    millFile,
+  } = useFruma();
+  const markets = SELL_MARKETS.filter((m) => millMarkets[m]);
+  const market = scoreMarket({
+    markets,
+    evidence: millEvidence,
+    millPct,
+    hasFile: Boolean(millFile),
+  });
   const thin = millPct < 70;
+  const lawGap = markets.length > 0 && !market.ready;
 
   return (
     <div>
@@ -110,17 +131,33 @@ export function MillProfileView() {
           <p className="ui-label">Step 1 of 5 · mill profile</p>
           <h1 className="page-title mt-2 md:text-[28px]">Têxteis Vale do Ave, Lda</h1>
           <p className="page-lede mt-3">
-            Claim what Fruma already found, then fill the gaps buyers filter on.
-            The more complete this card, the more often you appear in Design
-            search — then drop the hanger list.
+            Claim the mill, tick where you sell, then put evidence on file for
+            those markets. Completeness is what Design search filters on.
+            Market evidence is what lets a brand see you as ready for EU or UK
+            law — not an audit of the floor.
           </p>
         </div>
         <Button onClick={() => setMillRoom("upload")}>
-          {thin ? "Continue with gaps" : "Continue — drop a mill file"}
+          {lawGap
+            ? "Continue — not ready for those markets yet"
+            : thin
+              ? "Continue with gaps"
+              : "Continue — drop a mill file"}
         </Button>
       </div>
 
-      {thin && (
+      {lawGap ? (
+        <div className="banner mb-6" data-tone="weld">
+          <span className="banner-bar" />
+          <p>
+            Fruma score {market.score}. {market.requiredDone} of{" "}
+            {market.requiredTotal} required items on file for{" "}
+            {markets.map((m) => MARKET_LABEL[m]).join(" · ")}. You can still
+            drop a file — you will not show as ready for those buyers until the
+            list is complete.
+          </p>
+        </div>
+      ) : thin ? (
         <div className="banner mb-6" data-tone="weld">
           <span className="banner-bar" />
           <p>
@@ -129,9 +166,9 @@ export function MillProfileView() {
             stay off search.
           </p>
         </div>
-      )}
+      ) : null}
 
-      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
         <div className="space-y-6">
           <ProfileCard title="Identity" note="Confirm or complete">
             {FOUND.map((row) => (
@@ -167,9 +204,44 @@ export function MillProfileView() {
             ))}
           </ProfileCard>
 
-          <ProfileCard title="Certifications" note="From public registries">
-            {CERTS.map((c) => (
-              <ProfileRow key={c.title} title={c.title} sub={c.sub} done action="Confirmed" />
+          <ProfileCard title="Markets & law" note="Evidence, not an audit">
+            <div className="flex flex-wrap gap-2 border-b border-line py-3">
+              {SELL_MARKETS.map((m) => {
+                const on = millMarkets[m];
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => millToggleMarket(m)}
+                    className={cn(
+                      "h-8 border px-3 text-[11px] uppercase tracking-[0.18em]",
+                      on
+                        ? "border-chalk bg-chalk text-black"
+                        : "border-line2 bg-transparent text-mute",
+                    )}
+                  >
+                    {MARKET_LABEL[m]}
+                  </button>
+                );
+              })}
+            </div>
+            {EVIDENCE.filter(
+              (e) =>
+                e.kind === "boost" ||
+                e.markets.length === 0 ||
+                e.markets.some((m) => millMarkets[m]),
+            ).map((row) => (
+              <ProfileRow
+                key={row.id}
+                title={row.title}
+                sub={row.sub}
+                missing={row.kind === "required"}
+                done={Boolean(millEvidence[row.id])}
+                action={millEvidence[row.id] ? row.added : row.action}
+                onClick={
+                  millEvidence[row.id] ? undefined : () => millAddEvidence(row.id)
+                }
+              />
             ))}
           </ProfileCard>
 
@@ -210,48 +282,97 @@ export function MillProfileView() {
           </ProfileCard>
         </div>
 
-        <aside className="lg:sticky lg:top-[60px]">
-          <p className="ui-label">How buyers see you</p>
-          <p className="mt-1 text-[13px] text-mute">
-            This is the mill card in Design search. It updates as you confirm.
-          </p>
-          <div className="mt-4 mill-card p-5">
-            <p className="text-[16px] font-semibold tracking-[-0.02em] text-chalk">
-              Têxteis Vale do Ave, Lda
+        <aside className="lg:sticky lg:top-[60px] space-y-4">
+          <div>
+            <p className="ui-label">Fruma score</p>
+            <p className="mt-1 text-[13px] text-mute">
+              Market evidence for the countries you sell into. Not a floor
+              audit. Not a substitute for a brand’s own due diligence.
             </p>
-            <p className="mt-1 spec text-[11px] text-mute">
-              Famalicão, Portugal · 983 people · circular knit
-            </p>
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              <span className="src-pill bg-ok/10 text-ok">GOTS 2027</span>
-              <span className="src-pill bg-ok/10 text-ok">OEKO-TEX</span>
-              {(Object.keys(CARD) as (keyof typeof CARD)[]).map((k) => {
-                const on = Boolean(millAdded[k]) || (k === "qualities" && millFile);
-                return (
-                  <span
-                    key={k}
-                    className="src-pill border border-line2 text-mute"
-                    style={{ opacity: on ? 1 : 0.4 }}
-                  >
-                    {on ? CARD[k].on : CARD[k].off}
-                  </span>
-                );
-              })}
-            </div>
-            <div className="mt-5">
+            <div className="mt-4 mill-card p-5">
               <div className="mb-2 flex justify-between text-[12px] text-mute">
-                <span>Profile completeness</span>
-                <b className="spec text-chalk">{millPct}%</b>
+                <span>{market.ready ? "Ready for those markets" : "Not ready yet"}</span>
+                <b className="spec text-chalk">{market.score}</b>
               </div>
               <div className="mill-bar">
-                <i style={{ width: `${millPct}%` }} />
+                <i style={{ width: `${market.score}%` }} />
               </div>
+              <p className="mt-2 spec text-[11px] text-mute">
+                {market.requiredDone}/{market.requiredTotal || "—"} required
+                {markets.length
+                  ? ` · ${markets.map((m) => MARKET_LABEL[m]).join(" · ")}`
+                  : " · pick markets"}
+              </p>
+              {market.suggestions[0] ? (
+                <p className="mt-4 border-t border-line2 pt-4 text-[13px] leading-relaxed text-mute">
+                  <b className="font-medium text-weld">Next. </b>
+                  {market.suggestions[0]}
+                </p>
+              ) : null}
+              {market.suggestions.slice(1).map((s) => (
+                <p key={s} className="mt-3 text-[13px] leading-relaxed text-mute">
+                  {s}
+                </p>
+              ))}
             </div>
-            <p className="mt-4 border-t border-line2 pt-4 text-[13px] leading-relaxed text-mute">
-              Without MOQ, lead and construction you drop out of most designer
-              searches.{" "}
-              <b className="font-medium text-weld">The file comes next — this card is the mill.</b>
+          </div>
+          <div>
+            <p className="ui-label">How buyers see you</p>
+            <p className="mt-1 text-[13px] text-mute">
+              Design search card. Completeness still decides if you appear.
             </p>
+            <div className="mt-4 mill-card p-5">
+              <p className="text-[16px] font-semibold tracking-[-0.02em] text-chalk">
+                Têxteis Vale do Ave, Lda
+              </p>
+              <p className="mt-1 spec text-[11px] text-mute">
+                Famalicão, Portugal · 983 people · circular knit
+              </p>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {market.ready ? (
+                  <span className="src-pill bg-ok/10 text-ok">
+                    Ready · {markets.map((m) => MARKET_LABEL[m]).join(" · ")}
+                  </span>
+                ) : (
+                  <span className="src-pill border border-line2 text-mute">
+                    Not ready for those markets
+                  </span>
+                )}
+                {millEvidence.gots ? (
+                  <span className="src-pill bg-ok/10 text-ok">GOTS mill programme</span>
+                ) : null}
+                {millEvidence["rs-oeko"] ? (
+                  <span className="src-pill bg-ok/10 text-ok">OEKO-TEX</span>
+                ) : null}
+                {(Object.keys(CARD) as (keyof typeof CARD)[]).map((k) => {
+                  const on = Boolean(millAdded[k]) || (k === "qualities" && millFile);
+                  return (
+                    <span
+                      key={k}
+                      className="src-pill border border-line2 text-mute"
+                      style={{ opacity: on ? 1 : 0.4 }}
+                    >
+                      {on ? CARD[k].on : CARD[k].off}
+                    </span>
+                  );
+                })}
+              </div>
+              <div className="mt-5">
+                <div className="mb-2 flex justify-between text-[12px] text-mute">
+                  <span>Search completeness</span>
+                  <b className="spec text-chalk">{millPct}%</b>
+                </div>
+                <div className="mill-bar">
+                  <i style={{ width: `${millPct}%` }} />
+                </div>
+              </div>
+              <p className="mt-4 border-t border-line2 pt-4 text-[13px] leading-relaxed text-mute">
+                Without MOQ, lead and construction you drop out of most designer
+                searches. More mill files and listing outcomes make the next
+                suggestion sharper.{" "}
+                <b className="font-medium text-weld">The file comes next — this card is the mill.</b>
+              </p>
+            </div>
           </div>
         </aside>
       </div>

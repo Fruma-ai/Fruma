@@ -71,6 +71,7 @@ export const ORIGIN_INDEX: OriginFacility[] = [
   row("Isko Denim", "Kahramanmaraş", "TR", "Türkiye", ["Textile"]),
   row("Kipaş Textiles", "Kahramanmaraş", "TR", "Türkiye", ["Textile"]),
   row("Riopele Têxteis", "Pousada de Saramagos", "PT", "Portugal", ["Textile"]),
+  row("Têxteis Vale do Ave, Lda", "Vila Nova de Famalicão", "PT", "Portugal", ["Textile"]),
   row("Paulo de Oliveira", "Covilhã", "PT", "Portugal", ["Textile"]),
   row("Somelos", "Vizela", "PT", "Portugal", ["Textile"]),
   row("Lameirinho", "Guimarães", "PT", "Portugal", ["Textile"]),

@@ -1,0 +1,4 @@
+1. Double-click this zip.
+2. Open https://github.com/Fruma-ai/Fruma/upload/main
+3. Open Fruma-website, Cmd+A, drag onto GitHub (not the zip).
+4. Commit changes.
