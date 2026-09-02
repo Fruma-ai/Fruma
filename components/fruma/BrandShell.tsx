@@ -50,8 +50,7 @@ export function BrandShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="chrome-status">
-            <span className="live-dot" aria-hidden />
-            <span>Demo · Sunspel</span>
+            <span>Sunspel · unaffiliated</span>
             <span className="spec text-[11px]">{rangeSummary().styles} styles in</span>
           </div>
           <ModeSwitch />

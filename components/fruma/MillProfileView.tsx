@@ -3,10 +3,14 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  millFileState,
+  millProfileState,
+  workshopReady,
+} from "@/lib/fruma/honesty";
+import {
   EVIDENCE,
   MARKET_LABEL,
   SELL_MARKETS,
-  scoreMarket,
 } from "@/lib/fruma/market-score";
 import { cn } from "@/lib/utils";
 import { useFruma } from "./store";
@@ -104,25 +108,25 @@ export function MillProfileView() {
   const {
     millAdded,
     millFixed,
-    millPct,
     millAdd,
     millFix,
+    millClaim,
+    millClaimed,
     millMarkets,
     millEvidence,
     millToggleMarket,
     millAddEvidence,
     setMillRoom,
     millFile,
+    millMapConfirmed,
   } = useFruma();
-  const markets = SELL_MARKETS.filter((m) => millMarkets[m]);
-  const market = scoreMarket({
-    markets,
-    evidence: millEvidence,
-    millPct,
-    hasFile: Boolean(millFile),
+  const claimed = millProfileState(millClaimed);
+  const fileState = millFileState(millFile);
+  const ready = workshopReady({
+    claimed: millClaimed,
+    file: millFile,
+    mapped: millMapConfirmed,
   });
-  const thin = millPct < 70;
-  const lawGap = markets.length > 0 && !market.ready;
 
   return (
     <div>
@@ -131,42 +135,31 @@ export function MillProfileView() {
           <p className="ui-label">Step 1 of 5 · mill profile</p>
           <h1 className="page-title mt-2 md:text-[28px]">Têxteis Vale do Ave, Lda</h1>
           <p className="page-lede mt-3">
-            Claim the mill, tick where you sell, then put evidence on file for
-            those markets. Completeness is what Design search filters on.
-            Market evidence is what lets a brand see you as ready for EU or UK
-            law — not an audit of the floor.
+            {claimed}. Public records are not a claim. Completeness is not a
+            live catalogue — never complete a blank.
           </p>
         </div>
-        <Button onClick={() => setMillRoom("upload")}>
-          {lawGap
-            ? "Continue — not ready for those markets yet"
-            : thin
-              ? "Continue with gaps"
-              : "Continue — drop a mill file"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={millClaimed ? "ok" : "outline"}
+            onClick={millClaim}
+            disabled={millClaimed}
+          >
+            {claimed}
+          </Button>
+          <Button onClick={() => setMillRoom("upload")}>Continue to file</Button>
+        </div>
       </div>
 
-      {lawGap ? (
-        <div className="banner mb-6" data-tone="weld">
-          <span className="banner-bar" />
-          <p>
-            Fruma score {market.score}. {market.requiredDone} of{" "}
-            {market.requiredTotal} required items on file for{" "}
-            {markets.map((m) => MARKET_LABEL[m]).join(" · ")}. You can still
-            drop a file — you will not show as ready for those buyers until the
-            list is complete.
-          </p>
-        </div>
-      ) : thin ? (
-        <div className="banner mb-6" data-tone="weld">
-          <span className="banner-bar" />
-          <p>
-            Profile is {millPct}% complete. MOQ, lead and gauges are what
-            designers filter on. You can still drop a file — unfilled fields
-            stay off search.
-          </p>
-        </div>
-      ) : null}
+      <div className="banner mb-6">
+        <span className="banner-bar" />
+        <p>
+          Profile {claimed}. File {fileState}.{" "}
+          {ready
+            ? "Claimed, on file, and mapped — Ready is allowed here."
+            : "Ready is not a Workshop label until claimed, on file, and mapped."}
+        </p>
+      </div>
 
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
         <div className="space-y-6">
@@ -188,7 +181,7 @@ export function MillProfileView() {
                       ? row.added
                       : row.action
                     : row.locked
-                      ? "On file"
+                      ? "Public record"
                       : millFixed[row.key]
                         ? "Confirmed"
                         : "Confirm"
@@ -274,9 +267,9 @@ export function MillProfileView() {
             <ProfileRow
               title="Fabric qualities"
               sub="Composition, weight, width, stock colours — from a mill file, not a form"
-              missing
-              done={Boolean(millAdded.qualities || millFile)}
-              action={millAdded.qualities || millFile ? "On file" : "Drop a file"}
+              missing={fileState === "Not on file"}
+              done={millMapConfirmed}
+              action={fileState}
               onClick={() => setMillRoom("upload")}
             />
           </ProfileCard>
@@ -284,68 +277,47 @@ export function MillProfileView() {
 
         <aside className="lg:sticky lg:top-[60px] space-y-4">
           <div>
-            <p className="ui-label">Fruma score</p>
-            <p className="mt-1 text-[13px] text-mute">
-              Market evidence for the countries you sell into. Not a floor
-              audit. Not a substitute for a brand’s own due diligence.
-            </p>
-            <div className="mt-4 mill-card p-5">
-              <div className="mb-2 flex justify-between text-[12px] text-mute">
-                <span>{market.ready ? "Ready for those markets" : "Not ready yet"}</span>
-                <b className="spec text-chalk">{market.score}</b>
-              </div>
-              <div className="mill-bar">
-                <i style={{ width: `${market.score}%` }} />
-              </div>
-              <p className="mt-2 spec text-[11px] text-mute">
-                {market.requiredDone}/{market.requiredTotal || "—"} required
-                {markets.length
-                  ? ` · ${markets.map((m) => MARKET_LABEL[m]).join(" · ")}`
-                  : " · pick markets"}
-              </p>
-              {market.suggestions[0] ? (
-                <p className="mt-4 border-t border-line2 pt-4 text-[13px] leading-relaxed text-mute">
-                  <b className="font-medium text-weld">Next. </b>
-                  {market.suggestions[0]}
-                </p>
-              ) : null}
-              {market.suggestions.slice(1).map((s) => (
-                <p key={s} className="mt-3 text-[13px] leading-relaxed text-mute">
-                  {s}
-                </p>
-              ))}
-            </div>
-          </div>
-          <div>
             <p className="ui-label">How buyers see you</p>
             <p className="mt-1 text-[13px] text-mute">
-              Design search card. Completeness still decides if you appear.
+              Studio search does not treat this working file as mill identities.
+              Digital is not a hanger.
             </p>
             <div className="mt-4 mill-card p-5">
               <p className="text-[16px] font-semibold tracking-[-0.02em] text-chalk">
                 Têxteis Vale do Ave, Lda
               </p>
               <p className="mt-1 spec text-[11px] text-mute">
-                Famalicão, Portugal · 983 people · circular knit
+                Famalicão, Portugal · public record · circular knit
               </p>
               <div className="mt-4 flex flex-wrap gap-1.5">
-                {market.ready ? (
-                  <span className="src-pill bg-ok/10 text-ok">
-                    Ready · {markets.map((m) => MARKET_LABEL[m]).join(" · ")}
-                  </span>
+                <span className="src-pill border border-line2 text-mute">{claimed}</span>
+                <span className="src-pill border border-line2 text-mute">{fileState}</span>
+                {ready ? (
+                  <span className="src-pill bg-ok/10 text-ok">Ready</span>
                 ) : (
                   <span className="src-pill border border-line2 text-mute">
-                    Not ready for those markets
+                    Ready is closed
                   </span>
                 )}
                 {millEvidence.gots ? (
-                  <span className="src-pill bg-ok/10 text-ok">GOTS mill programme</span>
+                  <span className="src-pill border border-line2 text-mute">
+                    GOTS mill programme — not a quality cert
+                  </span>
                 ) : null}
                 {millEvidence["rs-oeko"] ? (
-                  <span className="src-pill bg-ok/10 text-ok">OEKO-TEX</span>
+                  <span className="src-pill border border-line2 text-mute">
+                    Restricted substances on file
+                  </span>
                 ) : null}
                 {(Object.keys(CARD) as (keyof typeof CARD)[]).map((k) => {
-                  const on = Boolean(millAdded[k]) || (k === "qualities" && millFile);
+                  if (k === "qualities") {
+                    return (
+                      <span key={k} className="src-pill border border-line2 text-mute">
+                        Qualities · {fileState}
+                      </span>
+                    );
+                  }
+                  const on = Boolean(millAdded[k]);
                   return (
                     <span
                       key={k}
@@ -357,20 +329,9 @@ export function MillProfileView() {
                   );
                 })}
               </div>
-              <div className="mt-5">
-                <div className="mb-2 flex justify-between text-[12px] text-mute">
-                  <span>Search completeness</span>
-                  <b className="spec text-chalk">{millPct}%</b>
-                </div>
-                <div className="mill-bar">
-                  <i style={{ width: `${millPct}%` }} />
-                </div>
-              </div>
               <p className="mt-4 border-t border-line2 pt-4 text-[13px] leading-relaxed text-mute">
-                Without MOQ, lead and construction you drop out of most designer
-                searches. More mill files and listing outcomes make the next
-                suggestion sharper.{" "}
-                <b className="font-medium text-weld">The file comes next — this card is the mill.</b>
+                No Fruma score in Workshop. Live is not complete. A blank stays
+                a blank until claimed, received, mapped and confirmed.
               </p>
             </div>
           </div>
@@ -420,7 +381,7 @@ function ProfileRow({
       <span
         className={cn(
           "flex size-5 shrink-0 items-center justify-center spec text-[11px]",
-          done ? "text-ok" : missing ? "text-weld" : "text-ok",
+          done ? "text-ok" : "text-mute",
         )}
       >
         {done ? "✓" : missing ? "?" : "✓"}

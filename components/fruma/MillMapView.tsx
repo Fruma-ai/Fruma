@@ -54,7 +54,7 @@ export function MillMapView() {
           </h1>
           <p className="page-lede mt-3">
             Required fields are suggested. Ignore anything you don&apos;t have —
-            the next file in this layout will map itself.
+            mapping does not put qualities on the standard.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -108,7 +108,7 @@ export function MillMapView() {
               <tr>
                 <th className="w-[240px]">Fruma field</th>
                 <th>Your column</th>
-                <th>Preview from the file</th>
+                <th>Seeded preview</th>
               </tr>
             </thead>
             <tbody>
@@ -120,7 +120,7 @@ export function MillMapView() {
                       <p className="text-[13.5px] text-chalk">
                         {field.label}
                         {field.required ? (
-                          <span className="ml-1 text-weld">required</span>
+                          <span className="ml-1 text-mute">required</span>
                         ) : (
                           <span className="ml-1 text-mute">optional</span>
                         )}
@@ -147,8 +147,8 @@ export function MillMapView() {
                           field.confidence === "high"
                             ? "text-ok"
                             : field.confidence === "med"
-                              ? "text-weld"
-                              : "text-madder",
+                              ? "text-mute"
+                              : "text-mute",
                         )}
                       >
                         {field.confidence === "high"
@@ -185,8 +185,8 @@ function ApplyingCard({ step, file, rows }: { step: number; file: string; rows: 
           Mapping {rows} qualities
         </h1>
         <p className="mt-2 text-[13.5px] leading-relaxed text-mute">
-          Applying your template from {file} onto the Fruma catalogue. That
-          groundwork is what brands search — exceptions wait for you on Review.
+          Applying your template from {file}. Exceptions wait on Review. Seeded
+          rows stay Seeded — not in the live catalogue.
         </p>
         <div className="mill-bar mt-5">
           <i style={{ width: `${pct}%` }} />
@@ -198,7 +198,7 @@ function ApplyingCard({ step, file, rows }: { step: number; file: string; rows: 
               <span
                 className={cn(
                   "spec text-[11px]",
-                  i < step ? "text-ok" : i === step ? "text-weld" : "text-mute",
+                  i < step ? "text-ok" : i === step ? "text-chalk" : "text-mute",
                 )}
               >
                 {i < step ? "✓" : i === step ? "…" : "○"}

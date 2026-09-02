@@ -15,14 +15,6 @@ import { SurfaceState } from "./SurfaceState";
 import { SwatchFacts } from "./SwatchFacts";
 import { useFruma } from "./store";
 
-const STAGES: SwatchStage[] = ["desk", "ordered", "in-hand", "signed-off"];
-const STAGE_LABEL: Record<SwatchStage, string> = {
-  desk: "Desk",
-  ordered: "Ordered",
-  "in-hand": "In hand",
-  "signed-off": "Signed off",
-};
-
 export function DeskView() {
   const {
     desk,
@@ -69,19 +61,19 @@ export function DeskView() {
           <h1 className="page-title">Desk</h1>
           <p className="mt-2 max-w-[54ch] text-[14.5px] leading-relaxed text-mute">
             {desk.length} product option{desk.length === 1 ? "" : "s"}. Compare
-            the generated garments, handle live styles in store if this cloth is
-            already in the range, then pick the one that goes to Product.
+            the generated garments. Digital is not a hanger — requesting a
+            hanger does not invent a courier.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button disabled={!canOrder} variant="outline" onClick={orderSwatches}>
-            {canOrder ? "Order swatches" : "Swatches ordered"}
+            {canOrder ? "Request hanger" : "Hanger requested"}
           </Button>
         </div>
       </div>
 
       {!chosenId && (
-        <div className="banner mb-6" data-tone="weld">
+        <div className="banner mb-6">
           <span className="banner-bar" />
           <p>
             None of these is the working style yet. Pick one to send through to
@@ -170,8 +162,6 @@ function DeskOption({
         {raw ? f.raw.c : f.composition}
       </p>
 
-      <Lifecycle stage={stage} />
-
       <SwatchFacts fabric={f} raw={raw} />
       {f.feel.length > 0 && (
         <p className="mt-2 text-[12px] text-mute">{f.feel.join(" · ")}</p>
@@ -188,40 +178,25 @@ function DeskOption({
         ))}
       </div>
 
+      {stage === "ordered" ? (
+        <p className="mt-3 text-[12px] text-mute">Hanger requested. Digital is not a hanger.</p>
+      ) : null}
       <PastStyleSelect key={f.id} fabricId={f.id} fabricName={f.name} />
-      <DeskActions id={f.id} stage={stage} chosen={chosen} onPick={() => pickProduct(f.id)} />
+      <DeskActions id={f.id} chosen={chosen} onPick={() => pickProduct(f.id)} />
     </article>
-  );
-}
-
-function Lifecycle({ stage }: { stage: SwatchStage }) {
-  const stageIndex = STAGES.indexOf(stage);
-  return (
-    <ol className="mt-3 mb-1 flex gap-1" aria-label="Swatch lifecycle">
-      {STAGES.map((s, i) => (
-        <li key={s} className="min-w-0 flex-1">
-          <div className={cn("h-0.5", i <= stageIndex ? "bg-weld" : "bg-line")} />
-          <p className={cn("mt-1.5 text-[11px]", i <= stageIndex ? "text-ink" : "text-mute")}>
-            {STAGE_LABEL[s]}
-          </p>
-        </li>
-      ))}
-    </ol>
   );
 }
 
 function DeskActions({
   id,
-  stage,
   chosen,
   onPick,
 }: {
   id: string;
-  stage: SwatchStage;
   chosen: boolean;
   onPick: () => void;
 }) {
-  const { toggleDesk, advanceSwatch, setBrandRoom } = useFruma();
+  const { toggleDesk, setBrandRoom } = useFruma();
   return (
     <div className="mt-5 flex flex-wrap gap-2">
       {chosen ? (
@@ -230,16 +205,6 @@ function DeskActions({
         </Button>
       ) : (
         <Button onClick={onPick}>Take this to Product</Button>
-      )}
-      {stage === "ordered" && (
-        <Button variant="outline" onClick={() => advanceSwatch(id)}>
-          Mark in hand
-        </Button>
-      )}
-      {stage === "in-hand" && (
-        <Button variant="outline" onClick={() => advanceSwatch(id)}>
-          Sign off
-        </Button>
       )}
       <Button variant="ghost" onClick={() => toggleDesk(id)}>
         Remove

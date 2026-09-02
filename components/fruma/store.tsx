@@ -20,7 +20,13 @@ import {
   type CatalogRow,
 } from "@/lib/fruma/catalog";
 import { DEMO_BRIEF, DRAFT_PRODUCT, FABRIC_BY_ID, MAX_DESK } from "@/lib/fruma/data";
-import { seedEvidence, type SellMarket } from "@/lib/fruma/market-score";
+import {
+  FILE_RECEIVED_COPY,
+  SEEDED_FILE_COPY,
+  isOnTheStandard,
+  rowIsAsSent,
+} from "@/lib/fruma/honesty";
+import { type SellMarket } from "@/lib/fruma/market-score";
 import { APPLY_STEPS, defaultMillMap, DEMO_MILL_FILE } from "@/lib/fruma/mill-ingest";
 import {
   emptyMillLearn,
@@ -87,6 +93,7 @@ type State = {
   published: Record<string, boolean>;
   millAdded: Record<string, boolean>;
   millFixed: Record<string, boolean>;
+  millClaimed: boolean;
   millPct: number;
   millMarkets: Record<SellMarket, boolean>;
   millEvidence: Record<string, boolean>;
@@ -119,6 +126,7 @@ type State = {
 
 type Action =
   | { type: "enter"; mode: "brand" | "mill" }
+  | { type: "millClaim" }
   | { type: "setupPhase"; phase: SetupPhase }
   | { type: "setBrandRoom"; room: BrandRoom }
   | { type: "setMillRoom"; room: MillRoom }
@@ -222,9 +230,10 @@ const initial: State = {
   published: {},
   millAdded: {},
   millFixed: {},
-  millPct: 45,
-  millMarkets: { eu: true, uk: true, us: false },
-  millEvidence: seedEvidence(),
+  millClaimed: false,
+  millPct: 0,
+  millMarkets: { eu: false, uk: false, us: false },
+  millEvidence: {},
   ingestChoices: {},
   ingestPublished: false,
   insightDone: {},
@@ -245,7 +254,7 @@ const initial: State = {
   millApplyStatus: "idle",
   millApplyStep: 0,
   millColumnMap: defaultMillMap(),
-  millTemplateName: "Vale do Ave hanger list",
+  millTemplateName: "Mill template",
   millMapConfirmed: false,
   millReviewGroup: "all",
   millExceptionOpen: false,
@@ -253,7 +262,10 @@ const initial: State = {
 };
 
 function millLive(state: State): Fabric[] {
-  return liveCatalogFabrics(state.catalog, state.ingestPublished);
+  return liveCatalogFabrics(state.catalog, {
+    claimed: state.millClaimed,
+    mapped: state.millMapConfirmed,
+  });
 }
 
 function fabricLookup(state: State): Record<string, Fabric> {
@@ -286,6 +298,9 @@ function reducer(state: State, action: Action): State {
             ? "reading"
             : state.setupPhase,
       };
+    case "millClaim":
+      if (state.millClaimed) return state;
+      return { ...state, millClaimed: true };
     case "setupPhase":
       return { ...state, setupPhase: action.phase };
     case "setBrandRoom":
@@ -384,7 +399,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         swatchStage: next,
-        toast: `Swatch pack requested · ${state.deskIds.length} ${state.deskIds.length === 1 ? "quality" : "qualities"} · courier to the studio Friday`,
+        toast: "Hanger requested. Digital is not a hanger.",
         brandRoom: "desk",
       };
     }
@@ -465,7 +480,10 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         millAdded: { ...state.millAdded, [action.key]: true },
-        millPct: Math.min(100, state.millPct + 5),
+        millPct:
+          !state.millClaimed || !state.millFile || !state.millMapConfirmed
+            ? Math.min(99, state.millPct + 5)
+            : Math.min(100, state.millPct + 5),
         millMarkets:
           action.key === "markets"
             ? { eu: true, uk: true, us: true }
@@ -490,7 +508,10 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         millFixed: { ...state.millFixed, [action.key]: true },
-        millPct: Math.min(100, state.millPct + 6),
+        millPct:
+          !state.millClaimed || !state.millFile || !state.millMapConfirmed
+            ? Math.min(99, state.millPct + 6)
+            : Math.min(100, state.millPct + 6),
       };
     case "ingestChoose":
       return {
@@ -503,13 +524,13 @@ function reducer(state: State, action: Action): State {
         ingestPublished: true,
         millRoom: "catalog",
         millExceptionOpen: false,
-        toast: "Catalogue is live to the brand studio.",
+        toast: "Working file open. Not in the live catalogue.",
       };
     case "millFile":
       return {
         ...state,
         millFile: action.file,
-        millReadStatus: "ready",
+        millReadStatus: "idle",
         millReadStep: 0,
         millApplyStatus: "idle",
         millApplyStep: 0,
@@ -518,6 +539,8 @@ function reducer(state: State, action: Action): State {
         millTemplateName: action.file.name.replace(/\.[^.]+$/, ""),
         millRoom: "upload",
         millRowApproved: {},
+        toast:
+          action.file.source === "upload" ? FILE_RECEIVED_COPY : SEEDED_FILE_COPY,
       };
     case "millApplyStart":
       return { ...state, millApplyStatus: "running", millApplyStep: 0 };
@@ -530,9 +553,7 @@ function reducer(state: State, action: Action): State {
         millApplyStep: APPLY_STEPS.length,
         millMapConfirmed: true,
         millRoom: "review",
-        millAdded: { ...state.millAdded, qualities: true },
-        millPct: Math.min(100, Math.max(state.millPct, 78)),
-        toast: "Mapped to the Fruma standard — review the exceptions.",
+        toast: "Mapped. Exceptions stay on Review. Not in the live catalogue.",
       };
     case "millMapField":
       return {
@@ -582,7 +603,7 @@ function reducer(state: State, action: Action): State {
         millExceptionOpen: false,
         millRoom: "catalog",
         ingestPublished: true,
-        toast: "Remaining suggestions approved · catalogue is ready",
+        toast: "Remaining suggestions approved. Not in the live catalogue.",
       };
     }
     case "millException":
@@ -641,7 +662,22 @@ function reducer(state: State, action: Action): State {
         catalog: state.catalog.map((row) =>
           ids.has(row.id) ? { ...row, status: "confirmed" as const } : row,
         ),
-        toast: `Confirmed · ${action.ids.length} live in the mill index`,
+        toast: `Confirmed · ${action.ids.length}. ${
+          action.ids.some((id) => {
+            const row = state.catalog.find((r) => r.id === id);
+            return (
+              row &&
+              isOnTheStandard({
+                claimed: state.millClaimed,
+                mapped: state.millMapConfirmed,
+                rowConfirmed: true,
+                asSent: rowIsAsSent(row),
+              })
+            );
+          })
+            ? "On the standard"
+            : "Not in the live catalogue"
+        }`,
       };
     }
     case "catalogField": {
@@ -732,6 +768,7 @@ type Store = State & {
   approveAI: () => void;
   publish: (dest: string) => void;
   millAdd: (key: string) => void;
+  millClaim: () => void;
   millFix: (key: string) => void;
   millToggleMarket: (market: SellMarket) => void;
   millAddEvidence: (id: string) => void;
@@ -769,17 +806,17 @@ export function FrumaProvider({ children }: { children: ReactNode }) {
 
   const results = useMemo(
     () => state.resultIds.map((id) => fabricLookup(state)[id]).filter(Boolean),
-    [state.resultIds, state.catalog, state.ingestPublished],
+    [state.resultIds, state.catalog, state.millClaimed, state.millMapConfirmed],
   );
   const desk = useMemo(
     () => state.deskIds.map((id) => fabricLookup(state)[id]).filter(Boolean),
-    [state.deskIds, state.catalog, state.ingestPublished],
+    [state.deskIds, state.catalog, state.millClaimed, state.millMapConfirmed],
   );
   const productFabric = useMemo(
     () => resolveProductFabric(state),
     // chosen cloth on the desk is the working product
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.deskIds, state.chosenId, state.catalog, state.ingestPublished],
+    [state.deskIds, state.chosenId, state.catalog, state.millClaimed, state.millMapConfirmed],
   );
   const chosenIndex = useMemo(() => {
     if (!state.chosenId) return -1;
@@ -982,19 +1019,24 @@ export function FrumaProvider({ children }: { children: ReactNode }) {
     approveAI: () => dispatch({ type: "aiApprove" }),
     publish: (dest) => dispatch({ type: "publish", dest }),
     millAdd: (key) => dispatch({ type: "millAdd", key }),
+    millClaim: () => dispatch({ type: "millClaim" }),
     millFix: (key) => dispatch({ type: "millFix", key }),
     millToggleMarket: (market) => dispatch({ type: "millToggleMarket", market }),
     millAddEvidence: (id) => dispatch({ type: "millEvidence", id }),
     ingestChoose: (i, choice) => dispatch({ type: "ingestChoose", i, choice }),
     ingestPublish: () => dispatch({ type: "ingestPublish" }),
     attachMillFile: (file) => {
-      const next: MillFile = file ?? {
-        name: DEMO_MILL_FILE.name,
-        size: DEMO_MILL_FILE.size,
-        rows: stateRef.current.catalog.length || DEMO_MILL_FILE.rows,
-        source: "demo",
-      };
-      dispatch({ type: "millFile", file: next });
+      const next: MillFile =
+        file ?? {
+          name: DEMO_MILL_FILE.name,
+          size: DEMO_MILL_FILE.size,
+          rows: stateRef.current.catalog.length,
+          source: "demo",
+        };
+      dispatch({
+        type: "millFile",
+        file: next.source === "upload" ? { ...next, rows: 0 } : next,
+      });
     },
     setMillMapField: (key, column) => dispatch({ type: "millMapField", key, column }),
     setMillTemplateName: (name) => dispatch({ type: "millTemplateName", name }),

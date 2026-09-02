@@ -3,21 +3,24 @@
 import { useRef } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FILE_RECEIVED_COPY, SEEDED_FILE_COPY, millFileState } from "@/lib/fruma/honesty";
 import { DEMO_MILL_FILE } from "@/lib/fruma/mill-ingest";
 import { useFruma } from "./store";
 
 export function MillUploadView() {
-  const { millFile, attachMillFile, setMillRoom } = useFruma();
+  const { millFile, attachMillFile, setMillRoom, catalog } = useFruma();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const takeFile = (file: File) => {
     attachMillFile({
       name: file.name,
       size: file.size > 1024 ? `${Math.round(file.size / 1024)} KB` : `${file.size} B`,
-      rows: DEMO_MILL_FILE.rows,
+      rows: 0,
       source: "upload",
     });
   };
+
+  const fileState = millFileState(millFile);
 
   return (
     <div>
@@ -26,7 +29,7 @@ export function MillUploadView() {
         <h1 className="page-title mt-2 md:text-[28px]">Drop the file you already have.</h1>
         <p className="page-lede mt-3">
           Hanger list, line sheet, spec spreadsheet, or a photograph of a card.
-          Fruma maps it to the standard catalogue — you do not retype qualities.
+          A drop is receipt only — not a mapping, and not a live catalogue.
         </p>
       </div>
 
@@ -46,14 +49,19 @@ export function MillUploadView() {
 
       {millFile ? (
         <div className="space-y-6">
-          <section className="mill-card p-5">
-            <p className="ui-label">Your uploaded file</p>
-            <div className="mill-file mt-3">
+          <section className="mill-card p-5" role="status">
+            <p className="ui-label">{fileState}</p>
+            <p className="mt-3 text-[15px] font-medium text-chalk">
+              {millFile.source === "upload" ? FILE_RECEIVED_COPY : SEEDED_FILE_COPY}
+            </p>
+            <div className="mill-file mt-4">
               <div>
                 <p className="text-[15px] font-medium text-chalk">{millFile.name}</p>
                 <p className="mt-1 spec text-[12px] text-mute">
-                  {millFile.size} · {millFile.rows} qualities ·{" "}
-                  {millFile.source === "demo" ? "demo hanger list" : "uploaded"}
+                  {millFile.size}
+                  {millFile.source === "demo"
+                    ? ` · ${catalog.length} qualities · ${fileState}`
+                    : ` · ${fileState} · Unknown row count`}
                 </p>
               </div>
               <Button variant="ghost" size="sm" onClick={() => inputRef.current?.click()}>
@@ -67,8 +75,8 @@ export function MillUploadView() {
             </Button>
             <Button onClick={() => setMillRoom("map")}>Continue to mapping</Button>
             <p className="text-[12.5px] text-mute">
-              Next: match mill columns to the Fruma standard. The file is not
-              rewritten.
+              Next: match mill columns to the Fruma standard. The catalogue does
+              not change until a quality is claimed, received, mapped and confirmed.
             </p>
           </div>
         </div>
@@ -87,29 +95,29 @@ export function MillUploadView() {
                 takeFile(file);
               }}
             >
-              <Upload size={22} strokeWidth={1.6} className="text-weld" aria-hidden />
+              <Upload size={22} strokeWidth={1.6} className="text-mute" aria-hidden />
               <p className="text-[16px] font-semibold tracking-[-0.02em] text-chalk">
                 Drag and drop your mill file, or click to browse
               </p>
               <p className="spec text-[12px] text-mute">
                 .csv · .xlsx · .json · .pdf · photo of a hanger card
               </p>
-              <span className="mt-1 inline-flex h-9 items-center bg-weld px-4 text-[13px] font-medium text-[#1a1400]">
+              <span className="mt-1 inline-flex h-9 items-center border border-line2 px-4 text-[13px] font-medium text-chalk">
                 Choose file
               </span>
             </button>
 
             <button
               type="button"
-              className="mt-3 w-full mill-card px-4 py-3 text-left hover:border-weld"
+              className="mt-3 w-full mill-card px-4 py-3 text-left hover:border-line"
               onClick={() => attachMillFile()}
             >
               <p className="text-[13.5px] font-medium text-chalk">
-                Demo file · {DEMO_MILL_FILE.name}
+                Seeded · {DEMO_MILL_FILE.name}
               </p>
               <p className="mt-0.5 spec text-[12px] text-mute">
-                {DEMO_MILL_FILE.size} · {DEMO_MILL_FILE.rows} qualities · Vale do
-                Ave hanger list — click to use
+                {DEMO_MILL_FILE.size} · {catalog.length} qualities · Seeded — not
+                as sent
               </p>
             </button>
           </div>

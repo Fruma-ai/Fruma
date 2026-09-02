@@ -9,18 +9,22 @@ import {
   rawFor,
   type CatalogRow,
 } from "@/lib/fruma/catalog";
+import {
+  countOnTheStandard,
+  isOnTheStandard,
+  millCatalogueState,
+  millFileState,
+  millMapState,
+  millProfileState,
+  reviewRowLabel,
+  rowIsAsSent,
+  rowProvenance,
+  workshopReady,
+} from "@/lib/fruma/honesty";
 import { rankMillOptions } from "@/lib/fruma/mill-learn";
 import type { CatalogField, CatalogFilter } from "@/lib/fruma/types";
 import { cn } from "@/lib/utils";
 import { useFruma } from "./store";
-
-const FILTERS: { id: CatalogFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "review", label: "Needs a look" },
-  { id: "ready", label: "Ready" },
-  { id: "confirmed", label: "Live" },
-  { id: "gap", label: "Gaps" },
-];
 
 const FIXES: { needle: string; label: (n: number) => string }[] = [
   { needle: "width in inches", label: (n) => `${n} still in inches — apply cm` },
@@ -48,7 +52,7 @@ export function CatalogView() {
     setMillRoom,
     millFile,
     millMapConfirmed,
-    ingestPublished,
+    millClaimed,
   } = useFruma();
 
   const counts = catalogCounts(catalog);
@@ -56,10 +60,30 @@ export function CatalogView() {
   const selectedCount = catalogSelected.length;
   const allVisibleSelected =
     visible.length > 0 && visible.every((r) => catalogSelected.includes(r.id));
+  const mapped = millMapConfirmed;
+  const ready = workshopReady({
+    claimed: millClaimed,
+    file: millFile,
+    mapped,
+  });
+  const onStandard = countOnTheStandard(catalog, {
+    claimed: millClaimed,
+    mapped,
+  });
+  const catalogueState = millCatalogueState(onStandard);
+  const provenance = rowProvenance();
   const hit =
     millLearn.picks === 0
       ? null
       : Math.round((millLearn.firstHits / millLearn.picks) * 100);
+
+  const filters: { id: CatalogFilter; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "review", label: "Unconfirmed" },
+    ...(ready ? [{ id: "ready" as const, label: "Ready" }] : []),
+    { id: "confirmed", label: "Confirmed" },
+    { id: "gap", label: "Unknown remains" },
+  ];
 
   return (
     <div>
@@ -68,9 +92,8 @@ export function CatalogView() {
           <p className="ui-label">Step 5 of 5 · working file</p>
           <h1 className="page-title mt-1">Catalogue</h1>
           <p className="page-lede mt-2">
-            {counts.total} qualities in this drop. Confirmed rows are what
-            designers search in the brand studio — mill file in, Fruma standard
-            out. Gaps stay here.
+            {counts.total} qualities · {provenance}. {catalogueState}. Live is
+            not complete.
           </p>
         </div>
         <Button variant="outline" onClick={() => setMillRoom("upload")}>
@@ -78,44 +101,40 @@ export function CatalogView() {
         </Button>
       </div>
 
-      {!ingestPublished && (
-        <div className="banner mb-5" data-tone="weld">
-          <span className="banner-bar" />
-          <p>
-            {millFile && millMapConfirmed
-              ? "Exceptions are still open. Confirm mappings on Review, or apply the Fruma standard here."
-              : millFile
-                ? "This drop is mapped but not reviewed. Finish Review so brands only see confirmed qualities."
-                : "This is last season’s working file. Drop a new hanger list from Profile or File to refresh it."}{" "}
-            <button
-              type="button"
-              className="font-medium text-chalk underline decoration-line underline-offset-2"
-              onClick={() =>
-                setMillRoom(millFile ? (millMapConfirmed ? "review" : "map") : "upload")
-              }
-            >
-              {millFile ? "Back to the ingest" : "Drop a mill file"}
-            </button>
-          </p>
-        </div>
-      )}
+      <div className="banner mb-5">
+        <span className="banner-bar" />
+        <p>
+          {millProfileState(millClaimed)} · {millFileState(millFile)} ·{" "}
+          {millMapState(millFile, mapped)}. {catalogueState}. Seeded rows are
+          not Vale do Ave as-sent.{" "}
+          <button
+            type="button"
+            className="font-medium text-chalk underline decoration-line underline-offset-2"
+            onClick={() =>
+              setMillRoom(millFile ? (mapped ? "review" : "map") : "upload")
+            }
+          >
+            {millFile ? "Back to the ingest" : "Drop a mill file"}
+          </button>
+        </p>
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
         <span>
-          <b className="spec">{counts.review}</b>{" "}
-          <span className="text-mute">need a look</span>
-        </span>
-        <span>
-          <b className="spec">{counts.ready}</b>{" "}
-          <span className="text-mute">ready to apply</span>
+          <b className="spec">{counts.review + counts.ready}</b>{" "}
+          <span className="text-mute">unconfirmed</span>
         </span>
         <span>
           <b className="spec">{counts.confirmed}</b>{" "}
-          <span className="text-mute">live</span>
+          <span className="text-mute">confirmed</span>
+        </span>
+        <span>
+          <b className="spec">{onStandard}</b>{" "}
+          <span className="text-mute">on the standard</span>
         </span>
         <span>
           <b className="spec">{counts.gap}</b>{" "}
-          <span className="text-mute">gaps</span>
+          <span className="text-mute">unknown remains</span>
         </span>
         <span className="ml-auto text-[12.5px] text-mute">
           {hit === null
@@ -133,7 +152,7 @@ export function CatalogView() {
           aria-label="Filter catalogue"
           className="h-8 min-w-[200px] flex-1 border border-line bg-transparent px-2.5 text-[13px] text-chalk placeholder:text-mute"
         />
-        {FILTERS.map((f) => (
+        {filters.map((f) => (
           <button
             key={f.id}
             type="button"
@@ -154,7 +173,7 @@ export function CatalogView() {
         const rows = bulkIssue(visible, fix.needle);
         if (rows.length === 0) return null;
         return (
-          <div key={fix.needle} className="banner" data-tone="weld">
+          <div key={fix.needle} className="banner">
             <span className="banner-bar" />
             <p className="min-w-0 flex-1 text-[13px]">{fix.label(rows.length)}</p>
             <Button
@@ -198,7 +217,7 @@ export function CatalogView() {
                 />
               </th>
               <th>Article</th>
-              <th>As sent</th>
+              <th>{provenance}</th>
               <th>Structure</th>
               <th>Composition</th>
               <th>Weight</th>
@@ -212,6 +231,9 @@ export function CatalogView() {
               <CatalogRowView
                 key={row.id}
                 row={row}
+                provenance={rowProvenance(row)}
+                claimed={millClaimed}
+                mapped={mapped}
                 selected={catalogSelected.includes(row.id)}
                 onToggle={() => toggleCatalogRow(row.id)}
                 onField={setCatalogField}
@@ -229,32 +251,35 @@ export function CatalogView() {
 
 function CatalogRowView({
   row,
+  provenance,
+  claimed,
+  mapped,
   selected,
   onToggle,
   onField,
 }: {
   row: CatalogRow;
+  provenance: string;
+  claimed: boolean;
+  mapped: boolean;
   selected: boolean;
   onToggle: () => void;
   onField: (id: string, field: CatalogField, value: string) => void;
 }) {
   const { millLearn } = useFruma();
-  const tone =
-    row.status === "confirmed"
-      ? "text-ok"
-      : row.status === "gap"
-        ? "text-madder"
-        : row.status === "review"
-          ? "text-weld"
-          : "text-mute";
-  const statusLabel =
-    row.status === "confirmed"
-      ? "Live"
-      : row.status === "gap"
-        ? "Gap"
-        : row.status === "review"
-          ? "Look"
-          : "Ready";
+  const review = reviewRowLabel(row.status);
+  const onStandard = isOnTheStandard({
+    claimed,
+    mapped,
+    rowConfirmed: row.status === "confirmed",
+    asSent: rowIsAsSent(row),
+  });
+  const weld = mapped && review === "Confirmed" && provenance !== "Seeded";
+  const tone = onStandard
+    ? "text-ok"
+    : weld
+      ? "text-weld"
+      : "text-mute";
 
   return (
     <tr className={selected ? "bg-white/3" : undefined}>
@@ -263,7 +288,7 @@ function CatalogRowView({
       </td>
       <td>
         <p className="spec text-[12px] text-chalk">{row.article}</p>
-        <p className="mt-0.5 spec text-[11px] text-mute">{row.confidence}%</p>
+        <p className="mt-0.5 spec text-[11px] text-mute">{provenance}</p>
       </td>
       <td>
         <p className="spec text-[12px] text-raw">{row.raw.construction}</p>
@@ -279,7 +304,9 @@ function CatalogRowView({
           />
         </td>
       ))}
-      <td className={cn("spec text-[12px]", tone)}>{statusLabel}</td>
+      <td className={cn("spec text-[12px]", tone)}>
+        {onStandard ? "On the standard" : review}
+      </td>
     </tr>
   );
 }
@@ -303,9 +330,10 @@ function FieldSelect({
       </span>
       <select
         className="suggest-select w-full max-w-[160px] border-line bg-transparent text-chalk"
-        value={value || ranked[0] || ""}
+        value={value || ""}
         onChange={(e) => onPick(e.target.value)}
       >
+        <option value="">Unknown</option>
         {ranked.map((opt, i) => (
           <option key={opt} value={opt}>
             {i === 0 && !value ? `Suggested — ${opt}` : opt}

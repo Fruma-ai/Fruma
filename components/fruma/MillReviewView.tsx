@@ -8,6 +8,12 @@ import {
   CATALOG_FIELDS,
   type CatalogRow,
 } from "@/lib/fruma/catalog";
+import {
+  countOnTheStandard,
+  millCatalogueState,
+  reviewRowLabel,
+  rowProvenance,
+} from "@/lib/fruma/honesty";
 import { EXCEPTION_GROUPS, frumaPath } from "@/lib/fruma/mill-ingest";
 import { rankMillOptions } from "@/lib/fruma/mill-learn";
 import type { CatalogField } from "@/lib/fruma/types";
@@ -24,6 +30,7 @@ export function MillReviewView() {
     millFile,
     millLearn,
     millMapConfirmed,
+    millClaimed,
     setMillReviewGroup,
     approveMillRow,
     approveAllMill,
@@ -35,6 +42,7 @@ export function MillReviewView() {
   const [query, setQuery] = useState("");
 
   const counts = catalogCounts(catalog);
+  const provenance = rowProvenance();
   const pending = catalog.filter(
     (r) => r.status === "review" || r.status === "ready" || r.status === "gap",
   );
@@ -93,9 +101,10 @@ export function MillReviewView() {
             Approve the mappings that still need a look.
           </h1>
           <p className="page-lede mt-3">
-            {millFile.rows} qualities from {millFile.name}. High-confidence rows
-            are suggested. You only handle inches, ounces, mill composition
-            strings, and gaps.
+            Review by exception. {provenance} working file
+            {millFile ? ` · ${millFile.name}` : ""}. No inferred GOTS or origin.
+            Confirming a row is not On the standard until claimed, received,
+            mapped and confirmed.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -114,16 +123,16 @@ export function MillReviewView() {
 
       <div className="mb-5 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
         <span>
-          <b className="spec">{counts.review}</b>{" "}
-          <span className="text-mute">need a look</span>
-        </span>
-        <span>
-          <b className="spec">{counts.ready}</b>{" "}
-          <span className="text-mute">suggested</span>
+          <b className="spec">{counts.review + counts.ready}</b>{" "}
+          <span className="text-mute">unconfirmed</span>
         </span>
         <span>
           <b className="spec">{counts.gap}</b>{" "}
-          <span className="text-mute">gaps</span>
+          <span className="text-mute">unknown remains</span>
+        </span>
+        <span>
+          <b className="spec">{counts.confirmed}</b>{" "}
+          <span className="text-mute">confirmed</span>
         </span>
         <span>
           <b className="spec">{Object.keys(millRowApproved).length}</b>{" "}
@@ -180,7 +189,7 @@ export function MillReviewView() {
               <thead>
                 <tr>
                   <th>Quality</th>
-                  <th>As the mill sent it</th>
+                  <th>{provenance}</th>
                   <th>Fruma mapping</th>
                   <th className="w-[96px]" />
                 </tr>
@@ -199,6 +208,7 @@ export function MillReviewView() {
                     )}
                     onField={setCatalogField}
                     onApprove={() => approveMillRow(row.id)}
+                    provenance={provenance}
                   />
                 ))}
               </tbody>
@@ -209,8 +219,8 @@ export function MillReviewView() {
           )}
           {visible.length > 24 && (
             <p className="mt-3 text-[12.5px] text-mute">
-              Showing 24 of {visible.length}. Approve all remaining, or open
-              Catalogue for the full drop.
+              Showing 24 of {visible.length}. Confirm remaining, or open
+              Catalogue for the working file.
             </p>
           )}
         </div>
@@ -224,8 +234,14 @@ export function MillReviewView() {
               {unapproved.length} qualities still unapproved.
             </h2>
             <p className="mt-2 text-[13.5px] leading-relaxed text-mute">
-              Approve Fruma&apos;s suggestions for the rest, or keep them out of
-              the live catalogue until you look.
+              Approve Fruma&apos;s suggestions for the rest, or keep them{" "}
+              {millCatalogueState(
+                countOnTheStandard(catalog, {
+                  claimed: millClaimed,
+                  mapped: millMapConfirmed,
+                }),
+              ).toLowerCase()}
+              . Seeded rows stay Seeded.
             </p>
             <div className="mt-5 flex flex-col gap-2">
               <Button onClick={approveAllMill}>
@@ -257,19 +273,24 @@ function ReviewRow({
   ranked,
   onField,
   onApprove,
+  provenance,
 }: {
   row: CatalogRow;
   approved: boolean;
   ranked: string[];
   onField: (id: string, field: CatalogField, value: string) => void;
   onApprove: () => void;
+  provenance: string;
 }) {
-  const structure = row.values.structure || ranked[0] || "";
+  const structure = row.values.structure || "";
+  const review = reviewRowLabel(row.status);
   return (
     <tr>
       <td>
         <p className="spec text-[12px] text-chalk">{row.article}</p>
-        <p className="mt-0.5 spec text-[11px] text-mute">{row.confidence}% confidence</p>
+        <p className="mt-0.5 spec text-[11px] text-mute">
+          {review} · {provenance}
+        </p>
       </td>
       <td>
         <p className="text-[13px] text-raw">{row.raw.construction}</p>
@@ -282,24 +303,25 @@ function ReviewRow({
           onChange={(e) => onField(row.id, "structure", e.target.value)}
           aria-label={`Fruma structure for ${row.article}`}
         >
+          <option value="">Unknown</option>
           {ranked.map((opt, i) => (
             <option key={opt} value={opt}>
-              {i === 0 ? `Suggested — ${opt}` : opt}
+              {i === 0 && !structure ? `Suggested — ${opt}` : opt}
             </option>
           ))}
         </select>
         <p className="mt-1 spec text-[11px] text-mute">{frumaPath(structure)}</p>
         <p className="mt-0.5 spec text-[11px] text-mute">
           {CATALOG_FIELDS.filter((f) => f.key !== "structure")
-            .map((f) => row.values[f.key] || row.options[f.key]?.[0])
+            .map((f) => row.values[f.key])
             .filter(Boolean)
             .slice(0, 2)
-            .join(" · ")}
+            .join(" · ") || "Unknown"}
         </p>
       </td>
       <td>
         <Button size="sm" variant={approved ? "ok" : "outline"} onClick={onApprove}>
-          {approved ? "Approved" : "Approve"}
+          {approved ? "Confirmed" : "Confirm"}
         </Button>
       </td>
     </tr>

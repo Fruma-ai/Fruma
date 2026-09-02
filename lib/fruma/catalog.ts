@@ -1,3 +1,4 @@
+import { isOnTheStandard, rowIsAsSent, type RowProvenance } from "./honesty";
 import type { CatalogField, CatalogFilter, CatalogStatus, ColourName, Fabric, FabricStructure } from "./types";
 import { COLOURS } from "./cloth";
 import { rankMillOptions, type MillLearn } from "./mill-learn";
@@ -18,6 +19,8 @@ export type CatalogRow = {
   issues: string[];
   confidence: number;
   status: CatalogStatus;
+  /** Seeded until a parser emits as-sent rows. Never inferred from file drop. */
+  provenance: RowProvenance;
 };
 
 type Template = {
@@ -176,7 +179,7 @@ const TEMPLATES: Template[] = [
       composition: [
         "100% cotton — organic unconfirmed",
         "100% cotton",
-        "GOTS cotton (needs cert)",
+        "cotton + elastane",
       ],
       gsm: ["168 g/m²", "170 g/m²", "unpublished"],
       widthCm: ["165 cm", "160 cm", "—"],
@@ -276,12 +279,8 @@ export function buildCatalog(): CatalogRow[] {
     for (let i = 0; i < 6; i += 1) {
       n += 1;
       const colours = t.colours[i % t.colours.length] ?? "";
-      const status: CatalogStatus =
-        t.status === "gap" && i < 4
-          ? "gap"
-          : t.status === "confirmed" && i > 1
-            ? "ready"
-            : t.status;
+      const gap = t.status === "gap" || !colours;
+      const status: CatalogStatus = gap ? "gap" : "review";
       const confidence = Math.max(32, t.confidence - (i % 3) * 4);
       rows.push({
         id: `vda-${2400 + n}`,
@@ -307,7 +306,8 @@ export function buildCatalog(): CatalogRow[] {
           !colours ? "no stock colours" : "",
         ].filter(Boolean),
         confidence,
-        status: !colours && status !== "confirmed" ? (t.status === "gap" ? "gap" : status) : status,
+        status,
+        provenance: "seeded",
       });
     }
   }
@@ -497,29 +497,37 @@ function millFinish(construction: string) {
   return "Not on file";
 }
 
-/** Qualities a designer can search once the mill file is on the Fruma standard. */
-export function liveCatalogFabrics(rows: CatalogRow[], published: boolean): Fabric[] {
+/**
+ * Qualities a designer can search only when claimed + mapped + confirmed on an
+ * as-sent (parsed) row. Seeded VDA-#### rows never qualify. Upload is not as-sent.
+ */
+export function liveCatalogFabrics(
+  rows: CatalogRow[],
+  gate: { claimed: boolean; mapped: boolean },
+): Fabric[] {
   return rows
-    .filter((r) => {
-      if (r.status === "gap" || r.status === "review") return false;
-      if (r.status === "confirmed") return true;
-      if (r.status === "ready") return published || r.confidence >= 86;
-      return false;
-    })
+    .filter((r) =>
+      isOnTheStandard({
+        claimed: gate.claimed,
+        mapped: gate.mapped,
+        rowConfirmed: r.status === "confirmed",
+        asSent: rowIsAsSent(r),
+      }),
+    )
     .map(catalogToFabric)
     .filter((f): f is Fabric => Boolean(f));
 }
 
 export function catalogToFabric(row: CatalogRow): Fabric | null {
-  const structure = asStructure(row.values.structure || row.options.structure[0] || "");
+  const structure = asStructure(row.values.structure);
   if (!structure) return null;
-  const composition = row.values.composition || "cotton";
+  const composition = row.values.composition;
+  if (!composition) return null;
   const gsmLabel = row.values.gsm || row.raw.weight;
   const widthLabel = row.values.widthCm || row.raw.width;
   const moqLabel = row.values.moqM || row.raw.moq;
   const gsm = /unpublish/i.test(gsmLabel) ? 0 : parseNum(gsmLabel);
   const ways = waysFromMill(row.raw.colours);
-  const organic = /organic|gots/i.test(composition);
   return {
     id: row.id,
     name: `${row.article} ${structure}`,
@@ -530,10 +538,10 @@ export function catalogToFabric(row: CatalogRow): Fabric | null {
     widthCm: parseNum(widthLabel),
     composition,
     moqM: /on req|—/i.test(moqLabel) ? 0 : parseNum(moqLabel),
-    leadWeeks: 2,
+    leadWeeks: 0,
     priceGbp: 0,
-    certs: organic ? ["GOTS 2027"] : [],
-    feel: ["from mill hanger list"],
+    certs: [],
+    feel: [],
     ways,
     baseHex: COLOURS[ways[0]] ?? "#27364F",
     raw: {
@@ -544,7 +552,6 @@ export function catalogToFabric(row: CatalogRow): Fabric | null {
     },
     finish: millFinish(row.raw.construction),
     care: "Ask the mill — not on this hanger list",
-    fibreOrigin: "Portugal",
     source: "mill-file",
   };
 }
