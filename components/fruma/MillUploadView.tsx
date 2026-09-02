@@ -3,24 +3,39 @@
 import { useRef } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FILE_RECEIVED_COPY, SEEDED_FILE_COPY, millFileState } from "@/lib/fruma/honesty";
+import {
+  FILE_RECEIVED_COPY,
+  SEEDED_FILE_COPY,
+  millFileState,
+} from "@/lib/fruma/honesty";
+import { formatMillDepositException } from "@/lib/fruma/mill-deposit";
 import { DEMO_MILL_FILE } from "@/lib/fruma/mill-ingest";
+import { AsSentList } from "./AsSentList";
 import { useFruma } from "./store";
 
 export function MillUploadView() {
-  const { millFile, attachMillFile, setMillRoom, catalog } = useFruma();
+  const {
+    millFile,
+    millDeposits,
+    millDepositError,
+    millDepositPosting,
+    attachMillFile,
+    depositMillFile,
+    setMillRoom,
+    catalog,
+  } = useFruma();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const takeFile = (file: File) => {
-    attachMillFile({
-      name: file.name,
-      size: file.size > 1024 ? `${Math.round(file.size / 1024)} KB` : `${file.size} B`,
-      rows: 0,
-      source: "upload",
-    });
+    void depositMillFile(file);
   };
 
   const fileState = millFileState(millFile);
+  const latest = millDeposits[millDeposits.length - 1];
+  const receivedCopy =
+    millFile?.source === "upload"
+      ? (latest?.fileStepSentence ?? FILE_RECEIVED_COPY)
+      : SEEDED_FILE_COPY;
 
   return (
     <div>
@@ -39,6 +54,7 @@ export function MillUploadView() {
         accept=".csv,.xlsx,.xls,.json,.pdf,image/*"
         className="sr-only"
         aria-label="Choose mill file"
+        disabled={millDepositPosting}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (!file) return;
@@ -47,13 +63,32 @@ export function MillUploadView() {
         }}
       />
 
+      {millDepositError ? (
+        <section className="mill-card mb-6 p-5" role="alert">
+          <p className="ui-label">{millDepositError.code}</p>
+          <p className="mt-3 text-[15px] font-medium text-chalk">
+            {formatMillDepositException(millDepositError)}
+          </p>
+          <p className="mt-2 text-[13px] text-mute">
+            Not mapped. Not in the live catalogue. No rows invented.
+          </p>
+        </section>
+      ) : null}
+
+      {millDepositPosting ? (
+        <section className="mill-card mb-6 p-5" role="status">
+          <p className="ui-label">File</p>
+          <p className="mt-3 text-[15px] font-medium text-chalk">
+            Sending the mill file…
+          </p>
+        </section>
+      ) : null}
+
       {millFile ? (
         <div className="space-y-6">
           <section className="mill-card p-5" role="status">
             <p className="ui-label">{fileState}</p>
-            <p className="mt-3 text-[15px] font-medium text-chalk">
-              {millFile.source === "upload" ? FILE_RECEIVED_COPY : SEEDED_FILE_COPY}
-            </p>
+            <p className="mt-3 text-[15px] font-medium text-chalk">{receivedCopy}</p>
             <div className="mill-file mt-4">
               <div>
                 <p className="text-[15px] font-medium text-chalk">{millFile.name}</p>
@@ -64,16 +99,24 @@ export function MillUploadView() {
                     : ` · ${fileState} · Unknown row count`}
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => inputRef.current?.click()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={millDepositPosting}
+                onClick={() => inputRef.current?.click()}
+              >
                 Replace
               </Button>
             </div>
           </section>
+          {millFile.source === "upload" ? <AsSentList deposits={millDeposits} /> : null}
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="outline" onClick={() => setMillRoom("profile")}>
               Back
             </Button>
-            <Button onClick={() => setMillRoom("map")}>Continue to mapping</Button>
+            <Button disabled={millDepositPosting} onClick={() => setMillRoom("map")}>
+              Continue to mapping
+            </Button>
             <p className="text-[12.5px] text-mute">
               Next: match mill columns to the Fruma standard. The catalogue does
               not change until a quality is claimed, received, mapped and confirmed.
@@ -86,12 +129,13 @@ export function MillUploadView() {
             <button
               type="button"
               className="mill-drop w-full"
+              disabled={millDepositPosting}
               onClick={() => inputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
                 const file = e.dataTransfer.files?.[0];
-                if (!file) return;
+                if (!file || millDepositPosting) return;
                 takeFile(file);
               }}
             >
@@ -110,6 +154,7 @@ export function MillUploadView() {
             <button
               type="button"
               className="mt-3 w-full mill-card px-4 py-3 text-left hover:border-line"
+              disabled={millDepositPosting}
               onClick={() => attachMillFile()}
             >
               <p className="text-[13.5px] font-medium text-chalk">

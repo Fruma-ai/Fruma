@@ -73,3 +73,131 @@ export function toMillDepositResponse(input: MillDepositMapperInput): MillDeposi
     fileStepSentence: FILE_RECEIVED_COPY,
   };
 }
+
+export const MILL_DEPOSITS_PATH = "/api/mill/deposits";
+
+export type AsSentQualityRow = MillDepositQuality & {
+  depositId: string;
+  filename: string;
+};
+
+export type MillDepositFailure = MillDepositException;
+
+export function fileSizeLabel(bytes: number): string {
+  return bytes > 1024 ? `${Math.round(bytes / 1024)} KB` : `${bytes} B`;
+}
+
+export function isMillDepositResponse(value: unknown): value is MillDepositResponse {
+  if (!value || typeof value !== "object") return false;
+  const body = value as MillDepositResponse;
+  return (
+    typeof body.depositId === "string" &&
+    typeof body.filename === "string" &&
+    typeof body.receivedAt === "string" &&
+    typeof body.sha256 === "string" &&
+    Array.isArray(body.qualities) &&
+    Array.isArray(body.exceptions) &&
+    body.fileStepSentence === FILE_RECEIVED_COPY
+  );
+}
+
+export function millDepositFailureFromBody(
+  status: number,
+  body: unknown,
+): MillDepositFailure {
+  if (body && typeof body === "object") {
+    const rec = body as Record<string, unknown>;
+    if (typeof rec.code === "string" && typeof rec.message === "string") {
+      const failure: MillDepositFailure = { code: rec.code, message: rec.message };
+      if (typeof rec.sheet === "string") failure.sheet = rec.sheet;
+      if (typeof rec.row === "number") failure.row = rec.row;
+      if (typeof rec.column === "string") failure.column = rec.column;
+      return failure;
+    }
+    if (typeof rec.error === "string") {
+      return {
+        code: status === 401 ? "unauthorized" : "deposit_failed",
+        message: rec.error,
+      };
+    }
+  }
+  return { code: "deposit_failed", message: "Could not deposit that mill file." };
+}
+
+export function formatMillDepositException(e: MillDepositException): string {
+  const pointer = [
+    e.sheet,
+    e.row !== undefined ? `row ${e.row}` : undefined,
+    e.column !== undefined ? `column ${e.column}` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return pointer ? `${e.code} — ${e.message} (${pointer})` : `${e.code} — ${e.message}`;
+}
+
+/** Flatten deposit DTOs. Do not feed these through buildCatalog / catalogToFabric. */
+export function asSentQualities(deposits: MillDepositResponse[]): AsSentQualityRow[] {
+  return deposits.flatMap((deposit) =>
+    deposit.qualities.map((quality) => ({
+      ...quality,
+      depositId: deposit.depositId,
+      filename: deposit.filename,
+    })),
+  );
+}
+
+export function depositExceptions(
+  deposits: MillDepositResponse[],
+): Array<MillDepositException & { filename: string; depositId: string }> {
+  return deposits.flatMap((deposit) =>
+    deposit.exceptions.map((exception) => ({
+      ...exception,
+      filename: deposit.filename,
+      depositId: deposit.depositId,
+    })),
+  );
+}
+
+/**
+ * Workshop File drop. Cookie is the mill session (`fruma_demo`); credentials
+ * must include it. Never import the ingest engine from this module.
+ */
+export async function postMillDeposit(
+  file: File,
+): Promise<
+  { ok: true; deposit: MillDepositResponse } | { ok: false; failure: MillDepositFailure }
+> {
+  const form = new FormData();
+  form.set("file", file);
+  let res: Response;
+  try {
+    res = await fetch(MILL_DEPOSITS_PATH, {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+  } catch {
+    return {
+      ok: false,
+      failure: { code: "deposit_failed", message: "Could not deposit that mill file." },
+    };
+  }
+
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    return {
+      ok: false,
+      failure: {
+        code: "deposit_failed",
+        message: "Could not read the mill deposit response.",
+      },
+    };
+  }
+
+  if (res.ok && isMillDepositResponse(body)) {
+    return { ok: true, deposit: body };
+  }
+  return { ok: false, failure: millDepositFailureFromBody(res.status, body) };
+}

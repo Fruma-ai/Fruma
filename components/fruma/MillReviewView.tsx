@@ -18,6 +18,7 @@ import { EXCEPTION_GROUPS, frumaPath } from "@/lib/fruma/mill-ingest";
 import { rankMillOptions } from "@/lib/fruma/mill-learn";
 import type { CatalogField } from "@/lib/fruma/types";
 import { cn } from "@/lib/utils";
+import { AsSentList } from "./AsSentList";
 import { SurfaceState } from "./SurfaceState";
 import { useFruma } from "./store";
 
@@ -31,6 +32,7 @@ export function MillReviewView() {
     millLearn,
     millMapConfirmed,
     millClaimed,
+    millDeposits,
     setMillReviewGroup,
     approveMillRow,
     approveAllMill,
@@ -103,8 +105,9 @@ export function MillReviewView() {
           <p className="page-lede mt-3">
             Review by exception. {provenance} working file
             {millFile ? ` · ${millFile.name}` : ""}. No inferred GOTS or origin.
-            Confirming a row is not On the standard until claimed, received,
-            mapped and confirmed.
+            Confirming a seeded row is not On the standard. As-sent deposit
+            exceptions stay on their own list — empty-article is not a catalogue
+            row.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -120,6 +123,12 @@ export function MillReviewView() {
           </Button>
         </div>
       </div>
+
+      {millDeposits.length > 0 ? (
+        <div className="mb-8 border-b border-line pb-8">
+          <AsSentList deposits={millDeposits} kicker="As-sent exceptions" />
+        </div>
+      ) : null}
 
       <div className="mb-5 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
         <span>

@@ -36,6 +36,7 @@ export function MillShell({ children }: { children: React.ReactNode }) {
     millRowApproved,
     millClaimed,
     catalog,
+    millDepositPosting,
     confirmMillMap,
     ingestPublish,
     setMillException,
@@ -75,6 +76,7 @@ export function MillShell({ children }: { children: React.ReactNode }) {
   const next = millNext({
     millRoom,
     millFile: Boolean(millFile),
+    millDepositPosting,
     millMapConfirmed,
     millApplyStatus,
     requiredMissing,
@@ -157,6 +159,7 @@ export function MillShell({ children }: { children: React.ReactNode }) {
 function millNext({
   millRoom,
   millFile,
+  millDepositPosting,
   millMapConfirmed,
   millApplyStatus,
   requiredMissing,
@@ -169,6 +172,7 @@ function millNext({
 }: {
   millRoom: MillRoom;
   millFile: boolean;
+  millDepositPosting: boolean;
   millMapConfirmed: boolean;
   millApplyStatus: string;
   requiredMissing: boolean;
@@ -184,8 +188,8 @@ function millNext({
   }
   if (millRoom === "upload") {
     return {
-      label: "Continue to mapping",
-      disabled: !millFile,
+      label: millDepositPosting ? "Sending…" : "Continue to mapping",
+      disabled: !millFile || millDepositPosting,
       run: () => setMillRoom("map"),
     };
   }

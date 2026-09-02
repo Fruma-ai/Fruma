@@ -56,6 +56,19 @@ export function millCatalogueState(onStandardCount: number): CatalogueHonesty {
   return onStandardCount > 0 ? "On the standard" : "Not in the live catalogue";
 }
 
+/** Starting honesty for as-sent deposit qualities after File drop. */
+export function asSentDropHonesty(): {
+  mapped: MapHonesty;
+  review: ReviewHonesty;
+  catalogue: CatalogueHonesty;
+} {
+  return {
+    mapped: "Not mapped",
+    review: "Unconfirmed",
+    catalogue: "Not in the live catalogue",
+  };
+}
+
 /** Ready is not a Workshop label until claimed + on file + mapped. */
 export function workshopReady(args: {
   claimed: boolean;
@@ -73,7 +86,8 @@ export function rowIsAsSent(row: { provenance?: RowProvenance }): boolean {
 /**
  * Catalogue “On the standard” only after claimed + mapped + confirmed for an
  * as-sent (parsed) quality. File source is ignored — an unread drop is not as-sent.
- * Until a parser exists, no row is as-sent, so On the standard stays empty.
+ * Seeded VDA rows never qualify. Deposit DTO qualities are not poured into the
+ * catalogue reducer, so On the standard stays empty on File drop.
  */
 export function isOnTheStandard(args: {
   claimed: boolean;
@@ -99,8 +113,8 @@ export function countOnTheStandard(
 }
 
 /**
- * Working-file rows in this demo are the seed catalogue. An upload is received
- * but not parsed (parser out of scope), so rows stay Seeded — never Vale do Ave as-sent.
+ * Working-file rows in this demo are the seed catalogue. A mill deposit appends
+ * as-sent qualities on a separate list — never inferred into buildCatalog().
  */
 export function rowProvenance(row?: { provenance?: RowProvenance }): ProvenanceLabel {
   if (row?.provenance === "as-sent") return PROVENANCE.asSent;
