@@ -9,6 +9,7 @@ import {
   type CatalogRow,
 } from "@/lib/fruma/catalog";
 import {
+  countOnTheStandard,
   millCatalogueState,
   reviewRowLabel,
   rowProvenance,
@@ -235,9 +236,10 @@ export function MillReviewView() {
             <p className="mt-2 text-[13.5px] leading-relaxed text-mute">
               Approve Fruma&apos;s suggestions for the rest, or keep them{" "}
               {millCatalogueState(
-                millClaimed && millFile?.source === "upload" && millMapConfirmed
-                  ? 1
-                  : 0,
+                countOnTheStandard(catalog, {
+                  claimed: millClaimed,
+                  mapped: millMapConfirmed,
+                }),
               ).toLowerCase()}
               . Seeded rows stay Seeded.
             </p>

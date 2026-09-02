@@ -24,6 +24,7 @@ import {
   FILE_RECEIVED_COPY,
   SEEDED_FILE_COPY,
   isOnTheStandard,
+  rowIsAsSent,
 } from "@/lib/fruma/honesty";
 import { type SellMarket } from "@/lib/fruma/market-score";
 import { APPLY_STEPS, defaultMillMap, DEMO_MILL_FILE } from "@/lib/fruma/mill-ingest";
@@ -263,7 +264,6 @@ const initial: State = {
 function millLive(state: State): Fabric[] {
   return liveCatalogFabrics(state.catalog, {
     claimed: state.millClaimed,
-    file: state.millFile,
     mapped: state.millMapConfirmed,
   });
 }
@@ -663,11 +663,17 @@ function reducer(state: State, action: Action): State {
           ids.has(row.id) ? { ...row, status: "confirmed" as const } : row,
         ),
         toast: `Confirmed · ${action.ids.length}. ${
-          isOnTheStandard({
-            claimed: state.millClaimed,
-            file: state.millFile,
-            mapped: state.millMapConfirmed,
-            rowConfirmed: true,
+          action.ids.some((id) => {
+            const row = state.catalog.find((r) => r.id === id);
+            return (
+              row &&
+              isOnTheStandard({
+                claimed: state.millClaimed,
+                mapped: state.millMapConfirmed,
+                rowConfirmed: true,
+                asSent: rowIsAsSent(row),
+              })
+            );
           })
             ? "On the standard"
             : "Not in the live catalogue"
@@ -800,17 +806,17 @@ export function FrumaProvider({ children }: { children: ReactNode }) {
 
   const results = useMemo(
     () => state.resultIds.map((id) => fabricLookup(state)[id]).filter(Boolean),
-    [state.resultIds, state.catalog, state.millClaimed, state.millFile, state.millMapConfirmed],
+    [state.resultIds, state.catalog, state.millClaimed, state.millMapConfirmed],
   );
   const desk = useMemo(
     () => state.deskIds.map((id) => fabricLookup(state)[id]).filter(Boolean),
-    [state.deskIds, state.catalog, state.millClaimed, state.millFile, state.millMapConfirmed],
+    [state.deskIds, state.catalog, state.millClaimed, state.millMapConfirmed],
   );
   const productFabric = useMemo(
     () => resolveProductFabric(state),
     // chosen cloth on the desk is the working product
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.deskIds, state.chosenId, state.catalog, state.millClaimed, state.millFile, state.millMapConfirmed],
+    [state.deskIds, state.chosenId, state.catalog, state.millClaimed, state.millMapConfirmed],
   );
   const chosenIndex = useMemo(() => {
     if (!state.chosenId) return -1;

@@ -10,11 +10,14 @@ import {
   type CatalogRow,
 } from "@/lib/fruma/catalog";
 import {
+  countOnTheStandard,
+  isOnTheStandard,
   millCatalogueState,
   millFileState,
   millMapState,
   millProfileState,
   reviewRowLabel,
+  rowIsAsSent,
   rowProvenance,
   workshopReady,
 } from "@/lib/fruma/honesty";
@@ -63,13 +66,10 @@ export function CatalogView() {
     file: millFile,
     mapped,
   });
-  const onStandard = catalog.filter(
-    (r) =>
-      millClaimed &&
-      millFile?.source === "upload" &&
-      mapped &&
-      r.status === "confirmed",
-  ).length;
+  const onStandard = countOnTheStandard(catalog, {
+    claimed: millClaimed,
+    mapped,
+  });
   const catalogueState = millCatalogueState(onStandard);
   const provenance = rowProvenance();
   const hit =
@@ -231,8 +231,8 @@ export function CatalogView() {
               <CatalogRowView
                 key={row.id}
                 row={row}
-                provenance={provenance}
-                catalogueState={catalogueState}
+                provenance={rowProvenance(row)}
+                claimed={millClaimed}
                 mapped={mapped}
                 selected={catalogSelected.includes(row.id)}
                 onToggle={() => toggleCatalogRow(row.id)}
@@ -252,7 +252,7 @@ export function CatalogView() {
 function CatalogRowView({
   row,
   provenance,
-  catalogueState,
+  claimed,
   mapped,
   selected,
   onToggle,
@@ -260,7 +260,7 @@ function CatalogRowView({
 }: {
   row: CatalogRow;
   provenance: string;
-  catalogueState: string;
+  claimed: boolean;
   mapped: boolean;
   selected: boolean;
   onToggle: () => void;
@@ -268,7 +268,12 @@ function CatalogRowView({
 }) {
   const { millLearn } = useFruma();
   const review = reviewRowLabel(row.status);
-  const onStandard = catalogueState === "On the standard" && row.status === "confirmed";
+  const onStandard = isOnTheStandard({
+    claimed,
+    mapped,
+    rowConfirmed: row.status === "confirmed",
+    asSent: rowIsAsSent(row),
+  });
   const weld = mapped && review === "Confirmed" && provenance !== "Seeded";
   const tone = onStandard
     ? "text-ok"

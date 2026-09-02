@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { FRUMA_MILL_FIELDS, IGNORE } from "@/lib/fruma/mill-ingest";
 import {
+  countOnTheStandard,
   millCatalogueState,
   millFileState,
   millMapState,
@@ -53,9 +54,10 @@ export function MillShell({ children }: { children: React.ReactNode }) {
   const confirmed = catalog.filter((r) => r.status === "confirmed").length;
   const unknownRemains = catalog.filter((r) => r.status === "gap").length;
   const mapped = millMapConfirmed || millApplyStatus === "ready";
-  const onStandard = catalog.filter((r) =>
-    millClaimed && millFile?.source === "upload" && mapped && r.status === "confirmed",
-  ).length;
+  const onStandard = countOnTheStandard(catalog, {
+    claimed: millClaimed,
+    mapped,
+  });
 
   const stepState: Record<MillRoom, string> = {
     profile: millProfileState(millClaimed),

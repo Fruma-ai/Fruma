@@ -1,5 +1,5 @@
-import { isOnTheStandard } from "./honesty";
-import type { CatalogField, CatalogFilter, CatalogStatus, ColourName, Fabric, FabricStructure, MillFile } from "./types";
+import { isOnTheStandard, rowIsAsSent, type RowProvenance } from "./honesty";
+import type { CatalogField, CatalogFilter, CatalogStatus, ColourName, Fabric, FabricStructure } from "./types";
 import { COLOURS } from "./cloth";
 import { rankMillOptions, type MillLearn } from "./mill-learn";
 
@@ -19,6 +19,8 @@ export type CatalogRow = {
   issues: string[];
   confidence: number;
   status: CatalogStatus;
+  /** Seeded until a parser emits as-sent rows. Never inferred from file drop. */
+  provenance: RowProvenance;
 };
 
 type Template = {
@@ -305,6 +307,7 @@ export function buildCatalog(): CatalogRow[] {
         ].filter(Boolean),
         confidence,
         status,
+        provenance: "seeded",
       });
     }
   }
@@ -495,20 +498,20 @@ function millFinish(construction: string) {
 }
 
 /**
- * Qualities a designer can search only when claimed + received + mapped + confirmed.
- * Seeded rows never become mill identities. High confidence is not a shortcut.
+ * Qualities a designer can search only when claimed + mapped + confirmed on an
+ * as-sent (parsed) row. Seeded VDA-#### rows never qualify. Upload is not as-sent.
  */
 export function liveCatalogFabrics(
   rows: CatalogRow[],
-  gate: { claimed: boolean; file: MillFile | null; mapped: boolean },
+  gate: { claimed: boolean; mapped: boolean },
 ): Fabric[] {
   return rows
     .filter((r) =>
       isOnTheStandard({
         claimed: gate.claimed,
-        file: gate.file,
         mapped: gate.mapped,
         rowConfirmed: r.status === "confirmed",
+        asSent: rowIsAsSent(r),
       }),
     )
     .map(catalogToFabric)

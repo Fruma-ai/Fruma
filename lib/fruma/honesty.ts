@@ -16,6 +16,9 @@ export const PROVENANCE = {
 
 export type ProvenanceLabel = (typeof PROVENANCE)[keyof typeof PROVENANCE];
 
+/** Row-level source. Upload receipt is not as-sent. Only a parsed mill row is. */
+export type RowProvenance = "as-sent" | "seeded" | "unknown";
+
 export type ProfileHonesty = "Not claimed" | "Claimed";
 export type FileHonesty = "Not on file" | "File received" | "Seeded";
 export type MapHonesty = "Not mapped" | "Mapped" | "Unknown";
@@ -62,29 +65,46 @@ export function workshopReady(args: {
   return args.claimed && Boolean(args.file) && args.mapped;
 }
 
+/** Parsed mill row only. `source: upload` is receipt, not as-sent. */
+export function rowIsAsSent(row: { provenance?: RowProvenance }): boolean {
+  return row.provenance === "as-sent";
+}
+
 /**
- * Catalogue “On the standard” only after claimed + received + mapped + confirmed
- * for that quality. Seeded rows never qualify. Live ≠ complete.
+ * Catalogue “On the standard” only after claimed + mapped + confirmed for an
+ * as-sent (parsed) quality. File source is ignored — an unread drop is not as-sent.
+ * Until a parser exists, no row is as-sent, so On the standard stays empty.
  */
 export function isOnTheStandard(args: {
   claimed: boolean;
-  file: MillFile | null;
   mapped: boolean;
   rowConfirmed: boolean;
+  asSent: boolean;
 }): boolean {
-  return (
-    args.claimed &&
-    args.file?.source === "upload" &&
-    args.mapped &&
-    args.rowConfirmed
-  );
+  return args.claimed && args.mapped && args.rowConfirmed && args.asSent;
+}
+
+export function countOnTheStandard(
+  rows: { provenance?: RowProvenance; status: CatalogStatus }[],
+  gate: { claimed: boolean; mapped: boolean },
+): number {
+  return rows.filter((r) =>
+    isOnTheStandard({
+      claimed: gate.claimed,
+      mapped: gate.mapped,
+      rowConfirmed: r.status === "confirmed",
+      asSent: rowIsAsSent(r),
+    }),
+  ).length;
 }
 
 /**
  * Working-file rows in this demo are the seed catalogue. An upload is received
  * but not parsed (parser out of scope), so rows stay Seeded — never Vale do Ave as-sent.
  */
-export function rowProvenance(): ProvenanceLabel {
+export function rowProvenance(row?: { provenance?: RowProvenance }): ProvenanceLabel {
+  if (row?.provenance === "as-sent") return PROVENANCE.asSent;
+  if (row?.provenance === "unknown") return PROVENANCE.unknown;
   return PROVENANCE.seeded;
 }
 
