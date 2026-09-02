@@ -9,7 +9,12 @@ import { IngestException } from "./exceptions";
 import { baseQualityId } from "./identity";
 import { sha256Hex } from "./hash";
 import { buildXlsx } from "./parse-xlsx";
-import { VISIBILITY_PRIVATE } from "./types";
+import {
+  GRANT_STATUS_GRANTED,
+  GRANT_STATUS_REVOKED,
+  VISIBILITY_GRANTED,
+  VISIBILITY_PRIVATE,
+} from "./types";
 
 const FIXTURE_DIR = dirname(fileURLToPath(import.meta.url));
 const CSV_NAME = "synthetic-hanger.csv";
@@ -44,6 +49,17 @@ function depositCsv(ing = engine()) {
       receivedAt: "2026-09-02T11:00:00.000Z",
     }),
   };
+}
+
+function confirmMatching(
+  ing: IngestEngine,
+  depositId: string,
+  cells: { pointer: { sheet: string; row: number; column: string }; standardField?: string }[],
+  field: string,
+) {
+  for (const cell of cells.filter((c) => c.standardField === field)) {
+    ing.confirmCell(depositId, cell.pointer);
+  }
 }
 
 describe("SPEC 6 ingest — parse csv and xlsx bytes", () => {
@@ -198,6 +214,9 @@ describe("SPEC 6 ingest — visibility and grants", () => {
   it("commercial and customer-specific stay denied unless that class is named", () => {
     const { ing, result } = depositCsv();
     const qa100 = result.qualities.find((q) => q.millArticleCode === "SYN-QA-100")!;
+    confirmMatching(ing, result.deposit.depositId, qa100.cells, "width");
+    confirmMatching(ing, result.deposit.depositId, qa100.cells, "moq");
+    confirmMatching(ing, result.deposit.depositId, qa100.cells, "customer");
     ing.grant({
       millOrgId: MILL,
       brandOrgId: BRAND,
@@ -259,6 +278,100 @@ describe("SPEC 6 ingest — visibility and grants", () => {
     const after = ing.brandVisibleRows(BRAND)[0]!.fields;
     assert.ok(after.some((f) => f.field === "cert" && f.sourceValue === "OEKO-TEX"));
     assert.ok(!after.some((f) => /GOTS/i.test(f.sourceValue) || /GOTS/i.test(f.standardValue)));
+    assert.ok(after.every((f) => f.confirmed === true));
+  });
+
+  it("colourway-scoped grant returns only that colourway’s cells, never siblings", () => {
+    const { ing, result } = depositCsv();
+    const qa100 = result.qualities.find((q) => q.millArticleCode === "SYN-QA-100");
+    assert.ok(qa100);
+    const navy = qa100.colourways.find((c) => c.colourAsWritten === "Navy");
+    const ecru = qa100.colourways.find((c) => c.colourAsWritten === "Ecru");
+    assert.ok(navy);
+    assert.ok(ecru);
+    for (const cell of qa100.cells) {
+      if (cell.standardField === "colour" || cell.standardField === "width") {
+        ing.confirmCell(result.deposit.depositId, cell.pointer);
+      }
+    }
+    ing.grant({
+      millOrgId: MILL,
+      brandOrgId: BRAND,
+      objectIds: [navy.id],
+      fieldClass: "technical",
+      actor: { kind: "named_grant", millOrgId: MILL },
+    });
+    const rows = ing.brandVisibleRows(BRAND);
+    assert.equal(rows.length, 1);
+    assert.deepEqual(
+      rows[0]?.colourways.map((c) => c.colourAsWritten),
+      ["Navy"],
+    );
+    const dumped = JSON.stringify(rows);
+    assert.ok(!dumped.includes("Ecru"));
+    assert.ok(!rows[0]!.fields.some((f) => f.sourceValue === "Ecru"));
+    assert.ok(!rows[0]!.fields.some((f) => f.sourceValue === "180cm"));
+    assert.ok(rows[0]!.fields.some((f) => f.field === "colour" && f.sourceValue === "Navy"));
+    assert.ok(rows[0]!.fields.some((f) => f.field === "width" && f.sourceValue === "160cm"));
+  });
+
+  it("omits unconfirmed cells from brandView — Granted payload is mill-confirmed only", () => {
+    const { ing, result } = depositCsv();
+    const qa100 = result.qualities.find((q) => q.millArticleCode === "SYN-QA-100")!;
+    ing.grant({
+      millOrgId: MILL,
+      brandOrgId: BRAND,
+      objectIds: [qa100.id],
+      fieldClass: "technical",
+      actor: { kind: "named_grant", millOrgId: MILL },
+    });
+    const before = ing.brandVisibleRows(BRAND);
+    assert.equal(before.length, 1);
+    assert.equal(before[0]?.fields.length, 0);
+    const navyWidth = qa100.cells.find(
+      (c) => c.standardField === "width" && c.sourceValue === "160cm",
+    );
+    assert.ok(navyWidth);
+    ing.confirmCell(result.deposit.depositId, navyWidth.pointer);
+    const after = ing.brandVisibleRows(BRAND)[0]!;
+    assert.equal(after.fields.length, 1);
+    assert.equal(after.fields[0]?.field, "width");
+    assert.equal(after.fields[0]?.sourceValue, "160cm");
+    assert.equal(after.fields[0]?.confirmed, true);
+    assert.ok(after.fields.every((f) => f.confirmed === true));
+    assert.ok(!after.fields.some((f) => f.field === "colour"));
+    assert.ok(!after.fields.some((f) => f.sourceValue === "180cm"));
+  });
+
+  it("revoke drops brand visibility going forward — stale-as-current is a release block", () => {
+    const { ing, result } = depositCsv();
+    const qa100 = result.qualities.find((q) => q.millArticleCode === "SYN-QA-100")!;
+    confirmMatching(ing, result.deposit.depositId, qa100.cells, "width");
+    const grant = ing.grant({
+      millOrgId: MILL,
+      brandOrgId: BRAND,
+      objectIds: [qa100.id],
+      fieldClass: "technical",
+      actor: { kind: "named_grant", millOrgId: MILL },
+    });
+    assert.equal(grant.status, GRANT_STATUS_GRANTED);
+    const live = ing.brandVisibleRows(BRAND);
+    assert.equal(live.length, 1);
+    assert.equal(live[0]?.visibility, VISIBILITY_GRANTED);
+    assert.ok(live[0]!.fields.length > 0);
+
+    const revoked = ing.revoke(grant.grantId);
+    assert.equal(revoked.status, GRANT_STATUS_REVOKED);
+    assert.equal(ing.grantById(grant.grantId).status, GRANT_STATUS_REVOKED);
+
+    const current = ing.brandVisibleRows(BRAND);
+    assert.deepEqual(current, []);
+    assert.ok(
+      !current.some((row) => row.visibility === VISIBILITY_GRANTED),
+      "revoked grant must not appear as current Granted to the brand",
+    );
+    assert.equal(ing.brandSourcePointer(BRAND, qa100.id), null);
+    assert.ok(ing.millQualities(MILL).every((q) => q.visibility === VISIBILITY_PRIVATE));
   });
 });
 

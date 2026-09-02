@@ -2,7 +2,15 @@
 
 export const VISIBILITY_PRIVATE = "Private" as const;
 export const VISIBILITY_GRANTED = "Granted" as const;
-export type Visibility = typeof VISIBILITY_PRIVATE | typeof VISIBILITY_GRANTED;
+export const VISIBILITY_REVOKED = "Revoked" as const;
+export type Visibility =
+  | typeof VISIBILITY_PRIVATE
+  | typeof VISIBILITY_GRANTED
+  | typeof VISIBILITY_REVOKED;
+
+export const GRANT_STATUS_GRANTED = VISIBILITY_GRANTED;
+export const GRANT_STATUS_REVOKED = VISIBILITY_REVOKED;
+export type GrantStatus = typeof GRANT_STATUS_GRANTED | typeof GRANT_STATUS_REVOKED;
 
 export const FIELD_CLASSES = [
   "identity",
@@ -126,6 +134,7 @@ export type NamedGrant = {
   brandOrgId: string;
   objectIds: string[];
   fieldClass: FieldClass;
+  status: GrantStatus;
 };
 
 export type GrantActor =
@@ -144,6 +153,8 @@ export type BrandVisibleField = {
   standardValue: string;
   sourceValue: string;
   pointer: CellPointer;
+  /** Brand payload is mill-confirmed only. Unconfirmed cells are omitted. */
+  confirmed: true;
 };
 
 export type BrandVisibleQuality = {

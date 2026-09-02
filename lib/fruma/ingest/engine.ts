@@ -7,6 +7,8 @@ import { PrivateByteStore } from "./store";
 import {
   DEFAULT_DENY_FIELD_CLASSES,
   FIELD_CLASS_OF,
+  GRANT_STATUS_GRANTED,
+  GRANT_STATUS_REVOKED,
   VISIBILITY_PRIVATE,
   type BaseQuality,
   type BrandVisibleQuality,
@@ -109,6 +111,7 @@ export class IngestEngine {
         "Cert is not mill-sourced on this quality; ingest will not infer one.",
       );
     }
+    sourceCell.confirmed = true;
     if (!quality.certs.some((c) => c.valueAsWritten === valueAsWritten)) {
       quality.certs.push({ valueAsWritten, sourceCell, millConfirmed: true });
     }
@@ -142,9 +145,32 @@ export class IngestEngine {
       brandOrgId: input.brandOrgId,
       objectIds: [...input.objectIds],
       fieldClass: input.fieldClass,
+      status: GRANT_STATUS_GRANTED,
     };
     this.grants.push(grant);
-    return grant;
+    return { ...grant, objectIds: [...grant.objectIds] };
+  }
+
+  /** Revoked is not current. Brand view must not keep showing this grant. */
+  revoke(grantId: string): NamedGrant {
+    const grant = this.grants.find((g) => g.grantId === grantId);
+    if (!grant) {
+      throw new IngestException("unknown_grant", "Grant is not in the ingest store.", {
+        grantId,
+      });
+    }
+    grant.status = GRANT_STATUS_REVOKED;
+    return { ...grant, objectIds: [...grant.objectIds] };
+  }
+
+  grantById(grantId: string): NamedGrant {
+    const grant = this.grants.find((g) => g.grantId === grantId);
+    if (!grant) {
+      throw new IngestException("unknown_grant", "Grant is not in the ingest store.", {
+        grantId,
+      });
+    }
+    return { ...grant, objectIds: [...grant.objectIds] };
   }
 
   millQualities(supplierOrgId: string): BaseQuality[] {

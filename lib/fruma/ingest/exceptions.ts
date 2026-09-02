@@ -6,6 +6,7 @@ export type IngestExceptionCode =
   | "empty_article"
   | "grant_denied"
   | "unknown_deposit"
+  | "unknown_grant"
   | "source_bytes_denied";
 
 export class IngestException extends Error {

@@ -1,12 +1,15 @@
 import { IngestException } from "./exceptions";
 import {
   FIELD_CLASS_OF,
+  GRANT_STATUS_GRANTED,
   VISIBILITY_GRANTED,
   type BaseQuality,
+  type BrandVisibleField,
   type BrandVisibleQuality,
-  type FieldClass,
+  type Colourway,
   type GrantActor,
   type NamedGrant,
+  type SourceCell,
   type StandardField,
 } from "./types";
 
@@ -41,44 +44,54 @@ export function assertNamedGrantActor(actor: GrantActor, millOrgId: string): voi
   }
 }
 
-export function grantCovers(
-  grant: NamedGrant,
-  quality: BaseQuality,
-  fieldClass: FieldClass,
-): boolean {
-  if (grant.millOrgId !== quality.supplierOrgId) return false;
-  if (grant.fieldClass !== fieldClass) return false;
-  const named = new Set(grant.objectIds);
-  if (named.has(quality.id)) return true;
-  return quality.colourways.some((c) => named.has(c.id));
+export function isCurrentGrant(grant: NamedGrant): boolean {
+  return grant.status === GRANT_STATUS_GRANTED;
 }
 
-function visibleFields(quality: BaseQuality, classes: Set<FieldClass>) {
-  const out: BrandVisibleQuality["fields"] = [];
-  const seen = new Set<string>();
-  for (const cell of quality.cells) {
-    const field = cell.standardField as StandardField | undefined;
-    if (!field) continue;
-    const fieldClass = FIELD_CLASS_OF[field];
-    if (!classes.has(fieldClass)) continue;
-    if (fieldClass === "certification") {
-      const confirmed = quality.certs.some(
-        (c) => c.valueAsWritten === cell.sourceValue && c.millConfirmed,
-      );
-      if (!confirmed) continue;
-    }
-    const key = `${field}:${cell.pointer.sheet}:${cell.pointer.row}:${cell.pointer.column}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({
-      field,
-      fieldClass,
-      standardValue: cell.standardValue ?? cell.sourceValue,
-      sourceValue: cell.sourceValue,
-      pointer: cell.pointer,
-    });
+function namedColourways(grant: NamedGrant, quality: BaseQuality): Colourway[] {
+  return quality.colourways.filter((c) => grant.objectIds.includes(c.id));
+}
+
+/** Quality-scoped grant covers every child. Colourway-scoped grant covers only those children. */
+export function grantScope(
+  grant: NamedGrant,
+  quality: BaseQuality,
+): { covers: boolean; colourways: Colourway[] | "all" } {
+  if (grant.millOrgId !== quality.supplierOrgId) return { covers: false, colourways: [] };
+  if (grant.objectIds.includes(quality.id)) return { covers: true, colourways: "all" };
+  const colourways = namedColourways(grant, quality);
+  return { covers: colourways.length > 0, colourways };
+}
+
+function rowKey(cell: SourceCell): string {
+  return `${cell.pointer.sheet}:${cell.pointer.row}`;
+}
+
+function cellsInScope(quality: BaseQuality, colourways: Colourway[] | "all"): SourceCell[] {
+  if (colourways === "all") return quality.cells;
+  const rows = new Set(colourways.map((c) => rowKey(c.sourceCell)));
+  return quality.cells.filter((c) => rows.has(rowKey(c)));
+}
+
+function asBrandField(cell: SourceCell, quality: BaseQuality): BrandVisibleField | null {
+  if (!cell.confirmed) return null;
+  const field = cell.standardField as StandardField | undefined;
+  if (!field) return null;
+  const fieldClass = FIELD_CLASS_OF[field];
+  if (fieldClass === "certification") {
+    const millConfirmed = quality.certs.some(
+      (c) => c.valueAsWritten === cell.sourceValue && c.millConfirmed,
+    );
+    if (!millConfirmed) return null;
   }
-  return out;
+  return {
+    field,
+    fieldClass,
+    standardValue: cell.standardValue ?? cell.sourceValue,
+    sourceValue: cell.sourceValue,
+    pointer: cell.pointer,
+    confirmed: true,
+  };
 }
 
 export function brandView(
@@ -86,31 +99,44 @@ export function brandView(
   qualities: BaseQuality[],
   grants: NamedGrant[],
 ): BrandVisibleQuality[] {
-  const mine = grants.filter((g) => g.brandOrgId === brandOrgId);
+  const mine = grants.filter((g) => g.brandOrgId === brandOrgId && isCurrentGrant(g));
   if (!mine.length) return [];
 
   const visible: BrandVisibleQuality[] = [];
   for (const quality of qualities) {
-    const classes = new Set<FieldClass>();
+    const fields: BrandVisibleField[] = [];
+    const seen = new Set<string>();
+    const colourwayById = new Map<string, { id: string; colourAsWritten: string }>();
+
     for (const grant of mine) {
-      for (const fieldClass of Object.values(FIELD_CLASS_OF)) {
-        if (grantCovers(grant, quality, fieldClass)) classes.add(fieldClass);
+      const scope = grantScope(grant, quality);
+      if (!scope.covers) continue;
+      const scopedColourways =
+        scope.colourways === "all" ? quality.colourways : scope.colourways;
+      for (const cw of scopedColourways) {
+        colourwayById.set(cw.id, { id: cw.id, colourAsWritten: cw.colourAsWritten });
+      }
+      for (const cell of cellsInScope(quality, scope.colourways)) {
+        if (cell.standardField && FIELD_CLASS_OF[cell.standardField] !== grant.fieldClass) {
+          continue;
+        }
+        const field = asBrandField(cell, quality);
+        if (!field) continue;
+        const key = `${field.field}:${field.pointer.sheet}:${field.pointer.row}:${field.pointer.column}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        fields.push(field);
       }
     }
-    if (!classes.size) continue;
-    const colourways = quality.colourways
-      .filter((c) =>
-        mine.some(
-          (g) =>
-            g.objectIds.includes(quality.id) || g.objectIds.includes(c.id),
-        ),
-      )
-      .map((c) => ({ id: c.id, colourAsWritten: c.colourAsWritten }));
+
+    const covered = mine.some((g) => grantScope(g, quality).covers);
+    if (!covered) continue;
+
     visible.push({
       baseQualityId: quality.id,
       visibility: VISIBILITY_GRANTED,
-      fields: visibleFields(quality, classes),
-      colourways,
+      fields,
+      colourways: [...colourwayById.values()],
       source: { exists: true },
     });
   }
