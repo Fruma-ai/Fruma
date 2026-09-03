@@ -1,85 +1,26 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { HeroCloth } from "@/components/fruma/HeroCloth";
 import { InterestForm } from "@/components/fruma/InterestForm";
-import { PublicBar } from "@/components/fruma/PublicBar";
+import "./home.css";
+import "./home-flow.css";
 
-export const metadata: Metadata = {
-  title: "Fruma",
-  description:
-    "The mill’s catalogue, as sent, on a standard buyers can use.",
-};
-
-export default function Home() {
-  return (
-    <div className="min-h-dvh bg-black text-white" data-mode="mill">
-      <PublicBar />
-      <main>
-        <section className="manifest-hero">
-          <HeroCloth />
-          <div className="manifest-scrim" aria-hidden />
-          <div className="manifest-copy">
-            <h1 className="manifest-stack">
-              <span>The mill’s catalogue,</span>
-              <span>as sent,</span>
-              <span>on a standard</span>
-              <span>buyers can use.</span>
-            </h1>
-            <span className="manifest-rule" />
-            <div className="mt-10 flex flex-wrap items-center gap-6">
-              <a href="#apply" className="manifest-cta">
-                Apply
-              </a>
-              <Link href="/origin" className="manifest-cta border-white/30">
-                Origin
-              </Link>
-              <Link href="/app" className="manifest-cta border-white/30">
-                Platform
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="apply"
-          className="border-t border-white/10 bg-black px-5 py-16 md:px-10 md:py-24"
-        >
-          <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-[1fr_minmax(0,420px)] lg:items-end">
-            <div>
-              <p className="manifest-stack">
-                <Link href="/mills">
-                  <span>Mills</span>
-                </Link>
-                <Link href="/brands">
-                  <span>Brands</span>
-                </Link>
-                <Link href="/retailers">
-                  <span>Retailers</span>
-                </Link>
-              </p>
-              <p className="mt-6 max-w-[36ch] text-[14px] leading-relaxed text-white/50">
-                Keep mill catalogues at source, and give every quality an
-                identity that can travel.
-              </p>
-            </div>
-            <InterestForm />
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t border-white/10 px-5 py-4 md:px-10">
-        <div className="mx-auto flex max-w-[1180px] items-center justify-between">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/35">
-            Fruma
-          </p>
-          <Link
-            href="/app"
-            className="text-[11px] uppercase tracking-[0.18em] text-white/35 hover:text-white"
-          >
-            Platform
-          </Link>
-        </div>
-      </footer>
-    </div>
-  );
-}
+export const metadata: Metadata = { title: "Fruma — From product idea to market in weeks, not months.", description: "Fruma is building the connected intelligence layer for fashion sourcing." };
+const DESK="https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-image/images/ef5162b9-ca0f-4e00-abde-959226449b47/Photoreal_editorial_fashion_product_development_desk_in_a_re.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiYWM5ZGE3OTI5OWRmNjk3MCIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4ODUzODAwMn0.IrPDNEXuvhzx8uSZAs1tuO8jJdWX0CLc5w2McQIyJBo";
+const ARCHIVE="https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-image/images/6c769a17-caf1-44c8-a912-ad80ea355a98/Photoreal_editorial_textile_archive_in_a_working_European_mi.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiZDBkNmYwY2Q1OTM3YmQwYiIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4ODUzNDQ3N30.P2VweZqVfdEv4jAg1bYtYAuDsvdGcubzC3OwQ5t6ims";
+const MACHINE="https://dnznrvs05pmza.cloudfront.net/seedance_2_mini/cgt-20260903175512-7tsvb/Single_continuous_cinematic_macro_shot_inside_a_working_European_textile_mill__Close_up_of_modern_kn.mp4?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiNDQ0YWNjZWVkOWUyOWQ3OCIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4ODU2ODgxNH0.1tQZ_3iRV3xOKytNGpAX8T-Z1NqvzpcO1aOTrASHkeg";
+function RequirementUI(){return <div className="ui-card ui-requirements"><div className="ui-top"><span>Specify</span><span>New product</span></div><h3>Unstructured wool jacket</h3><p className="ui-note">A finished-product intent becomes a requirement contract.</p><div className="ui-rows"><div><b>Material</b><span>Wool flannel</span></div><div><b>Structure</b><span>Unstructured</span></div><div><b>Colour</b><span>Navy</span></div><div><b>Details</b><span>Patch pockets, horn buttons</span></div><div><b>Audience</b><span>Menswear</span></div><div><b>Use case</b><span>Outerwear</span></div></div><div className="ui-status"><span>Searchable now</span><span>Needs mill confirmation</span></div></div>}
+function CandidateUI(){return <div className="ui-card ui-source"><div className="ui-top"><span>Source</span><span>Candidate evidence</span></div><div className="candidate-head"><div><small>Mill quality</small><h3>Q75</h3></div><strong>Strong evidence match</strong></div><div className="evidence-line"><span>9 of 10 requirements evidenced</span><span>Portugal</span></div><div className="ui-rows"><div><b>Quality</b><span>On file</span></div><div><b>MOQ</b><span>Compatible</span></div><div><b>Price</b><span>Needs confirmation</span></div><div><b>Delivery</b><span>Needs confirmation</span></div></div><div className="ui-action">Request confirmation →</div></div>}
+function LockedUI(){return <div className="ui-card ui-locked"><div className="ui-top"><span>Product record</span><span className="locked-badge">Locked</span></div><div className="locked-grid"><Image src="/products/draft-navy-q75-polo.png" alt="Navy polo product preview" width={360} height={420}/><div><h3>Textured navy polo</h3><p className="ui-note">One product truth carries forward from sourcing toward market.</p><div className="ui-rows"><div><b>Quality</b><span>Q75</span></div><div><b>Source</b><span>Selected</span></div><div><b>Commercial</b><span>Confirmed</span></div><div><b>Listing</b><span>Ready to map</span></div></div></div></div></div>}
+export default function Home(){return <div className="fruma-public"><header className="fruma-nav"><Link href="/" className="fruma-wordmark">FRUMA</Link><nav><a href="#mission">Mission</a><a href="#platform">Platform</a><Link href="/origin">Origin</Link><Link href="/app" className="fruma-nav-cta">Enter demo</Link></nav></header><main>
+<section className="fruma-hero"><HeroCloth/><div className="fruma-hero-shade"/><div className="fruma-hero-copy"><p className="fruma-kicker light">A new information layer for fashion</p><h1>From product idea<br/>to market in weeks,<br/><em>not months.</em></h1><p>Fruma connects the working intelligence already inside brands, mills and retailers — so teams can move faster without pretending the physical work disappears.</p><a href="#mission" className="fruma-arrow">Discover Fruma ↓</a></div></section>
+<section id="mission" className="editorial-row paper"><div className="editorial-copy"><p className="fruma-kicker">01 · Idea to intent</p><h2>It starts with an idea.</h2><p>Designers bring the vision. Fruma turns it into product intent that everyone can work from.</p></div><div className="media-frame"><img src={DESK} alt="Fashion product development desk with jacket sketch and wool fabric swatches"/></div><RequirementUI/></section>
+<section className="industry-section"><div className="industry-copy"><p className="fruma-kicker light">02 · The industry today</p><h2>Fashion still runs on fragmented information.</h2><p>Working files sit in mills. Product intent sits with brands. Commercial answers go stale. Teams search, re-key, email, wait — and start again.</p></div><div className="factory-still"><Image src="/splash/hero-mill.jpg" alt="Working textile mill interior" fill sizes="100vw"/></div></section>
+<section className="machine-film"><video src={MACHINE} autoPlay muted loop playsInline preload="metadata"/><div className="film-shade"/><div className="film-copy"><p className="fruma-kicker light">The physical world is the truth</p><h2>Materials. Machines.<br/>Processes. People.</h2><p>Fruma doesn’t replace physical development. It removes the information friction around it.</p></div></section>
+<section id="platform" className="platform-proof paper"><div className="editorial-copy"><p className="fruma-kicker">03 · Fruma intelligence</p><h2>We connect the working intelligence.</h2><p>What has been made. What can be made. What needs confirming. What evidence exists. What changed since last time.</p><Link href="/app" className="fruma-arrow dark">Explore the platform →</Link></div><CandidateUI/></section>
+<section className="data-section"><div className="data-copy"><p className="fruma-kicker light">04 · The power of connected data</p><h2>Fashion produces an enormous amount of data. Almost none of it is connected.</h2><p>Fruma turns fragmented working records into a connected intelligence layer that becomes more useful with every interaction.</p></div><div className="data-intelligence"><p>Every interaction makes the system more useful.</p><div className="data-categories"><div><b>Intent</b><span>What products are trying to become</span></div><div><b>Capability</b><span>What materials and processes can actually run</span></div><div><b>Commercials</b><span>What can be supplied now</span></div><div><b>Outcomes</b><span>What gets selected in practice</span></div><div><b>Evidence</b><span>What can be supported by source truth</span></div><div><b>Market</b><span>How product truth reaches retail</span></div></div><p className="data-mantra">The advantage isn’t simply more data. It’s understanding how the data connects.</p></div><div className="data-image"><img src={ARCHIVE} alt="Textile archive of fabric swatches, shade cards and mill working records"/></div></section>
+<section className="months"><p className="fruma-kicker">05 · The impact</p><div className="months-line"><span>Months</span><i>→</i><span>Weeks</span></div><p>Not because physical development disappears.<br/>Because the waiting, searching, re-keying and starting again does.</p></section>
+<section className="continuity paper"><div className="continuity-copy"><p className="fruma-kicker">06 · Continuity</p><h2>The next product shouldn’t start from zero.</h2><p>Exact repeat. Carryover. New style with a known mill. Fruma inherits what is already known, then focuses people and agents only on what changed.</p></div><div className="continuity-stats"><div><b>KEEP</b><span>known product truth</span></div><div><b>CHECK</b><span>what can change</span></div><div><b>RESOLVE</b><span>the exceptions</span></div></div></section>
+<section className="origin-market paper"><div className="garment-frame"><Image src="/products/draft-navy-q75-polo.png" alt="Navy polo product" fill sizes="40vw"/></div><div className="origin-copy"><p className="fruma-kicker">07 · Origin to market</p><h2>One source of truth.<br/>From origin to market.</h2><p>Every confirmed fact can carry forward instead of being rediscovered downstream. Physical development stays physical.</p></div><LockedUI/></section>
+<section className="final-vision"><p className="fruma-kicker light">Fruma</p><h2>A new information layer for fashion.</h2><p>Connecting product intent, mill truth, commercial confirmation and retailer requirements — so the industry can move from product idea to market in weeks, not months.</p><div className="final-actions"><Link href="/app" className="fruma-pill">Enter demo</Link><a href="#apply" className="fruma-arrow">Talk to Fruma →</a></div></section><section id="apply" className="form-section"><InterestForm/></section></main><footer className="fruma-footer"><span>FRUMA</span><span>Material · Brand · Truth · Intelligence</span><Link href="/app">Platform ↗</Link></footer></div>}
