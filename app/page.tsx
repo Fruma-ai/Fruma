@@ -1,85 +1,156 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { HeroCloth } from "@/components/fruma/HeroCloth";
 import { InterestForm } from "@/components/fruma/InterestForm";
-import { PublicBar } from "@/components/fruma/PublicBar";
 
 export const metadata: Metadata = {
-  title: "Fruma",
+  title: "Fruma — From product idea to market in weeks, not months.",
   description:
-    "The mill’s catalogue, as sent, on a standard buyers can use.",
+    "Fruma connects the working data of fashion brands, mills and retailers so products can be sourced, confirmed and prepared for sale dramatically faster.",
 };
+
+const modes = [
+  ["01", "Exact repeat", "Revalidate what can change. Keep everything else."],
+  ["02", "Carryover", "Inherit the locked product record. Resolve only the changes."],
+  ["03", "New style", "Search proven supply first, then widen the network when it matters."],
+];
+
+const agents = [
+  ["INGEST", "Understands messy mill working files without rewriting source truth."],
+  ["BRIEF", "Turns finished-product intent into requirements that can be checked."],
+  ["MATCH", "Finds evidence across mill data and separates known from unknown."],
+  ["COMMERCIAL", "Requests current price, MOQ, lead and sampling terms when they matter."],
+  ["EVIDENCE", "Checks claims against the evidence actually on file."],
+  ["LIST", "Maps one locked product truth into retailer requirements without changing facts."],
+];
 
 export default function Home() {
   return (
-    <div className="min-h-dvh bg-black text-white" data-mode="mill">
-      <PublicBar />
+    <div className="fruma-public">
+      <header className="fruma-nav">
+        <Link href="/" className="fruma-wordmark" aria-label="Fruma home">FRUMA</Link>
+        <nav aria-label="Public navigation">
+          <a href="#how">How it works</a>
+          <Link href="/origin">Origin</Link>
+          <Link href="/app" className="fruma-nav-cta">Enter demo</Link>
+        </nav>
+      </header>
+
       <main>
-        <section className="manifest-hero">
+        <section className="fruma-hero">
           <HeroCloth />
-          <div className="manifest-scrim" aria-hidden />
-          <div className="manifest-copy">
-            <h1 className="manifest-stack">
-              <span>The mill’s catalogue,</span>
-              <span>as sent,</span>
-              <span>on a standard</span>
-              <span>buyers can use.</span>
-            </h1>
-            <span className="manifest-rule" />
-            <div className="mt-10 flex flex-wrap items-center gap-6">
-              <a href="#apply" className="manifest-cta">
-                Apply
-              </a>
-              <Link href="/origin" className="manifest-cta border-white/30">
-                Origin
-              </Link>
-              <Link href="/app" className="manifest-cta border-white/30">
-                Platform
-              </Link>
+          <div className="fruma-hero-shade" aria-hidden />
+          <div className="fruma-hero-copy">
+            <p className="fruma-kicker fruma-kicker-light">Fashion sourcing infrastructure</p>
+            <h1>From product idea to market in <em>weeks, not months.</em></h1>
+            <p className="fruma-hero-lede">
+              Fruma connects the working data of fashion brands, mills and retailers so products can be sourced,
+              confirmed and prepared for sale dramatically faster.
+            </p>
+            <div className="fruma-actions">
+              <a href="#how" className="fruma-button fruma-button-light">See how Fruma works</a>
+              <Link href="/app" className="fruma-text-link">Enter demo <span aria-hidden>↗</span></Link>
+            </div>
+          </div>
+          <p className="fruma-hero-truth">Source truth preserved · Missing data stays missing · Physical development stays physical</p>
+        </section>
+
+        <section id="how" className="fruma-paper fruma-intro">
+          <p className="fruma-kicker">The old process</p>
+          <div className="fruma-intro-grid">
+            <h2>Fashion loses months to information that already exists.</h2>
+            <div className="fruma-prose">
+              <p>Product intent lives with the brand. Material truth lives in mill files. Commercial answers go stale. Retailer requirements arrive at the end.</p>
+              <p>Teams search, email, re-key, re-check and wait — then repeat much of it next season.</p>
+            </div>
+          </div>
+          <div className="fruma-process-image">
+            <Image src="/process/fashion-design-development.jpg" alt="Fashion product development materials and working documents" fill sizes="(max-width: 900px) 100vw, 84vw" />
+          </div>
+        </section>
+
+        <section className="fruma-black fruma-statement">
+          <p className="fruma-kicker fruma-kicker-light">The shift</p>
+          <h2>Months <span>→</span> Weeks</h2>
+          <p>Not by digitising the factory floor. By removing the waiting, searching and repeated work around it.</p>
+        </section>
+
+        <section className="fruma-paper fruma-continuity">
+          <div className="fruma-section-head">
+            <p className="fruma-kicker">Continuity</p>
+            <h2>The next product shouldn’t start from zero.</h2>
+          </div>
+          <div className="fruma-mode-grid">
+            {modes.map(([n, title, copy]) => (
+              <article key={n} className="fruma-mode">
+                <span>{n}</span><h3>{title}</h3><p>{copy}</p>
+              </article>
+            ))}
+          </div>
+          <p className="fruma-continuity-line">If Fruma already knows it, inherit it. If it changed, resolve the exception.</p>
+        </section>
+
+        <section className="fruma-split">
+          <div className="fruma-split-media">
+            <Image src="/splash/hero-mill.jpg" alt="Textile mill machinery" fill sizes="(max-width: 900px) 100vw, 50vw" />
+          </div>
+          <div className="fruma-split-copy">
+            <p className="fruma-kicker fruma-kicker-light">One connected data layer</p>
+            <h2>What brands try to make meets what mills can actually supply.</h2>
+            <p>Mill working files stay attributable. Brand intent becomes checkable. Current commercial responses become interaction truth. Selection creates an outcome the system can learn from.</p>
+            <div className="fruma-data-chain" aria-label="Fruma data chain">
+              <span>Mill truth</span><b>→</b><span>Product intent</span><b>→</b><span>Source decision</span><b>→</b><span>Locked truth</span><b>→</b><span>Retail</span>
             </div>
           </div>
         </section>
 
-        <section
-          id="apply"
-          className="border-t border-white/10 bg-black px-5 py-16 md:px-10 md:py-24"
-        >
-          <div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-[1fr_minmax(0,420px)] lg:items-end">
-            <div>
-              <p className="manifest-stack">
-                <Link href="/mills">
-                  <span>Mills</span>
-                </Link>
-                <Link href="/brands">
-                  <span>Brands</span>
-                </Link>
-                <Link href="/retailers">
-                  <span>Retailers</span>
-                </Link>
-              </p>
-              <p className="mt-6 max-w-[36ch] text-[14px] leading-relaxed text-white/50">
-                Keep mill catalogues at source, and give every quality an
-                identity that can travel.
-              </p>
-            </div>
+        <section className="fruma-paper fruma-network">
+          <p className="fruma-kicker">The compounding asset</p>
+          <div className="fruma-network-grid">
+            <h2>One product creates data.<br/>Thousands create intelligence.</h2>
+            <p>More mill truth improves matching. Better matching creates better enquiries. Real responses make commercial data more current. Selection outcomes sharpen what Fruma knows about viable supply — without exposing one brand to another or revealing brand identity to factories.</p>
+          </div>
+          <div className="fruma-network-loop">
+            <span>More mill truth</span><i>→</i><span>Better matches</span><i>→</i><span>More sourcing outcomes</span><i>→</i><span>More useful intelligence</span><i>↗</i>
+          </div>
+        </section>
+
+        <section className="fruma-black fruma-agents">
+          <div className="fruma-section-head">
+            <p className="fruma-kicker fruma-kicker-light">Agents with jobs</p>
+            <h2>Agents work on the data.<br/>Humans make the decisions.</h2>
+          </div>
+          <div className="fruma-agent-grid">
+            {agents.map(([name, copy]) => <article key={name}><span>{name}</span><p>{copy}</p></article>)}
+          </div>
+          <p className="fruma-agent-foot">No invented certifications. No guessed GSM. No theatrical “thinking”. Evidence stays inspectable.</p>
+        </section>
+
+        <section className="fruma-paper fruma-boundary">
+          <div>
+            <p className="fruma-kicker">Origin → Market</p>
+            <h2>Fruma owns the information-heavy bookends.</h2>
+          </div>
+          <div className="fruma-boundary-track">
+            <span className="active">SOURCE</span><i>→</i><span className="active">CONFIRM</span><i>→</i><span>PHYSICAL DEVELOPMENT</span><i>→</i><span className="active">LIST</span><i>→</i><span className="active">LIVE</span>
+          </div>
+          <p>Proto, fit, bulk and sewing stay physical. Fruma keeps the product truth intact before and after them.</p>
+        </section>
+
+        <section id="apply" className="fruma-final">
+          <div>
+            <p className="fruma-kicker fruma-kicker-light">Fruma</p>
+            <h2>The next product shouldn’t start from zero.</h2>
+            <p>We’re building the data and agent infrastructure to move fashion from product idea to market in weeks, not months.</p>
+          </div>
+          <div className="fruma-form-wrap">
             <InterestForm />
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/10 px-5 py-4 md:px-10">
-        <div className="mx-auto flex max-w-[1180px] items-center justify-between">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/35">
-            Fruma
-          </p>
-          <Link
-            href="/app"
-            className="text-[11px] uppercase tracking-[0.18em] text-white/35 hover:text-white"
-          >
-            Platform
-          </Link>
-        </div>
-      </footer>
+      <footer className="fruma-footer"><span>FRUMA</span><span>Material · Brand · Truth · Intelligence</span><Link href="/app">Platform ↗</Link></footer>
     </div>
   );
 }
