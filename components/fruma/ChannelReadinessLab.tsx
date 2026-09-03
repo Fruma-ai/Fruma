@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Check, CircleAlert, FileDown, Sparkles } from "lucide-react";
 import { featuredProduct, mills } from "@/lib/fruma/demo-data";
+import { ProductConceptLab } from "@/components/fruma/ProductConceptLab";
 
-type View = "flow" | "brand" | "destinations" | "content" | "handoff";
+type View = "flow" | "concept" | "brand" | "destinations" | "content" | "handoff";
 type Destination = { id: string; name: string; type: string; score: number; missing: number; conflicts: number; fields: number; downloadKey: string };
 
 const destinations: Destination[] = [
@@ -46,6 +47,7 @@ export function ChannelReadinessLab() {
   const liveScore = Math.min(99, destination.score + (visibleIssues.length - unresolved.length) * 2);
   const nav: { id: View; label: string }[] = [
     { id: "flow", label: "Standardisation" },
+    { id: "concept", label: "Concept & sample" },
     { id: "brand", label: "Brand mapping" },
     { id: "destinations", label: "Destinations" },
     { id: "content", label: "Content" },
@@ -73,15 +75,17 @@ export function ChannelReadinessLab() {
 
     <div className="cr-nav">{nav.map((x) => <button key={x.id} className={view === x.id ? "active" : ""} onClick={() => go(x.id)}>{x.label}</button>)}</div>
 
+    {view === "concept" && <ProductConceptLab />}
+
     {view === "flow" && <>
       <div className="cr-flow">
-        <button className="cr-flow-card" onClick={() => go("brand")}><small>01 · SOURCE</small><h2>Factory / mill data</h2><p>Mill-native files, abbreviations, units and evidence.</p><b>{mill.name}</b><span>Comp. · 100% ELS Ctn</span><span>Wgt gsm · 190 +/- 5</span></button><ArrowRight/>
+        <button className="cr-flow-card" onClick={() => go("concept")}><small>01 · SOURCE</small><h2>Factory / mill data</h2><p>Mill-native files, abbreviations, units and evidence.</p><b>{mill.name}</b><span>Comp. · 100% ELS Ctn</span><span>Wgt gsm · 190 +/- 5</span></button><ArrowRight/>
         <button className="cr-flow-card core" onClick={() => go("brand")}><small>02 · CANONICAL</small><h2>Fruma Standard</h2><p>Meaning is normalised while original values and provenance remain attached.</p><b>material.composition</b><span>100% extra-long staple cotton</span><span>Evidence: source-linked</span></button><ArrowRight/>
         <button className="cr-flow-card" onClick={() => go("brand")}><small>03 · BRAND</small><h2>Brand Standard</h2><p>The brand's taxonomy, naming, attributes and approved commercial language.</p><b>Fabric composition</b><span>100% Extra-Long Staple Cotton</span><span>Approved brand value</span></button><ArrowRight/>
         <button className="cr-flow-card core" onClick={() => go("destinations")}><small>04 · TRANSLATION</small><h2>Fruma governed mapping</h2><p>AI-supported mapping uses canonical truth plus brand-approved enrichment.</p><b>No silent invention</b><span>Confidence + gaps visible</span><span>Source lineage preserved</span></button><ArrowRight/>
         <button className="cr-flow-card" onClick={() => go("destinations")}><small>05 · DESTINATION</small><h2>Retail / wholesale standard</h2><p>Partner-specific fields, taxonomies, formatting and content requirements.</p><b>Primary material · Cotton</b><span>Composition · 100% cotton</span><span>Ready for brand handoff</span></button>
       </div>
-      <div className="cr-principle"><Sparkles size={18}/><div><b>Anything → Fruma → Brand → Fruma-governed translation → Anything</b><p>The Fruma Standard is the stable semantic layer. Mapping changes structure and expression, never the underlying source truth.</p></div><button className="fx-primary" onClick={() => go("brand")}>Work through mapping <ArrowRight size={14}/></button></div>
+      <div className="cr-principle"><Sparkles size={18}/><div><b>Anything → Fruma → Brand → Fruma-governed translation → Anything</b><p>The Fruma Standard is the stable semantic layer. Mapping changes structure and expression, never the underlying source truth.</p></div><button className="fx-primary" onClick={() => go("concept")}>Start with product concept <ArrowRight size={14}/></button></div>
     </>}
 
     {view === "brand" && <>
