@@ -5,29 +5,30 @@ import { ArrowRight, Check, Image as ImageIcon, Send, Sparkles, Upload } from "l
 import { featuredProduct, mills } from "@/lib/fruma/demo-data";
 
 type ConceptState = "empty" | "uploaded" | "generated" | "sent";
+const SAMPLE_SKETCH = "/demo/sample-brand-sketch.svg";
 
 export function ProductConceptLab() {
-  const [state, setState] = useState<ConceptState>("empty");
-  const [fileName, setFileName] = useState("");
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [state, setState] = useState<ConceptState>("uploaded");
+  const [fileName, setFileName] = useState("sample-brand-sketch.svg");
+  const [previewUrl, setPreviewUrl] = useState(SAMPLE_SKETCH);
   const [selectedMillId, setSelectedMillId] = useState(featuredProduct.shortlistMillIds[0] ?? mills[0].id);
   const selectedMill = useMemo(() => mills.find((m) => m.id === selectedMillId) ?? mills[0], [selectedMillId]);
 
-  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  useEffect(() => () => { if (previewUrl.startsWith("blob:")) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   function onUpload(file?: File) {
     if (!file) return;
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    if (previewUrl.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(URL.createObjectURL(file));
     setFileName(file.name);
     setState("uploaded");
   }
 
   function reset() {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl("");
-    setFileName("");
-    setState("empty");
+    if (previewUrl.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(SAMPLE_SKETCH);
+    setFileName("sample-brand-sketch.svg");
+    setState("uploaded");
   }
 
   return <section className="pc-wrap">
@@ -45,9 +46,9 @@ export function ProductConceptLab() {
         <div className="fx-card-head"><div><p className="fx-eyebrow">Reference input</p><h3>Brand sketch</h3></div><Upload size={18}/></div>
         <label className="pc-upload">
           <input type="file" accept="image/*" onChange={(e) => onUpload(e.target.files?.[0])}/>
-          {previewUrl ? <img src={previewUrl} alt="Uploaded product sketch preview"/> : <><ImageIcon size={28}/><b>Upload product sketch</b><span>PNG, JPG or WEBP</span></>}
+          {previewUrl ? <img src={previewUrl} alt="Brand product sketch preview"/> : <><ImageIcon size={28}/><b>Upload product sketch</b><span>PNG, JPG or WEBP</span></>}
         </label>
-        {fileName ? <div className="pc-file"><Check size={14}/><span>{fileName}</span><button type="button" onClick={reset}>Replace</button></div> : null}
+        <div className="pc-file"><Check size={14}/><span>{fileName}</span><button type="button" onClick={reset}>Use sample sketch</button></div>
         <div className="pc-brief"><b>{featuredProduct.name}</b><p>{featuredProduct.intent}</p></div>
         <button className="fx-primary full" disabled={state === "empty"} onClick={() => setState("generated")}><Sparkles size={14}/>{state === "generated" || state === "sent" ? "Regenerate concept" : "Generate AI product concept"}</button>
       </section>
@@ -57,7 +58,7 @@ export function ProductConceptLab() {
         {state === "generated" || state === "sent" ? <div className="pc-concept" aria-label="Generated visual concept of a navy polo shirt">
           <svg viewBox="0 0 420 420" role="img" aria-label="Stylised generated navy polo concept"><path d="M142 88 95 115 45 181l55 35 28-38v165h164V178l28 38 55-35-50-66-47-27-28 25h-80z" fill="#182337"/><path d="m170 88 40 37 40-37-15 58-25-17-25 17z" fill="#eef0ec"/><path d="M210 129v89" stroke="#eef0ec" strokeWidth="5"/><circle cx="222" cy="151" r="3" fill="#182337"/><circle cx="222" cy="167" r="3" fill="#182337"/><path d="M128 178h164M128 206h164M128 234h164M128 262h164M128 290h164" stroke="#263650" strokeWidth="3" opacity=".65"/></svg>
           <div className="pc-concept-copy"><span>AI concept · visual reference only</span><b>Deep navy · structured warp-knit mesh</b><small>Generated from sketch + approved product brief. Not treated as a confirmed physical product fact.</small></div>
-        </div> : <div className="pc-empty"><Sparkles size={30}/><b>Concept appears here</b><p>Upload a sketch first, then generate the visualisation.</p></div>}
+        </div> : <div className="pc-empty"><Sparkles size={30}/><b>Concept appears here</b><p>The sample sketch is already loaded. Generate the visualisation to see the workflow immediately.</p></div>}
         {state === "generated" || state === "sent" ? <div className="pc-truth"><Check size={14}/><span>Visual linked to the product case with source sketch, prompt context and generated status preserved.</span></div> : null}
       </section>
     </div>
