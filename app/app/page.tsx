@@ -1,4 +1,5 @@
-import { FrumaDemoPlatform } from "@/components/fruma/FrumaDemoPlatform";
+import { InteractivePlatform } from "@/components/fruma/InteractivePlatform";
+import { RecoveryButtonEnhancer } from "@/components/fruma/RecoveryButtonEnhancer";
 import "./enterprise-platform.css";
 import "./interactive-platform.css";
 import "./customer-demo.css";
@@ -9,5 +10,10 @@ export const metadata = {
 };
 
 export default function AppPage() {
-  return <FrumaDemoPlatform />;
+  return (
+    <>
+      <InteractivePlatform />
+      <RecoveryButtonEnhancer />
+    </>
+  );
 }
