@@ -1,5 +1,5 @@
-# PR12 baseline marker
+# PR12 exact live baseline
 
-This non-product file marks the intentional restore of the exact PR #12 sourcing-case platform as the live `/app` baseline (`c6a9da2116c0e0b6b26897ae7a185f2b8ef0f713`).
+Production `/app` is the exact PR #12 sourcing-case `PlatformV2` (merge `c6a9da2116c0e0b6b26897ae7a185f2b8ef0f713`).
 
-Active entry: `PlatformV2` via `app/app/page.tsx`.
+Later PR13/PR14/PR20 enterprise and demo shells have been removed from the shipping tree so they cannot be served as the live product UI.
