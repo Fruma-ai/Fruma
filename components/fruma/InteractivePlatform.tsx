@@ -31,16 +31,19 @@ import {
   type Product,
   type Stage,
 } from "@/lib/fruma/demo-data";
+import { ProductConceptLab } from "@/components/fruma/ProductConceptLab";
 
 type Mode = "brand" | "mill";
-type BrandScreen = Stage | "range" | "suppliers";
-type MillScreen = "requests" | "book" | "data" | "evidence" | "samples" | "orders" | "messages";
+type BrandLifecycle = Stage | "concept";
+type BrandScreen = BrandLifecycle | "range" | "suppliers";
+type MillScreen = "home" | "requests" | "book" | "data" | "evidence" | "samples" | "orders" | "messages";
 type ProductPanel = "overview" | "brief" | "inspiration" | "targets" | "bom" | "development";
 type RequestState = "draft" | "sent" | "answered";
 type MappingState = "ready" | "mapped" | "published";
 
-const lifecycle: { id: Stage; label: string }[] = [
+const lifecycle: { id: BrandLifecycle; label: string }[] = [
   { id: "intent", label: "Intent" },
+  { id: "concept", label: "Concept" },
   { id: "check", label: "Check" },
   { id: "source", label: "Source" },
   { id: "confirm", label: "Confirm" },
@@ -50,6 +53,7 @@ const lifecycle: { id: Stage; label: string }[] = [
 ];
 
 const millNav: { id: MillScreen; label: string }[] = [
+  { id: "home", label: "Home" },
   { id: "requests", label: "Requests" },
   { id: "book", label: "Book" },
   { id: "data", label: "Data" },
@@ -60,36 +64,15 @@ const millNav: { id: MillScreen; label: string }[] = [
 ];
 
 function PageHead({ eyebrow, title, copy, action }: { eyebrow?: string; title: string; copy: string; action?: React.ReactNode }) {
-  return (
-    <div className="fx-page-head">
-      <div>{eyebrow ? <p className="fx-eyebrow">{eyebrow}</p> : null}<h1>{title}</h1><p>{copy}</p></div>
-      {action ? <div>{action}</div> : null}
-    </div>
-  );
+  return <div className="fx-page-head"><div>{eyebrow ? <p className="fx-eyebrow">{eyebrow}</p> : null}<h1>{title}</h1><p>{copy}</p></div>{action ? <div>{action}</div> : null}</div>;
 }
 
 function ModeSwitch({ mode, setMode }: { mode: Mode; setMode: (mode: Mode) => void }) {
-  return (
-    <div className="fx-mode-switch" aria-label="Workspace mode">
-      <button className={mode === "brand" ? "active" : ""} onClick={() => setMode("brand")}>Brand</button>
-      <button className={mode === "mill" ? "active" : ""} onClick={() => setMode("mill")}>Mill</button>
-    </div>
-  );
+  return <div className="fx-mode-switch" aria-label="Workspace mode"><button className={mode === "brand" ? "active" : ""} onClick={() => setMode("brand")}>Brand</button><button className={mode === "mill" ? "active" : ""} onClick={() => setMode("mill")}>Mill</button></div>;
 }
 
 function BrandHeader({ screen, setScreen, mode, setMode }: { screen: BrandScreen; setScreen: (screen: BrandScreen) => void; mode: Mode; setMode: (mode: Mode) => void }) {
-  return (
-    <header className="fx-topbar">
-      <button className="fx-wordmark" onClick={() => setScreen("range")}>FRUMA</button>
-      <button className="fx-workspace">{demoBrands[0].name}<ChevronDown size={14}/></button>
-      <nav className="fx-main-nav">
-        <button className={screen === "range" ? "active" : ""} onClick={() => setScreen("range")}>Range</button>
-        <button className={lifecycle.some((x) => x.id === screen) ? "active" : ""} onClick={() => setScreen("intent")}>Products</button>
-        <button className={screen === "suppliers" ? "active" : ""} onClick={() => setScreen("suppliers")}>Suppliers</button>
-      </nav>
-      <div className="fx-top-actions"><ModeSwitch mode={mode} setMode={setMode}/><button aria-label="Notifications"><Bell size={16}/></button><div className="fx-avatar">AR</div></div>
-    </header>
-  );
+  return <header className="fx-topbar"><button className="fx-wordmark" onClick={() => setScreen("range")}>FRUMA</button><button className="fx-workspace">{demoBrands[0].name}<ChevronDown size={14}/></button><nav className="fx-main-nav"><button className={screen === "range" ? "active" : ""} onClick={() => setScreen("range")}>Range</button><button className={lifecycle.some((x) => x.id === screen) ? "active" : ""} onClick={() => setScreen("intent")}>Products</button><button className={screen === "suppliers" ? "active" : ""} onClick={() => setScreen("suppliers")}>Suppliers</button></nav><div className="fx-top-actions"><ModeSwitch mode={mode} setMode={setMode}/><button aria-label="Notifications"><Bell size={16}/></button><div className="fx-avatar">AR</div></div></header>;
 }
 
 function LifecycleBar({ screen, setScreen }: { screen: BrandScreen; setScreen: (screen: BrandScreen) => void }) {
@@ -98,14 +81,7 @@ function LifecycleBar({ screen, setScreen }: { screen: BrandScreen; setScreen: (
 }
 
 function ProductRail({ product, panel, setPanel }: { product: Product; panel: ProductPanel; setPanel: (panel: ProductPanel) => void }) {
-  const items: { id: ProductPanel; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "brief", label: "Product Brief" },
-    { id: "inspiration", label: "Inspiration" },
-    { id: "targets", label: "Targets" },
-    { id: "bom", label: "Bill of Materials" },
-    { id: "development", label: "Development Notes" },
-  ];
+  const items: { id: ProductPanel; label: string }[] = [{ id: "overview", label: "Overview" }, { id: "brief", label: "Product Brief" }, { id: "inspiration", label: "Inspiration" }, { id: "targets", label: "Targets" }, { id: "bom", label: "Bill of Materials" }, { id: "development", label: "Development Notes" }];
   return <aside className="fx-rail"><p className="fx-rail-label">Product case</p>{items.map((item) => <button key={item.id} className={panel === item.id ? "active" : ""} onClick={() => setPanel(item.id)}>{item.label}</button>)}<div className="fx-rail-spacer"/><div className="fx-case-mini"><span>{product.sku}</span><b>{product.season}</b></div></aside>;
 }
 
@@ -124,7 +100,11 @@ function RangeScreen({ setProduct, setScreen }: { setProduct: (product: Product)
 
 function IntentScreen({ product, setProduct, panel, setPanel, setScreen }: { product: Product; setProduct: (product: Product) => void; panel: ProductPanel; setPanel: (panel: ProductPanel) => void; setScreen: (screen: BrandScreen) => void }) {
   const options = [featuredProduct, ...products.slice(0, 20)];
-  return <div className="fx-with-rail"><ProductRail product={product} panel={panel} setPanel={setPanel}/><main className="fx-main"><PageHead title="Product intent" copy="Start with what the brand is trying to make, then structure it into requirements Fruma can test and source." action={<button className="fx-primary" onClick={() => setScreen("check")}>Build requirement contract <ArrowRight size={14}/></button>}/><div className="fx-form-grid"><label>Working product<select value={product.id} onChange={(e) => setProduct(options.find((p) => p.id === e.target.value) ?? featuredProduct)}>{options.map((p) => <option key={p.id} value={p.id}>{p.sku} · {p.name}</option>)}</select></label><label>Category<input readOnly value={product.category}/></label><label>Season<input readOnly value={product.season}/></label><label>Target ship date<input readOnly value="15 May 2027"/></label></div><ProductPanelView panel={panel} product={product}/></main></div>;
+  return <div className="fx-with-rail"><ProductRail product={product} panel={panel} setPanel={setPanel}/><main className="fx-main"><PageHead title="Product intent" copy="Start with what the brand is trying to make, then structure it into requirements Fruma can test and source." action={<button className="fx-primary" onClick={() => setScreen("concept")}>Add sketch & AI concept <ArrowRight size={14}/></button>}/><div className="fx-form-grid"><label>Working product<select value={product.id} onChange={(e) => setProduct(options.find((p) => p.id === e.target.value) ?? featuredProduct)}>{options.map((p) => <option key={p.id} value={p.id}>{p.sku} · {p.name}</option>)}</select></label><label>Category<input readOnly value={product.category}/></label><label>Season<input readOnly value={product.season}/></label><label>Target ship date<input readOnly value="15 May 2027"/></label></div><ProductPanelView panel={panel} product={product}/></main></div>;
+}
+
+function ConceptScreen({ setScreen }: { setScreen: (screen: BrandScreen) => void }) {
+  return <main className="fx-main"><PageHead eyebrow="AI-assisted development" title="Sketch to product concept." copy="Start from the brand sketch, generate a visual end-product reference, and keep its generated status explicit until physical validation." action={<button className="fx-primary" onClick={() => setScreen("check")}>Continue to product truth <ArrowRight size={14}/></button>}/><ProductConceptLab/></main>;
 }
 
 function CheckScreen({ product, setScreen }: { product: Product; setScreen: (screen: BrandScreen) => void }) {
@@ -143,7 +123,7 @@ function SourceScreen({ product, selectedMillId, setSelectedMillId, setScreen }:
   const [sort, setSort] = useState("Best Overall");
   const [favourites, setFavourites] = useState<string[]>([]);
   const candidates = useMemo(() => rankedMills(product), [product]);
-  return <main className="fx-main"><PageHead title="Source" copy="Compare the network against this exact case, keeping current evidence and relationship history visible."/><div className="fx-toolbar"><div className="fx-tabs compact">{["Best Overall", "Cost", "Quality", "Delivery", "Sustainability"].map((x) => <button key={x} className={sort === x ? "active" : ""} onClick={() => setSort(x)}>{x}</button>)}</div><button className="fx-secondary"><Filter size={14}/> Filters</button></div><div className="fx-source-grid">{candidates.slice(0, 8).map((mill, i) => { const score = Math.max(70, Math.min(98, mill.evidenceCoverage + (mill.relationship === "preferred" ? 5 : 0) - mill.staleEvidence * 2)); const fav = favourites.includes(mill.id); return <article className={`fx-supplier ${selectedMillId === mill.id ? "selected" : ""}`} key={mill.id}><div className="fx-card-head"><span className="fx-score">{score}</span><button onClick={() => setFavourites(fav ? favourites.filter((x) => x !== mill.id) : [...favourites, mill.id])} aria-label="Favourite"><Heart size={16} fill={fav ? "currentColor" : "none"}/></button></div><h2>{mill.name}</h2><p>{mill.region}, {mill.country}</p><div className="fx-kpi-grid small"><div><span>MOQ</span><b>{mill.moq.toLocaleString()} m</b></div><div><span>Lead</span><b>{mill.leadWeeks} wks</b></div><div><span>Evidence</span><b>{mill.evidenceCoverage}%</b></div><div><span>Relationship</span><b>{mill.relationship}</b></div></div><div className="fx-chip-row">{mill.specialties.slice(0, 3).map((x) => <span key={x}>{x}</span>)}</div><button className="fx-primary full" onClick={() => { setSelectedMillId(mill.id); setScreen("confirm"); }}>Select & confirm</button></article>; })}</div></main>;
+  return <main className="fx-main"><PageHead title="Source" copy="Compare the network against this exact case, keeping current evidence and relationship history visible."/><div className="fx-toolbar"><div className="fx-tabs compact">{["Best Overall", "Cost", "Quality", "Delivery", "Sustainability"].map((x) => <button key={x} className={sort === x ? "active" : ""} onClick={() => setSort(x)}>{x}</button>)}</div><button className="fx-secondary"><Filter size={14}/> Filters</button></div><div className="fx-source-grid">{candidates.slice(0, 8).map((mill) => { const score = Math.max(70, Math.min(98, mill.evidenceCoverage + (mill.relationship === "preferred" ? 5 : 0) - mill.staleEvidence * 2)); const fav = favourites.includes(mill.id); return <article className={`fx-supplier ${selectedMillId === mill.id ? "selected" : ""}`} key={mill.id}><div className="fx-card-head"><span className="fx-score">{score}</span><button onClick={() => setFavourites(fav ? favourites.filter((x) => x !== mill.id) : [...favourites, mill.id])} aria-label="Favourite"><Heart size={16} fill={fav ? "currentColor" : "none"}/></button></div><h2>{mill.name}</h2><p>{mill.region}, {mill.country}</p><div className="fx-kpi-grid small"><div><span>MOQ</span><b>{mill.moq.toLocaleString()} m</b></div><div><span>Lead</span><b>{mill.leadWeeks} wks</b></div><div><span>Evidence</span><b>{mill.evidenceCoverage}%</b></div><div><span>Relationship</span><b>{mill.relationship}</b></div></div><div className="fx-chip-row">{mill.specialties.slice(0, 3).map((x) => <span key={x}>{x}</span>)}</div><button className="fx-primary full" onClick={() => { setSelectedMillId(mill.id); setScreen("confirm"); }}>Select & confirm</button></article>; })}</div></main>;
 }
 
 function ConfirmScreen({ product, mill, requestState, setRequestState, setScreen }: { product: Product; mill: Mill; requestState: RequestState; setRequestState: (state: RequestState) => void; setScreen: (screen: BrandScreen) => void }) {
@@ -177,11 +157,15 @@ function BrandWorkspace({ mode, setMode }: { mode: Mode; setMode: (mode: Mode) =
   const [requestState, setRequestState] = useState<RequestState>("draft");
   const mill = mills.find((m) => m.id === selectedMillId) ?? mills[0];
   function chooseProduct(p: Product) { setProduct(p); setSelectedMillId(p.shortlistMillIds[0] ?? mills[0].id); setRequestState("draft"); }
-  return <div className="fx-shell brand"><BrandHeader screen={screen} setScreen={setScreen} mode={mode} setMode={setMode}/><LifecycleBar screen={screen} setScreen={setScreen}/>{screen === "range" ? <RangeScreen setProduct={chooseProduct} setScreen={setScreen}/> : screen === "intent" ? <IntentScreen product={product} setProduct={chooseProduct} panel={panel} setPanel={setPanel} setScreen={setScreen}/> : screen === "check" ? <CheckScreen product={product} setScreen={setScreen}/> : screen === "source" ? <SourceScreen product={product} selectedMillId={selectedMillId} setSelectedMillId={setSelectedMillId} setScreen={setScreen}/> : screen === "confirm" ? <ConfirmScreen product={product} mill={mill} requestState={requestState} setRequestState={setRequestState} setScreen={setScreen}/> : screen === "development" ? <DevelopmentScreen product={product} mill={mill} setScreen={setScreen}/> : screen === "list" ? <ListScreen product={product} mill={mill} setScreen={setScreen}/> : screen === "live" ? <LiveScreen product={product} mill={mill}/> : <SuppliersScreen setSelectedMillId={setSelectedMillId} setScreen={setScreen}/>}</div>;
+  return <div className="fx-shell brand"><BrandHeader screen={screen} setScreen={setScreen} mode={mode} setMode={setMode}/><LifecycleBar screen={screen} setScreen={setScreen}/>{screen === "range" ? <RangeScreen setProduct={chooseProduct} setScreen={setScreen}/> : screen === "intent" ? <IntentScreen product={product} setProduct={chooseProduct} panel={panel} setPanel={setPanel} setScreen={setScreen}/> : screen === "concept" ? <ConceptScreen setScreen={setScreen}/> : screen === "check" ? <CheckScreen product={product} setScreen={setScreen}/> : screen === "source" ? <SourceScreen product={product} selectedMillId={selectedMillId} setSelectedMillId={setSelectedMillId} setScreen={setScreen}/> : screen === "confirm" ? <ConfirmScreen product={product} mill={mill} requestState={requestState} setRequestState={setRequestState} setScreen={setScreen}/> : screen === "development" ? <DevelopmentScreen product={product} mill={mill} setScreen={setScreen}/> : screen === "list" ? <ListScreen product={product} mill={mill} setScreen={setScreen}/> : screen === "live" ? <LiveScreen product={product} mill={mill}/> : <SuppliersScreen setSelectedMillId={setSelectedMillId} setScreen={setScreen}/>}</div>;
 }
 
 function MillHeader({ screen, setScreen, mode, setMode, mill }: { screen: MillScreen; setScreen: (screen: MillScreen) => void; mode: Mode; setMode: (mode: Mode) => void; mill: Mill }) {
-  return <header className="fx-topbar mill"><button className="fx-wordmark" onClick={() => setScreen("requests")}>FRUMA</button><button className="fx-workspace">{mill.name}<ChevronDown size={14}/></button><nav className="fx-main-nav">{millNav.map((item) => <button key={item.id} className={screen === item.id ? "active" : ""} onClick={() => setScreen(item.id)}>{item.label}</button>)}</nav><div className="fx-top-actions"><ModeSwitch mode={mode} setMode={setMode}/><div className="fx-avatar">VM</div></div></header>;
+  return <header className="fx-topbar mill"><button className="fx-wordmark" onClick={() => setScreen("home")}>FRUMA</button><button className="fx-workspace">{mill.name}<ChevronDown size={14}/></button><nav className="fx-main-nav">{millNav.map((item) => <button key={item.id} className={screen === item.id ? "active" : ""} onClick={() => setScreen(item.id)}>{item.label}</button>)}</nav><div className="fx-top-actions"><ModeSwitch mode={mode} setMode={setMode}/><div className="fx-avatar">VM</div></div></header>;
+}
+
+function MillHome({ mill, setScreen }: { mill: Mill; setScreen: (screen: MillScreen) => void }) {
+  return <main className="fx-main mill-main"><PageHead eyebrow="Mill workspace" title="Factory home" copy="Your mapped quality book, evidence, live requests and operational work all sit on the same source-linked record."/><div className="fx-kpi-grid"><div><span>Mapped qualities</span><b>16</b></div><div><span>Open requests</span><b>6</b></div><div><span>Evidence coverage</span><b>{mill.evidenceCoverage}%</b></div><div><span>Active samples</span><b>3</b></div></div><div className="fx-two-col"><section className="fx-card dark"><h2>Start work</h2><button className="fx-secondary full" onClick={() => setScreen("requests")}><Inbox size={14}/> Incoming requests</button><button className="fx-secondary full" onClick={() => setScreen("book")}><BookOpen size={14}/> Mapped mill book</button><button className="fx-secondary full" onClick={() => setScreen("data")}><Database size={14}/> Data & mapping</button></section><section className="fx-card dark"><h2>Setup state</h2><div className="fx-success"><Check size={14}/> Factory setup locked</div><div className="fx-line"><b>Source preserved</b><span>100%</span></div><div className="fx-line"><b>Evidence</b><span>Scoped separately</span></div><div className="fx-line"><b>Commercial terms</b><span>Freshness-aware</span></div></section></div></main>;
 }
 
 function MillRequests({ mill }: { mill: Mill }) {
@@ -199,41 +183,32 @@ function MillBook({ mill }: { mill: Mill }) {
   return <main className="fx-main mill-main"><PageHead title="Mapped mill book" copy="Your own quality language remains visible alongside the Fruma-standard interpretation."/><div className="fx-table-card dark"><table><thead><tr><th>Mill code</th><th>Quality</th><th>Construction</th><th>MOQ</th><th>Lead</th><th>Mapping</th></tr></thead><tbody>{rows.map((r, i) => <tr key={r.code} className={selected === i ? "selected" : ""} onClick={() => setSelected(i)}><td>{r.code}</td><td><b>{r.name}</b></td><td>{r.construction}</td><td>{r.moq} m</td><td>{r.lead} wks</td><td><span className="fx-status live">Mapped</span></td></tr>)}</tbody></table></div></main>;
 }
 
-const mappingRows = [
-  ["Article / Quality", "quality_name", "Direct"],
-  ["Composition", "material_composition", "Direct"],
-  ["Weight (g/m²)", "weight_gsm", "Direct"],
-  ["Width", "usable_width_cm", "Unit conversion"],
-  ["MOQ", "commercial_moq", "Needs scope"],
-  ["Lead time", "commercial_lead_time", "Needs freshness"],
-  ["Certification", "evidence_claim", "Evidence link required"],
-  ["Colour minimum", "colour_moq", "Direct"],
-];
+const mappingRows = [["Article / Quality", "quality_name", "Direct"], ["Composition", "material_composition", "Direct"], ["Weight (g/m²)", "weight_gsm", "Direct"], ["Width", "usable_width_cm", "Unit conversion"], ["MOQ", "commercial_moq", "Needs scope"], ["Lead time", "commercial_lead_time", "Needs freshness"], ["Certification", "evidence_claim", "Evidence link required"], ["Colour minimum", "colour_moq", "Direct"]];
 
 function MillData({ mill }: { mill: Mill }) {
   const [state, setState] = useState<MappingState>("ready");
   const [files, setFiles] = useState(["SS27_master_quality_book.xlsx", "certificates_2026.zip"]);
   function simulateUpload() { setFiles((current) => current.includes("updated_commercial_terms.csv") ? current : ["updated_commercial_terms.csv", ...current]); setState("ready"); }
-  return <main className="fx-main mill-main"><PageHead eyebrow="Critical data workflow" title="Upload, map, review, publish." copy="Fruma does not overwrite the mill's language. It preserves the source value, maps it to the Fruma standard, and keeps provenance and confidence attached." action={<button className="fx-primary" onClick={simulateUpload}><Upload size={14}/> Upload mill data</button>}/><div className="fx-data-steps"><div className="active"><Upload size={18}/><span>1. Ingest</span><b>{files.length} files</b></div><div className={state !== "ready" ? "active" : ""}><MapPinned size={18}/><span>2. Map</span><b>{mappingRows.length} fields</b></div><div className={state === "published" ? "active" : ""}><FileCheck2 size={18}/><span>3. Review</span><b>{state === "published" ? "Complete" : "Pending"}</b></div><div className={state === "published" ? "active" : ""}><Database size={18}/><span>4. Publish internally</span><b>{state === "published" ? "Published" : "Not yet"}</b></div></div><div className="fx-two-col data-layout"><section className="fx-card dark"><div className="fx-card-head"><h2>Source files</h2><span>Mill-owned</span></div>{files.map((file, i) => <div className="fx-file" key={file}><FileText size={16}/><div><b>{file}</b><span>{i === 0 ? "Uploaded just now" : `${i + 1} source tables detected`}</span></div><span className="fx-status">Parsed</span></div>)}<button className="fx-secondary full" onClick={simulateUpload}>Add another file</button></section><section className="fx-card dark"><div className="fx-card-head"><h2>Mapping summary</h2><span>{mill.name}</span></div><div className="fx-kpi-grid small"><div><span>Mapped</span><b>{state === "ready" ? 5 : 8}/8</b></div><div><span>Needs review</span><b>{state === "ready" ? 3 : 0}</b></div><div><span>Source preserved</span><b>100%</b></div><div><span>Published</span><b>{state === "published" ? "Yes" : "No"}</b></div></div></section></div><section className="fx-card dark mapping-table"><div className="fx-card-head"><h2>Source → Fruma standard mapping</h2><span>Nothing becomes confirmed truth just because it mapped successfully.</span></div><div className="fx-map-head"><span>Mill source field</span><span>Fruma standard field</span><span>Mapping rule</span><span>Status</span></div>{mappingRows.map(([source, target, rule], i) => <div className="fx-map-row" key={source}><b>{source}</b><code>{target}</code><span>{rule}</span><span className={`fx-status ${state !== "ready" || i < 5 ? "live" : ""}`}>{state !== "ready" || i < 5 ? "Mapped" : "Review"}</span></div>)}<div className="fx-map-actions">{state === "ready" ? <button className="fx-primary" onClick={() => setState("mapped")}>Accept reviewed mappings <ArrowRight size={14}/></button> : state === "mapped" ? <button className="fx-primary" onClick={() => setState("published")}>Publish to internal mill record <ArrowRight size={14}/></button> : <div className="fx-success"><Check size={14}/> Mapping published to Fruma's internal standard with source provenance preserved.</div>}</div></section></main>;
+  return <main className="fx-main mill-main"><PageHead eyebrow="Critical data workflow" title="Upload, map, review, publish." copy="Fruma does not overwrite the mill's language. It preserves the source value, maps it to the Fruma standard, and keeps provenance and confidence attached." action={<button className="fx-primary" onClick={simulateUpload}><Upload size={14}/> Upload mill data</button>}/><div className="fx-data-steps"><div className="active"><Upload size={18}/><span>1. Ingest</span><b>{files.length} files</b></div><div className={state !== "ready" ? "active" : ""}><MapPinned size={18}/><span>2. Map</span><b>{mappingRows.length} fields</b></div><div className={state === "published" ? "active" : ""}><FileCheck2 size={18}/><span>3. Review</span><b>{state === "published" ? "Complete" : "Pending"}</b></div><div className={state === "published" ? "active" : ""}><Database size={18}/><span>4. Publish internally</span><b>{state === "published" ? "Published" : "Not yet"}</b></div></div><div className="fx-two-col data-layout"><section className="fx-card dark"><div className="fx-card-head"><h2>Source files</h2><span>Mill-owned</span></div>{files.map((file, i) => <div className="fx-file" key={file}><FileText size={16}/><div><b>{file}</b><span>{i === 0 ? "Uploaded just now" : `${i + 1} source tables detected`}</span></div><span className="fx-status">Parsed</span></div>)}<button className="fx-secondary full" onClick={simulateUpload}>Add another file</button></section><section className="fx-card dark"><div className="fx-card-head"><h2>Mapping summary</h2><span>{mill.name}</span></div><div className="fx-kpi-grid small"><div><span>Mapped</span><b>{state === "ready" ? 5 : 8}/8</b></div><div><span>Needs review</span><b>{state === "ready" ? 3 : 0}</b></div><div><span>Source preserved</span><b>100%</b></div><div><span>Published</span><b>{state === "published" ? "Yes" : "No"}</b></div></div></section></div><section className="fx-card dark mapping-table"><div className="fx-card-head"><h2>Source → Fruma standard mapping</h2><span>Nothing becomes confirmed truth just because it mapped successfully.</span></div><div className="fx-map-head"><span>Mill source field</span><span>Fruma standard field</span><span>Mapping rule</span><span>Status</span></div>{mappingRows.map(([source, target, rule], i) => <div className="fx-map-row" key={source}><b>{source}</b><code>{target}</code><span>{rule}</span><span className={`fx-status ${state !== "ready" || i < 5 ? "live" : ""}`}>{state !== "ready" || i < 5 ? "Mapped" : "Review"}</span></div>)}<div className="fx-map-actions">{state === "ready" ? <button className="fx-primary" onClick={() => setState("mapped")}>Accept reviewed mappings <ArrowRight size={14}/></button> : state === "mapped" ? <button className="fx-primary" onClick={() => setState("published")}>Publish to internal mill record <ArrowRight size={14}/></button> : <div className="fx-success"><Check size={14}/> Mapping published to Fruma&apos;s internal standard with source provenance preserved.</div>}</div></section></main>;
 }
 
 function MillEvidence({ mill }: { mill: Mill }) {
   return <main className="fx-main mill-main"><PageHead title="Evidence" copy="Manage evidence separately from capability and commercial claims, with scope and freshness explicit."/><div className="fx-source-grid evidence">{mill.certifications.map((c, i) => <article className="fx-card dark" key={c}><ShieldCheck size={22}/><h2>{c}</h2><p>Scope: mill site · applicable quality families subject to mapping.</p><div className="fx-line"><b>Status</b><span>{i === mill.certifications.length - 1 && mill.staleEvidence ? "Review due" : "Current"}</span></div><button className="fx-secondary full">Open evidence record</button></article>)}</div></main>;
 }
 
-function SimpleMillScreen({ screen }: { screen: MillScreen }) {
+function SimpleMillScreen({ screen }: { screen: Exclude<MillScreen, "home" | "requests" | "book" | "data" | "evidence"> }) {
   const content = screen === "samples" ? ["3 active sample requests", "2 in transit", "1 awaiting review"] : screen === "orders" ? ["4 confirmed orders", "2 production milestones due", "1 shipment this week"] : ["6 active conversations", "2 need a reply", "1 linked to an open sourcing request"];
   const Icon = screen === "samples" ? PackageCheck : screen === "orders" ? BookOpen : MessageSquare;
   return <main className="fx-main mill-main"><PageHead title={screen[0].toUpperCase() + screen.slice(1)} copy={`Operational ${screen} stay linked to the same underlying sourcing and product records.`}/><div className="fx-source-grid simple">{content.map((x, i) => <article className="fx-card dark" key={x}><Icon size={22}/><h2>{x}</h2><p>{i === 0 ? "Open workspace" : "Linked records and current status available."}</p><button className="fx-secondary">Open</button></article>)}</div></main>;
 }
 
 function MillWorkspace({ mode, setMode }: { mode: Mode; setMode: (mode: Mode) => void }) {
-  const [screen, setScreen] = useState<MillScreen>("requests");
+  const [screen, setScreen] = useState<MillScreen>("home");
   const activeMill = mills[3] ?? mills[0];
-  return <div className="fx-shell mill"><MillHeader screen={screen} setScreen={setScreen} mode={mode} setMode={setMode} mill={activeMill}/>{screen === "requests" ? <MillRequests mill={activeMill}/> : screen === "book" ? <MillBook mill={activeMill}/> : screen === "data" ? <MillData mill={activeMill}/> : screen === "evidence" ? <MillEvidence mill={activeMill}/> : <SimpleMillScreen screen={screen}/>}</div>;
+  return <div className="fx-shell mill"><MillHeader screen={screen} setScreen={setScreen} mode={mode} setMode={setMode} mill={activeMill}/>{screen === "home" ? <MillHome mill={activeMill} setScreen={setScreen}/> : screen === "requests" ? <MillRequests mill={activeMill}/> : screen === "book" ? <MillBook mill={activeMill}/> : screen === "data" ? <MillData mill={activeMill}/> : screen === "evidence" ? <MillEvidence mill={activeMill}/> : <SimpleMillScreen screen={screen}/>}</div>;
 }
 
-export function InteractivePlatform() {
-  const [mode, setMode] = useState<Mode>("brand");
+export function InteractivePlatform({ initialMode = "brand" }: { initialMode?: Mode }) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   return mode === "brand" ? <BrandWorkspace mode={mode} setMode={setMode}/> : <MillWorkspace mode={mode} setMode={setMode}/>;
 }
