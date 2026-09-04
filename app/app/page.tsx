@@ -1,4 +1,4 @@
-import { CustomerDemoPlatform } from "@/components/fruma/CustomerDemoPlatform";
+import { FactoryFirstPlatform } from "@/components/fruma/FactoryFirstPlatform";
 import "./enterprise-platform.css";
 import "./interactive-platform.css";
 import "./customer-demo.css";
@@ -9,5 +9,5 @@ export const metadata = {
 };
 
 export default function AppPage() {
-  return <CustomerDemoPlatform />;
+  return <FactoryFirstPlatform />;
 }
