@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function EnterForm() {
-  const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") || "/app";
   const [email, setEmail] = useState("");
@@ -34,8 +33,11 @@ export function EnterForm() {
         setLoading(false);
         return;
       }
-      router.replace(data.next || "/app");
-      router.refresh();
+
+      // The auth cookie is written by the POST response. A full browser
+      // navigation guarantees the next request includes it immediately and
+      // avoids the client router getting stuck on the login page.
+      window.location.assign(data.next || "/app");
     } catch {
       setError("Could not sign in. Try again.");
       setLoading(false);
