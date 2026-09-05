@@ -3,12 +3,13 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 const APPROVED_INTENT = [
-  "Product: Textured navy polo",
-  "Material intent: Extra-long staple cotton",
-  "Construction: Structured warp-knit mesh, not piqué",
-  "Colour: Deep navy",
-  "Handfeel: Premium, dry",
-  "Target market: UK + EU",
+  "Product: Men’s polo shirt, classic silhouette",
+  "Fabric: Cotton piqué, 100% cotton, approximately 220 GSM target",
+  "Fit: Regular fit",
+  "Colour: Navy, 19-3920 TCX",
+  "Construction: Rib knit collar, rib knit sleeve cuffs, three-button placket, side split hem",
+  "Trim: Matte-finish four-hole buttons",
+  "Target markets: EU, UK, US",
 ].join("\n");
 
 export async function POST(request: Request) {
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     const brief = String(form.get("brief") ?? "");
 
     if (!(sketch instanceof File)) {
-      return NextResponse.json({ error: "A designer sketch is required." }, { status: 400 });
+      return NextResponse.json({ error: "A product sketch or technical pack image is required." }, { status: 400 });
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -31,10 +32,10 @@ export async function POST(request: Request) {
 
     const upstream = new FormData();
     upstream.append("model", "gpt-image-2");
-    upstream.append("image", sketch, sketch.name || "designer-sketch.png");
+    upstream.append("image", sketch, sketch.name || "product-reference.png");
     upstream.append(
       "prompt",
-      `Create a polished finished-product ecommerce concept image that faithfully interprets the supplied designer sketch. Preserve the silhouette and design cues from the sketch. Use only the approved product intent below; do not invent logos, trims, fibre percentages, performance claims, sustainability claims, care instructions, compliance claims, or other unapproved facts. Present a single premium apparel product on a clean neutral studio background, no person, no text in the image.\n\nWritten brief:\n${brief}\n\nApproved intent:\n${APPROVED_INTENT}`,
+      `Create a polished, realistic finished-product ecommerce concept image that faithfully reflects the supplied product reference and the approved product specification below. The product reference may be a designer sketch, a technical pack, or a combined design/technical board. Treat the approved specification as a hard constraint, not creative inspiration. Preserve the intended silhouette, fit, fabric type, colour, collar, cuffs, placket, buttons and hem construction. Do not add contrast tipping, logos, branding, decorative trims, extra seams, alternate constructions, colours, fibres, claims or styling that are not supported by the approved specification. If any detail is unresolved, keep it visually neutral rather than inventing it. Present a single premium apparel product on a clean neutral studio background, no person, no text in the image.\n\nWritten product search / brief:\n${brief}\n\nApproved product specification:\n${APPROVED_INTENT}`,
     );
     upstream.append("size", "1024x1024");
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "AI concept generation returned no image." }, { status: 502 });
     }
 
-    return NextResponse.json({ imageUrl, provenance: "uploaded sketch + written brief + approved requirements" });
+    return NextResponse.json({ imageUrl, provenance: "product search / brief + uploaded sketch / tech pack + approved specification" });
   } catch (error) {
     console.error("product-concept route error", error);
     return NextResponse.json({ error: "Unable to generate the concept image." }, { status: 500 });
