@@ -6,6 +6,8 @@ import { featuredProduct, mills } from "@/lib/fruma/demo-data";
 
 type ConceptState = "empty" | "uploaded" | "interpreting" | "generated" | "pdp" | "sent" | "validated";
 
+type ConceptMode = "ai" | "source-fallback" | "none";
+
 const approvedIntent = [
   ["Product", "Textured navy polo", "Designer brief"],
   ["Material intent", "Extra-long staple cotton", "Approved requirement"],
@@ -21,10 +23,15 @@ export function ProductConceptLab() {
   const [state, setState] = useState<ConceptState>("empty");
   const [fileName, setFileName] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
+  const [sketchFile, setSketchFile] = useState<File | null>(null);
+  const [conceptUrl, setConceptUrl] = useState("");
+  const [conceptMode, setConceptMode] = useState<ConceptMode>("none");
+  const [generationError, setGenerationError] = useState("");
   const [selectedMillId, setSelectedMillId] = useState(featuredProduct.shortlistMillIds[0] ?? mills[0].id);
   const selectedMill = useMemo(() => mills.find((m) => m.id === selectedMillId) ?? mills[0], [selectedMillId]);
   const hasConcept = ["generated", "pdp", "sent", "validated"].includes(state);
   const hasPdp = ["pdp", "sent", "validated"].includes(state);
+  const displayedConceptUrl = conceptUrl || previewUrl;
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
@@ -32,19 +39,47 @@ export function ProductConceptLab() {
     if (!file) return;
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(URL.createObjectURL(file));
+    setSketchFile(file);
     setFileName(file.name);
+    setConceptUrl("");
+    setConceptMode("none");
+    setGenerationError("");
     setState("uploaded");
   }
 
-  function generateConcept() {
+  async function generateConcept() {
+    if (!sketchFile) return;
     setState("interpreting");
-    window.setTimeout(() => setState("generated"), 1700);
+    setGenerationError("");
+    setConceptUrl("");
+    setConceptMode("none");
+
+    try {
+      const form = new FormData();
+      form.append("sketch", sketchFile);
+      form.append("brief", featuredProduct.intent);
+      const response = await fetch("/api/product-concept", { method: "POST", body: form });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.imageUrl) throw new Error(payload.error || "AI concept generation failed.");
+      setConceptUrl(payload.imageUrl);
+      setConceptMode("ai");
+    } catch (error) {
+      setConceptMode("source-fallback");
+      setGenerationError(error instanceof Error ? error.message : "AI concept generation is unavailable.");
+    } finally {
+      setState("generated");
+    }
   }
 
   function reset() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl("");
+    setSketchFile(null);
     setFileName("");
+    setConceptUrl("");
+    setConceptMode("none");
+    setGenerationError("");
     setState("empty");
   }
 
@@ -81,15 +116,19 @@ export function ProductConceptLab() {
 
     {hasConcept ? <div className="pc-concept-pdp-grid">
       <section className="fx-card pc-panel">
-        <div className="fx-card-head"><div><p className="fx-eyebrow">Finished-product concept</p><h3>Potential end product</h3></div><span className="fx-status live">AI interpretation</span></div>
-        <div className="pc-concept" aria-label="Generated visual concept of a navy polo shirt"><svg viewBox="0 0 420 420" role="img" aria-label="Stylised generated navy polo concept"><defs><linearGradient id="shirt" x1="0" x2="1"><stop offset="0" stopColor="#172235"/><stop offset="1" stopColor="#263751"/></linearGradient></defs><path d="M142 88 95 115 45 181l55 35 28-38v165h164V178l28 38 55-35-50-66-47-27-28 25h-80z" fill="url(#shirt)"/><path d="m170 88 40 37 40-37-15 58-25-17-25 17z" fill="#eef0ec"/><path d="M210 129v89" stroke="#eef0ec" strokeWidth="5"/><circle cx="222" cy="151" r="3" fill="#182337"/><circle cx="222" cy="167" r="3" fill="#182337"/><path d="M128 178h164M128 206h164M128 234h164M128 262h164M128 290h164" stroke="#4e6685" strokeWidth="2" opacity=".55"/></svg><div className="pc-concept-copy"><span>AI interpretation · not confirmed product truth</span><b>Deep navy · structured warp-knit mesh direction</b><small>Generated from uploaded sketch + written brief + approved requirements. The image itself cannot promote a fact to confirmed status.</small></div></div>
+        <div className="fx-card-head"><div><p className="fx-eyebrow">Finished-product concept</p><h3>Potential end product</h3></div><span className="fx-status live">{conceptMode === "ai" ? "AI interpretation" : "Source-backed preview"}</span></div>
+        <div className="pc-concept" aria-label="Generated visual concept derived from the uploaded designer sketch">
+          {displayedConceptUrl ? <div className="pc-concept-image-wrap"><img src={displayedConceptUrl} alt="Source-backed finished-product concept derived from the uploaded sketch"/></div> : null}
+          <div className="pc-concept-copy"><span>{conceptMode === "ai" ? "AI interpretation · not confirmed product truth" : "Source sketch fallback · AI generation unavailable"}</span><b>Deep navy · structured warp-knit mesh direction</b><small>{conceptMode === "ai" ? "Generated from uploaded sketch + written brief + approved requirements. The image itself cannot promote a fact to confirmed status." : "The fixed placeholder has been removed. Until image generation is configured, Fruma preserves and shows the uploaded sketch rather than pretending a generic image was generated."}</small></div>
+        </div>
+        {generationError ? <div className="pc-warning"><b>Concept image generation unavailable</b><span>{generationError} The uploaded sketch is shown as a truthful fallback instead of a hard-coded product image.</span></div> : null}
         <div className="pc-truth"><Check size={14}/><span>Source sketch, designer brief, approved requirements and generated status remain linked to this concept.</span></div>
         {!hasPdp ? <button className="fx-primary full" onClick={() => setState("pdp")}>Build fictional PDP preview <ArrowRight size={14}/></button> : null}
       </section>
 
       <section className="fx-card pc-panel pc-pdp">
         <div className="fx-card-head"><div><p className="fx-eyebrow">Fictional destination preview</p><h3>Aster & Row PDP</h3></div>{hasPdp ? <span className="fx-status live">Preview ready</span> : <span className="fx-status">Waiting</span>}</div>
-        {hasPdp ? <div className="pdp-shell"><div className="pdp-brand">ASTER & ROW</div><div className="pdp-hero"><div className="pdp-photo"><svg viewBox="0 0 420 420" aria-hidden="true"><path d="M142 88 95 115 45 181l55 35 28-38v165h164V178l28 38 55-35-50-66-47-27-28 25h-80z" fill="#182337"/><path d="m170 88 40 37 40-37-15 58-25-17-25 17z" fill="#efeee8"/></svg><span>AI visual · not confirmed truth</span></div><div className="pdp-copy"><small>MEN / POLO SHIRTS</small><h4>Textured Navy Cotton Polo</h4><b>£85 <span>Fictional preview</span></b><p>Refined navy polo concept with a structured, breathable feel and premium dry handfeel, created from the approved product intent.</p><dl><div><dt>Colour</dt><dd>Deep navy</dd></div><div><dt>Material intent</dt><dd>Extra-long staple cotton</dd></div><div><dt>Construction</dt><dd>Structured warp-knit mesh · not piqué</dd></div><div><dt>Market</dt><dd>UK + EU</dd></div></dl><button type="button">Preview only · not purchasable</button></div></div></div> : <div className="pc-empty"><Sparkles size={30}/><b>PDP preview appears here</b><p>Fruma will only populate fields that come from approved intent. Missing facts stay missing.</p></div>}
+        {hasPdp ? <div className="pdp-shell"><div className="pdp-brand">ASTER & ROW</div><div className="pdp-hero"><div className="pdp-photo">{displayedConceptUrl ? <img src={displayedConceptUrl} alt="AI interpreted product concept in fictional PDP preview"/> : null}<span>{conceptMode === "ai" ? "AI visual · not confirmed truth" : "Source sketch preview · not product truth"}</span></div><div className="pdp-copy"><small>MEN / POLO SHIRTS</small><h4>Textured Navy Cotton Polo</h4><b>£85 <span>Fictional preview</span></b><p>Refined navy polo concept with a structured, breathable feel and premium dry handfeel, created from the approved product intent.</p><dl><div><dt>Colour</dt><dd>Deep navy</dd></div><div><dt>Material intent</dt><dd>Extra-long staple cotton</dd></div><div><dt>Construction</dt><dd>Structured warp-knit mesh · not piqué</dd></div><div><dt>Market</dt><dd>UK + EU</dd></div></dl><button type="button">Preview only · not purchasable</button></div></div></div> : <div className="pc-empty"><Sparkles size={30}/><b>PDP preview appears here</b><p>Fruma will only populate fields that come from approved intent. Missing facts stay missing.</p></div>}
         {hasPdp ? <div className="pc-pdp-note"><b>Approved-intent only</b><span>No fibre %, fabric weight, care, sustainability, compliance or performance claims are invented here because they are not yet confirmed.</span></div> : null}
       </section>
     </div> : null}
