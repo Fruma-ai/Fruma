@@ -1,0 +1,1 @@
+The potential end-product image is constrained by reconciled approved product data and remains an AI interpretation until sample validation.
