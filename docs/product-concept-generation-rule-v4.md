@@ -1,0 +1,1 @@
+AI concept generation follows approved product intent and must not invent unsupported details.
