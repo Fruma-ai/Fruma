@@ -1,0 +1,1 @@
+Product concepts must reflect the reconciled approved product specification.
