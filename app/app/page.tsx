@@ -1,11 +1,13 @@
 import { CustomerDemoPlatformV3 } from "@/components/fruma/CustomerDemoPlatformV3";
 import { FactoryCatalogueEnhancer } from "@/components/fruma/FactoryCatalogueEnhancer";
+import { VersionBanner } from "@/components/fruma/VersionBanner";
 import "./enterprise-platform.css";
 import "./interactive-platform.css";
 import "./customer-demo.css";
 import "./customer-demo-v2.css";
 import "./customer-demo-v3.css";
 import "./factory-catalogue.css";
+import "./test-corpus.css";
 import "../channel-lab/concept-sample.css";
 
 export const metadata = {
@@ -13,5 +15,11 @@ export const metadata = {
 };
 
 export default function AppPage() {
-  return <><CustomerDemoPlatformV3 /><FactoryCatalogueEnhancer /></>;
+  return (
+    <>
+      <VersionBanner version="demo" />
+      <CustomerDemoPlatformV3 />
+      <FactoryCatalogueEnhancer />
+    </>
+  );
 }
