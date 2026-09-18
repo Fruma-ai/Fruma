@@ -1,0 +1,16 @@
+---
+description: Product-truth invariants for Fruma mill and sourcing code
+globs: lib/fruma/**
+---
+
+# Product truth
+
+- Do not infer certs from organic fibre. Organic ≠ GOTS.
+- Mill programme ≠ quality claim. Missing evidence stays missing.
+- Do not generate article IDs. Empty article is an exception.
+- Do not overwrite `sourceValue`. Immutable mill source; normalised values sit alongside.
+- Do not mark MOQ / lead / price as current without a mill confirmation timestamp.
+- Named grants only. Cookie, approve-all, and confidence cannot create Granted visibility.
+- Brand-private preferred / proven / excluded memory never leaks across tenants or to mills.
+- Agents operate on bounded source pointers — never the whole corpus in an LLM prompt.
+- Destinations are projections; they must not mutate source truth.
