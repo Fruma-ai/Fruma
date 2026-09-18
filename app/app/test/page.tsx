@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { TestCorpusPlatform } from "@/components/fruma/TestCorpusPlatform";
 import "../customer-demo.css";
 import "../test-corpus.css";
@@ -9,5 +10,9 @@ export const metadata = {
 };
 
 export default function TestCorpusPage() {
-  return <TestCorpusPlatform />;
+  return (
+    <Suspense fallback={<div className="tc-shell" />}>
+      <TestCorpusPlatform />
+    </Suspense>
+  );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   TEST_BRANDS,
   TEST_FACTORIES,
@@ -13,6 +14,12 @@ import {
 import { VersionBanner } from "@/components/fruma/VersionBanner";
 
 type Tab = "overview" | "brands" | "factories" | "hangers";
+
+const TABS: Tab[] = ["overview", "brands", "factories", "hangers"];
+
+function isTab(value: string | null): value is Tab {
+  return value !== null && (TABS as string[]).includes(value);
+}
 
 function downloadCsv(factory: TestFactory) {
   const csv = hangerCsvFor(factory);
@@ -250,9 +257,24 @@ function HangersPanel() {
 }
 
 export function TestCorpusPlatform() {
-  const [tab, setTab] = useState<Tab>("overview");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: Tab = isTab(tabParam) ? tabParam : "overview";
   const [brandId, setBrandId] = useState(TEST_BRANDS[0].id);
   const [factoryId, setFactoryId] = useState(TEST_FACTORIES[0].id);
+
+  const setTab = useCallback(
+    (next: Tab) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "overview") params.delete("tab");
+      else params.set("tab", next);
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   return (
     <div className="tc-shell">
@@ -262,7 +284,7 @@ export function TestCorpusPlatform() {
           <p className="tc-kicker">Fruma · test</p>
           <strong>Test corpus workspace</strong>
         </div>
-        <nav className="tc-nav">
+        <nav className="tc-nav" aria-label="Test corpus sections">
           {(
             [
               ["overview", "Overview"],
@@ -275,6 +297,7 @@ export function TestCorpusPlatform() {
               key={id}
               type="button"
               className={tab === id ? "active" : ""}
+              aria-current={tab === id ? "page" : undefined}
               onClick={() => setTab(id)}
             >
               {label}
