@@ -316,6 +316,7 @@ export function sourceShortlist(input: {
   const candidates = scored.slice(0, limit);
   const currentIds = candidates.map((c) => c.factoryId);
   const prior = input.priorFactoryIds ?? [];
+  const hasBaseline = prior.length > 0;
   const priorSet = new Set(prior);
   const currentSet = new Set(currentIds);
 
@@ -325,9 +326,9 @@ export function sourceShortlist(input: {
     darkMillsSkipped,
     candidates,
     continuity: {
-      priorProductId: prior.length ? input.productId : null,
-      addedFactoryIds: currentIds.filter((id) => !priorSet.has(id)),
-      removedFactoryIds: prior.filter((id) => !currentSet.has(id)),
+      priorProductId: hasBaseline ? input.productId : null,
+      addedFactoryIds: hasBaseline ? currentIds.filter((id) => !priorSet.has(id)) : [],
+      removedFactoryIds: hasBaseline ? prior.filter((id) => !currentSet.has(id)) : [],
     },
   };
 }

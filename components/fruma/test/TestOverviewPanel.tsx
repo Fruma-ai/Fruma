@@ -32,9 +32,12 @@ export function TestOverviewPanel({
         <p className="tc-kicker">Test environment · live corpus health</p>
         <h1>Ingest success is not a mill catalogue.</h1>
         <p>
-          Fifty hangers all parse. {coverage.dark} mills are still dark because unknown columns
-          stay silent. Confirm a dialect playbook to attach mill vocabulary — source values never
-          change. Demo on <code>/app</code> stays frozen.
+          Fifty hangers all parse.{" "}
+          {coverage.dark
+            ? `${coverage.dark} mills are still dark because unknown columns stay silent.`
+            : `${coverage.partial} mills are partial — rows exist, but some mill vocabulary is still unmapped.`}{" "}
+          Confirm a dialect playbook to attach mill vocabulary — source values never change. Demo on{" "}
+          <code>/app</code> stays frozen.
         </p>
       </header>
       <div className="tc-stats tc-stats-six">
