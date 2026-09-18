@@ -12,10 +12,14 @@ Live workers on `/app/test?tab=agents`. Demo `/app` is untouched.
 
 ## Key findings (first harness pass, before mapping)
 
-- Built-in header map only knows “clean” English headers (`Article`, `Weight`, …).
-- Dialects **pl-fleece** (`Art.`), **it-shirting** (`Weave`, `Comp.`, `Wgt gsm`, …), **tr-knit**, **uk-imperial** leave headers unmapped.
-- Unmapped **article** headers → **0 qualities** for that factory (fail-closed — correct behaviour).
-- Mapping lexicon recovers those dialects when high-confidence proposals are confirmed; re-run Harness → 50/50 ok.
+Measured on the Test corpus:
+
+- **Before Mapping:** 42/50 factories ok · 1164 qualities · 19 headers unmapped
+- **pl-fleece** total failure — `Art.` not recognised as article → 0 qualities / 228 empty-article exceptions
+- Other dialects still produced qualities via known article headers, but left Weave / Comp. / GSM / etc. unmapped
+- **After Mapping auto-confirm:** 50/50 factories ok · 1392 qualities · 0 headers left
+
+Built-in header map only knows “clean” English headers. Mapping lexicon recovers mill dialect aliases without inventing values.
 
 ## Next agents (recommended)
 
