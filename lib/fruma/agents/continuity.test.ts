@@ -33,8 +33,9 @@ describe("Continuity agent", () => {
     );
   });
 
-  it("emits harness recovery exceptions after Mapping improves pl-fleece", () => {
+  it("reports stable harness when dialect builtins already land all 50", () => {
     runCorpusHarness({ idempotencyKey: "cont-h-before" });
+    // Mapping remains available for unknowns; corpus dialects no longer need Art. overlays.
     runMappingAgent({ idempotencyKey: "cont-map" });
     runCorpusHarness({ idempotencyKey: "cont-h-after" });
     runRetrievalAgent({ brandId: "brand-northline", idempotencyKey: "cont-r1" });
@@ -47,16 +48,18 @@ describe("Continuity agent", () => {
     });
 
     assert.ok(run.output?.baseline.established);
-    assert.ok(
-      run.output!.exceptions.some(
-        (e) =>
-          e.code === "factory_recovered" ||
-          e.code === "dialect_ok_changed" ||
-          e.code === "factory_ok_changed",
-      ),
-      `expected recovery exceptions, got ${run.output!.exceptions.map((e) => e.code).join(",")}`,
+    const harnessRecoveries = run.output!.exceptions.filter(
+      (e) =>
+        e.code === "factory_recovered" ||
+        e.code === "dialect_ok_changed" ||
+        e.code === "factory_ok_changed",
     );
-    assert.ok(run.output!.brandValue.bullets.some((b) => b.includes("exceptions")));
+    assert.equal(
+      harnessRecoveries.length,
+      0,
+      `builtins should keep harness green without recovery noise: ${harnessRecoveries.map((e) => e.code).join(",")}`,
+    );
+    assert.ok(run.output!.unchanged.harnessDialectsStable >= 1);
   });
 
   it("reports clean rebuy when two identical retrievals are diffed", () => {
