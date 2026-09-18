@@ -223,6 +223,22 @@ function evaluateRequirement(
       };
     }
     case "colour": {
+      if (req.target === "optional" || req.kind === "OPEN") {
+        if (!quality.colour) {
+          return {
+            ...base,
+            sourceField: "colour",
+            result: "not-on-file",
+            explanation: "Colourway not named in brief and not on this row.",
+          };
+        }
+        return {
+          ...base,
+          sourceField: "colour",
+          result: "needs-confirmation",
+          explanation: `Colourway "${quality.colour}" on file — brief left colour open.`,
+        };
+      }
       if (!quality.colour) {
         return {
           ...base,

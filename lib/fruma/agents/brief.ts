@@ -69,10 +69,11 @@ export function briefFromProduct(args: {
   market: string;
 }): ProductBrief {
   const { product, brandName, market } = args;
+  /** Colour is MUST only when the brief/product name names a colourway — never invent one. */
   const colourMatch = product.name.match(
     /\b(navy|stone|forest|black|cream|clay)\b/i,
   );
-  const colour = colourMatch?.[1]?.toLowerCase() ?? "navy";
+  const namedColour = colourMatch?.[1]?.toLowerCase();
   const constructions = CATEGORY_CONSTRUCTION[product.category] ?? ["jersey"];
   const specialties = CATEGORY_SPECIALTY[product.category] ?? ["fine cotton"];
 
@@ -105,13 +106,21 @@ export function briefFromProduct(args: {
       label: "Cotton-led or named fibre on file",
       target: "cotton|co |supima|merino",
     },
-    {
-      id: "req-colour",
-      kind: "PREFER",
-      field: "colour",
-      label: `Colourway ${colour} on hanger`,
-      target: colour,
-    },
+    namedColour
+      ? {
+          id: "req-colour",
+          kind: "MUST" as const,
+          field: "colour" as const,
+          label: `Colourway ${namedColour} on hanger (named in brief)`,
+          target: namedColour,
+        }
+      : {
+          id: "req-colour",
+          kind: "OPEN" as const,
+          field: "colour" as const,
+          label: "Colourway open — not named in brief",
+          target: "optional",
+        },
     {
       id: "req-moq",
       kind: "MUST",

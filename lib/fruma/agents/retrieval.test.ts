@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it, beforeEach } from "node:test";
 import { DEFAULT_AGENT_LIMITS } from "../agent-runtime";
+import { briefFromProduct } from "./brief";
 import {
   resetAgentRunsForTests,
   resetConfirmedHeadersForTests,
@@ -48,5 +49,45 @@ describe("Retrieval agent", () => {
       (s) => s.relationship === "preferred" || s.relationship === "proven",
     );
     assert.ok(boosted.length >= 1, "expected relationship boost on shortlist");
+  });
+
+  it("makes colour MUST when the brief names a colourway and filters mismatches", () => {
+    const run = runRetrievalAgent({
+      brandId: "brand-northline",
+      idempotencyKey: "test-retrieval-colour-must",
+    });
+    const colourReq = run.output!.brief.requirements.find((r) => r.field === "colour");
+    assert.ok(colourReq);
+    assert.equal(colourReq.kind, "MUST");
+    assert.equal(colourReq.target, "navy");
+    assert.ok(run.output!.shortlist.length > 0);
+    for (const row of run.output!.shortlist) {
+      const colourEv = row.evidence.find((e) => e.requirementId === "req-colour");
+      assert.ok(colourEv);
+      assert.equal(colourEv.result, "evidenced");
+      assert.match(row.colour.toLowerCase(), /navy/);
+    }
+  });
+
+  it("leaves colour OPEN when the product name does not name a colourway", () => {
+    const brief = briefFromProduct({
+      product: {
+        id: "anon-colour",
+        brandId: "brand-northline",
+        sku: "TST-ANON",
+        name: "Refined polo",
+        category: "Polo",
+        stage: "intent",
+        season: "SS27",
+        intent: "No colour named.",
+        shortlistFactoryIds: [],
+      },
+      brandName: "Northline Studio",
+      market: "UK + EU",
+    });
+    const colourReq = brief.requirements.find((r) => r.field === "colour");
+    assert.ok(colourReq);
+    assert.equal(colourReq.kind, "OPEN");
+    assert.equal(colourReq.target, "optional");
   });
 });

@@ -18,21 +18,21 @@ Standing ops: `docs/STANDING_OPS.md` · CTO brief: `docs/CTO_NORTH_STAR.md`
 
 ## Multi-brand findings (tenant moat)
 
-| Brand | Product | Shortlist | Excluded hidden | Evidence not brand-safe |
-| --- | --- | --- | --- | --- |
-| Northline Studio | Refined navy polo | 12 | 3 | all audited claims |
-| Harbour Standard | (T-shirt default) | 12 | 3 | all audited claims |
-| Field & Form | (Jacket default) | 12 | 3 | all audited claims |
+| Brand | Product | Shortlist | Excluded hidden | Evidence not brand-safe | Colour |
+| --- | --- | --- | --- | --- | --- |
+| Northline Studio | Refined navy polo | navy MUST shortlist | 3 | all audited claims | MUST navy |
+| Harbour Standard | (T-shirt default) | navy MUST shortlist | 3 | all audited claims | MUST navy |
+| Field & Form | (Jacket default) | navy MUST shortlist | 3 | all audited claims | MUST navy |
 
 - Same mill (`factory-001`) can carry **different private relationships** per brand
 - No brand ever sees another brand’s preferred/excluded set
+- **Colour:** named colourway in brief → **MUST** (mismatch rows ineligible); unnamed → **OPEN** (never invent navy)
 - **Brand pitch:** one catalogue spine, three private intelligence views
 
 ## Next steward pulls
 
-1. Optional MUST colour when brief names a colourway  
-2. Continuity across multi-brand snapshots  
-3. Ask Owen before Postgres / Demo promote  
+1. Continuity across multi-brand snapshots  
+2. Ask Owen before Postgres / Demo promote  
 
 ## How Owen uses this
 
