@@ -331,18 +331,31 @@ type AgentRunView = {
     }[];
     unchanged?: { harnessDialectsStable: number; retrievalShortlistStable: number };
     baseline?: { established: boolean };
+    assessments?: {
+      verdict: string;
+      claimAsWritten: string;
+      programme: string | null;
+      claimKind: string;
+      inferredScope: string;
+      brandSafeToState: boolean;
+      blockers: string[];
+      factoryName: string;
+      articleCode?: string;
+    }[];
+    summaryCounts?: Record<string, number>;
   };
 };
 
 function AgentsPanel() {
   const [busy, setBusy] = useState<
-    "harness" | "mapping" | "retrieval" | "continuity" | null
+    "harness" | "mapping" | "retrieval" | "continuity" | "evidence" | null
   >(null);
   const [error, setError] = useState<string | null>(null);
   const [harness, setHarness] = useState<AgentRunView | null>(null);
   const [mapping, setMapping] = useState<AgentRunView | null>(null);
   const [retrieval, setRetrieval] = useState<AgentRunView | null>(null);
   const [continuity, setContinuity] = useState<AgentRunView | null>(null);
+  const [evidence, setEvidence] = useState<AgentRunView | null>(null);
 
   async function runHarness() {
     setBusy("harness");
@@ -412,6 +425,56 @@ function AgentsPanel() {
     }
   }
 
+  async function runContinuity() {
+    setBusy("continuity");
+    setError(null);
+    try {
+      const res = await fetch("/api/test/agents/continuity", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
+        body: JSON.stringify({ refresh: true, brandId: "brand-northline" }),
+      });
+      const json = (await res.json()) as { run?: AgentRunView; error?: string };
+      if (!res.ok) {
+        setError(json.error ?? `Continuity failed (${res.status})`);
+        return;
+      }
+      setContinuity(json.run ?? null);
+      // Refresh may have produced new harness/retrieval runs — pull latest summaries if present
+      if (json.run?.output && !harness) {
+        /* keep existing UI state; continuity carries its own brand value */
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Continuity failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function runEvidence() {
+    setBusy("evidence");
+    setError(null);
+    try {
+      const res = await fetch("/api/test/agents/evidence", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
+        body: JSON.stringify({ brandId: "brand-northline", refreshRetrieval: true }),
+      });
+      const json = (await res.json()) as { run?: AgentRunView; error?: string };
+      if (!res.ok) {
+        setError(json.error ?? `Evidence failed (${res.status})`);
+        return;
+      }
+      setEvidence(json.run ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Evidence failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function confirmHeader(header: string, field: string) {
     setError(null);
     const res = await fetch("/api/test/agents/mapping", {
@@ -432,10 +495,9 @@ function AgentsPanel() {
     <section className="tc-panel">
       <header className="tc-head">
         <p className="tc-kicker">Agents · test only</p>
-        <h1>Harness, Mapping, Retrieval</h1>
+        <h1>Harness → Mapping → Retrieval → Continuity → Evidence</h1>
         <p>
-          Workers that turn mill files into brand-usable shortlists — without touching Demo.
-          Memory is <strong>in-process</strong> until Postgres.
+          Full Test loop for sourcing intelligence. Demo frozen. Memory in-process until Postgres.
         </p>
       </header>
 
@@ -446,7 +508,7 @@ function AgentsPanel() {
           disabled={busy !== null}
           onClick={() => void runHarness()}
         >
-          {busy === "harness" ? "Harness running…" : "1. Corpus Harness"}
+          {busy === "harness" ? "Harness…" : "1. Harness"}
         </button>
         <button
           type="button"
@@ -462,7 +524,23 @@ function AgentsPanel() {
           disabled={busy !== null}
           onClick={() => void runRetrieval()}
         >
-          {busy === "retrieval" ? "Retrieving…" : "3. Retrieval (Northline)"}
+          {busy === "retrieval" ? "Retrieving…" : "3. Retrieval"}
+        </button>
+        <button
+          type="button"
+          className="tc-primary"
+          disabled={busy !== null}
+          onClick={() => void runContinuity()}
+        >
+          {busy === "continuity" ? "Diffing…" : "4. Continuity"}
+        </button>
+        <button
+          type="button"
+          className="tc-primary"
+          disabled={busy !== null}
+          onClick={() => void runEvidence()}
+        >
+          {busy === "evidence" ? "Auditing…" : "5. Evidence"}
         </button>
       </div>
 
@@ -636,6 +714,131 @@ function AgentsPanel() {
                   </li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {continuity ? (
+        <div className="tc-lab-result" style={{ marginTop: 16 }}>
+          <p className="tc-kicker">Continuity · {continuity.status}</p>
+          <p>{continuity.summary}</p>
+          {continuity.output?.brandValue ? (
+            <div style={{ marginTop: 12 }}>
+              <p>
+                <strong>Brand value:</strong> {continuity.output.brandValue.headline}
+              </p>
+              <ul>
+                {continuity.output.brandValue.bullets.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {continuity.output?.unchanged ? (
+            <p style={{ marginTop: 12 }}>
+              Stable: {continuity.output.unchanged.harnessDialectsStable} dialects ·{" "}
+              {continuity.output.unchanged.retrievalShortlistStable} shortlist articles
+            </p>
+          ) : null}
+          {continuity.output?.exceptions?.length ? (
+            <div className="tc-table-wrap" style={{ marginTop: 12 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Scope</th>
+                    <th>Severity</th>
+                    <th>Code</th>
+                    <th>Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {continuity.output.exceptions.slice(0, 20).map((e, i) => (
+                    <tr key={`${e.code}-${i}`}>
+                      <td>{e.scope}</td>
+                      <td>{e.severity}</td>
+                      <td>
+                        <code>{e.code}</code>
+                      </td>
+                      <td>
+                        {e.message}
+                        {e.before || e.after ? (
+                          <>
+                            <br />
+                            <small>
+                              {e.before ?? "—"} → {e.after ?? "—"}
+                            </small>
+                          </>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : continuity.output?.baseline?.established ? (
+            <p style={{ marginTop: 12 }}>No exceptions — clean rebuy pass.</p>
+          ) : (
+            <p style={{ marginTop: 12 }}>Baseline set. Run Continuity again after Mapping to see diffs.</p>
+          )}
+        </div>
+      ) : null}
+
+      {evidence ? (
+        <div className="tc-lab-result" style={{ marginTop: 16 }}>
+          <p className="tc-kicker">Evidence · {evidence.status}</p>
+          <p>{evidence.summary}</p>
+          {evidence.output?.brandValue ? (
+            <div style={{ marginTop: 12 }}>
+              <p>
+                <strong>Brand value:</strong> {evidence.output.brandValue.headline}
+              </p>
+              <ul>
+                {evidence.output.brandValue.bullets.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {evidence.output?.summaryCounts ? (
+            <p style={{ marginTop: 12 }}>
+              Counts:{" "}
+              {Object.entries(evidence.output.summaryCounts)
+                .filter(([, n]) => n > 0)
+                .map(([k, n]) => `${k}=${n}`)
+                .join(" · ")}
+            </p>
+          ) : null}
+          {evidence.output?.assessments?.length ? (
+            <div className="tc-table-wrap" style={{ marginTop: 12 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Verdict</th>
+                    <th>Claim</th>
+                    <th>Scope</th>
+                    <th>Article</th>
+                    <th>Blockers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evidence.output.assessments.slice(0, 16).map((a, i) => (
+                    <tr key={`${a.factoryName}-${a.articleCode}-${a.verdict}-${i}`}>
+                      <td>
+                        <code>{a.verdict}</code>
+                      </td>
+                      <td>{a.claimAsWritten || "(none)"}</td>
+                      <td>{a.inferredScope}</td>
+                      <td>
+                        <code>{a.articleCode ?? "—"}</code>
+                      </td>
+                      <td>
+                        <small>{a.blockers[0]}</small>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : null}
         </div>

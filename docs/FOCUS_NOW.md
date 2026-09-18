@@ -15,10 +15,10 @@ Use Test for all experiments. Preview deployments on feature branches are also s
 ## Focus order
 
 ### 1. Full Test agent loop (live)
-`/app/test?tab=agents` — Harness → Mapping → Retrieval → **Continuity** (exception-only rebuy).
+`/app/test?tab=agents` — Harness → Mapping → Retrieval → Continuity → **Evidence**.
 
-### 2. Evidence agent + multi-brand retrieval
-Cert scope/issuer honesty; Harbour + Field & Form shortlists.
+### 2. Multi-brand + colour MUST option
+Harbour / Field & Form shortlists; tighten colour when brief names it.
 
 ### 3. Persist the spine (when memory is not enough)
 Postgres when baselines must survive deploys. See `docs/MEMORY_AND_DATABASE.md`.

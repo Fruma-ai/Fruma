@@ -21,7 +21,7 @@ As Test corpus + agents compound, brand value should show up as:
 1. **Faster, safer shortlists** — “these mills can answer this brief” with source-linked evidence, not vibes.
 2. **Private supplier memory** — preferred / proven / excluded stays brand-tenant; never leaks across brands or to mills.
 3. **Exception-only work** — continuity so teams only resolve what changed.
-4. **Honest gaps** — missing/stale/unscoped evidence is visible; no fake legal readiness.
+4. **Honest gaps** — missing/stale/unscoped evidence is visible; no fake legal readiness. (Evidence agent enforces this.)
 5. **Downstream readiness later** — listings / retailer / trust schemas as projections of the same product truth.
 
 ## Operating rules for agents advising Owen
