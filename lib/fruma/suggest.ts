@@ -1,4 +1,5 @@
 import type { AiFieldKey, AiFields, Fabric } from "./types";
+import { surfaceStorageKey, DEMO_SURFACE } from "./surfaces";
 
 export const AI_FIELD_ORDER: AiFieldKey[] = [
   "title",
@@ -45,7 +46,8 @@ export const AI_SUGGESTIONS: Record<AiFieldKey, string[]> = {
   ],
 };
 
-const LEARN_KEY = "fruma-demo-learn";
+/** Demo-scoped only — Test must never reuse this key. */
+const LEARN_KEY = surfaceStorageKey(DEMO_SURFACE, "demo-learn");
 
 export type LearnState = {
   picks: number;

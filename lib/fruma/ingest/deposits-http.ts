@@ -1,16 +1,27 @@
 import { DEMO_COOKIE, sessionFounder } from "../../gate";
 import { toMillDepositResponse, type MillDepositResponse } from "../mill-deposit";
+import { DEMO_SURFACE, surfaceFromRequest, surfaceMillOrgId } from "../surfaces";
+import type { FrumaVersion } from "../versions";
 import { IngestEngine } from "./engine";
 import { isIngestException } from "./exceptions";
 
-/** Authenticated founder session maps here. Never Vale do Ave / body mill-org. */
-export const SYNTHETIC_MILL_ORG_ID = "org_mill_synthetic";
+/** @deprecated Prefer surfaceMillOrgId("demo"). Kept for existing deposit tests. */
+export const SYNTHETIC_MILL_ORG_ID = surfaceMillOrgId(DEMO_SURFACE);
 
-let engine: IngestEngine | undefined;
+const engines = new Map<FrumaVersion, IngestEngine>();
 
-function millIngestEngine(): IngestEngine {
-  engine ??= new IngestEngine();
+export function millIngestEngineFor(surface: FrumaVersion): IngestEngine {
+  let engine = engines.get(surface);
+  if (!engine) {
+    engine = new IngestEngine();
+    engines.set(surface, engine);
+  }
   return engine;
+}
+
+/** Test helper — clear partitioned engines between cases when needed. */
+export function resetMillIngestEnginesForTests() {
+  engines.clear();
 }
 
 function cookieNamed(request: Request, name: string): string | undefined {
@@ -48,11 +59,12 @@ export async function handleMillDepositRequest(request: Request): Promise<MillDe
     return { status: 400, body: { error: "Attach a mill file as multipart field file." } };
   }
 
+  const surface = surfaceFromRequest(request, form.get("frumaVersion"));
   const bytes = new Uint8Array(await file.arrayBuffer());
 
   try {
-    const result = millIngestEngine().deposit({
-      supplierOrgId: SYNTHETIC_MILL_ORG_ID,
+    const result = millIngestEngineFor(surface).deposit({
+      supplierOrgId: surfaceMillOrgId(surface),
       filename: file.name,
       bytes,
     });
