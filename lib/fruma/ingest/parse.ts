@@ -66,7 +66,7 @@ export function detectMillFormat(filename: string, bytes: Uint8Array): MillForma
 export function parseMillBytes(
   filename: string,
   bytes: Uint8Array,
-  overlays?: Record<string, StandardField>,
+  headerOverlays?: Record<string, StandardField>,
 ): {
   format: MillFormat;
   cells: SourceCell[];
@@ -74,7 +74,7 @@ export function parseMillBytes(
   const format = detectMillFormat(filename, bytes);
   const cells =
     format === "xlsx"
-      ? parseXlsxBytes(bytes, overlays)
-      : parseCsvBytes(filename, bytes, overlays);
+      ? parseXlsxBytes(bytes)
+      : parseCsvBytes(filename, bytes, headerOverlays);
   return { format, cells };
 }

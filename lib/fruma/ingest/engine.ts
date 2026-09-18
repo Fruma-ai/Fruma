@@ -27,6 +27,7 @@ export type DepositInput = {
   filename: string;
   bytes: Uint8Array;
   receivedAt?: string;
+  /** Confirmed header overlays from Mapping agent — never invents values. */
   headerOverlays?: Record<string, StandardField>;
 };
 

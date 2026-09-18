@@ -1,7 +1,8 @@
+import { confirmedHeaderOverlays } from "@/lib/fruma/agents/confirmed-headers";
 import { factoryById, hangerCsvFor } from "@/lib/fruma/test-corpus";
+import { runCorpusHarness } from "@/lib/fruma/test-corpus/harness";
 import { millIngestEngineFor } from "@/lib/fruma/ingest/deposits-http";
 import { toMillDepositResponse } from "@/lib/fruma/mill-deposit";
-import { confirmedHeaderOverlays } from "@/lib/fruma/intelligence/overlays";
 import { requireTestFounder, testJson } from "@/lib/fruma/intelligence/http-auth";
 import { scoreFactoryCoverage } from "@/lib/fruma/intelligence/coverage";
 import { surfaceMillOrgId, TEST_SURFACE } from "@/lib/fruma/surfaces";
@@ -9,8 +10,11 @@ import { surfaceMillOrgId, TEST_SURFACE } from "@/lib/fruma/surfaces";
 export const runtime = "nodejs";
 
 /**
- * Test-only ingest: run a corpus mill fabric/material file through the Test ingest engine.
- * Never writes to the Demo engine.
+ * Test-only ingest: run one corpus factory hanger — or the full fifty-factory
+ * harness — through the Test ingest engine. Never writes to the Demo engine.
+ *
+ * Body: `{ factoryId }` or `{ all: true }` for the corpus harness.
+ * Mapping-agent confirmed overlays are applied on both paths.
  */
 export async function POST(request: Request) {
   const who = await requireTestFounder(request);
@@ -18,16 +22,29 @@ export async function POST(request: Request) {
     return testJson({ error: "Sign in to run test ingest." }, 401);
   }
 
-  let body: { factoryId?: string };
+  let body: { factoryId?: string; all?: boolean };
   try {
-    body = (await request.json()) as { factoryId?: string };
+    body = (await request.json()) as { factoryId?: string; all?: boolean };
   } catch {
-    return Response.json({ error: "Expected JSON body with factoryId." }, { status: 400 });
+    return Response.json(
+      { error: "Expected JSON body with factoryId or { all: true }." },
+      { status: 400 },
+    );
+  }
+
+  if (body.all === true) {
+    const harness = runCorpusHarness({
+      headerOverlays: confirmedHeaderOverlays(TEST_SURFACE),
+    });
+    return testJson({ surface: TEST_SURFACE, harness });
   }
 
   const factoryId = body.factoryId?.trim();
   if (!factoryId) {
-    return Response.json({ error: "factoryId is required." }, { status: 400 });
+    return Response.json(
+      { error: "factoryId is required (or pass { all: true } for the corpus harness)." },
+      { status: 400 },
+    );
   }
 
   const factory = factoryById(factoryId);
