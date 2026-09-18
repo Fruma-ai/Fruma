@@ -79,7 +79,30 @@ describe("test corpus", () => {
         bytes: hangerBytesFor(factory),
       });
       assert.equal(result.qualities.length, 0, factory.id);
+      const unknown = result.exceptions.filter((e) => e.code === "unknown_header");
+      const empty = result.exceptions.filter((e) => e.code === "empty_article");
+      assert.equal(empty.length, 0, factory.id);
+      assert.ok(
+        unknown.some((e) => e.message.includes("“Art.”")),
+        factory.id,
+      );
     }
+  });
+
+  it("treats unmapped Italian columns as unknown_header, not empty_article", () => {
+    const engine = new IngestEngine();
+    const factory = TEST_FACTORIES.find((f) => f.dialect === "it-shirting")!;
+    const result = engine.deposit({
+      supplierOrgId: factory.id,
+      filename: factory.filename,
+      bytes: hangerBytesFor(factory),
+    });
+    assert.ok(result.qualities.length > 0);
+    const unknown = result.exceptions.filter((e) => e.code === "unknown_header");
+    const empty = result.exceptions.filter((e) => e.code === "empty_article");
+    assert.equal(empty.length, 0);
+    assert.ok(unknown.some((e) => e.message.includes("“Weave”")));
+    assert.ok(unknown.some((e) => e.message.includes("“Comp.”")));
   });
 
   it("keeps brand relationship memory tenant-scoped", () => {

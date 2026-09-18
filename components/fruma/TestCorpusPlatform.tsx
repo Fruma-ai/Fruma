@@ -276,6 +276,8 @@ function LabPanel({
 
   const unmapped = result?.unmappedHeaders ?? previewHealth?.unmappedHeaders ?? [];
   const exceptions = result?.deposit.exceptions ?? [];
+  const mappingExceptions = exceptions.filter((e) => e.code === "unknown_header");
+  const rowExceptions = exceptions.filter((e) => e.code !== "unknown_header");
 
   return (
     <section className="tc-panel">
@@ -284,7 +286,8 @@ function LabPanel({
         <h1>Harness mill fabric files without touching Demo</h1>
         <p>
           Runs the selected mill fabric / material file through the <strong>Test</strong> ingest
-          engine. This is cloth on file — not a product catalogue. Confirmed dialect overlays apply.
+          engine. This is cloth on file — not a product catalogue. Unknown mill headers become
+          mapping exceptions. Confirmed dialect overlays apply.
         </p>
       </header>
       <div className="tc-lab">
@@ -320,7 +323,8 @@ function LabPanel({
           </p>
           <p>
             Deposit <code>{result.deposit.depositId}</code> · {result.deposit.qualities.length}{" "}
-            qualities · {exceptions.length} row exceptions · {unmapped.length} silent headers
+            qualities · {mappingExceptions.length} mapping exceptions · {rowExceptions.length}{" "}
+            row exceptions · {unmapped.length} unknown headers
           </p>
           <ul>
             {result.deposit.qualities.slice(0, 12).map((q) => (
@@ -334,7 +338,7 @@ function LabPanel({
           </ul>
           {unmapped.length > 0 ? (
             <div className="tc-lab-exceptions">
-              <p className="tc-kicker">Silent headers (not exceptions — mapping fuel)</p>
+              <p className="tc-kicker">Unknown headers (mapping work)</p>
               <ul>
                 {unmapped.map((header) => (
                   <li key={header}><code>{header}</code></li>
@@ -342,11 +346,23 @@ function LabPanel({
               </ul>
             </div>
           ) : null}
-          {exceptions.length > 0 ? (
+          {mappingExceptions.length > 0 ? (
+            <div className="tc-lab-exceptions">
+              <p className="tc-kicker">Mapping exceptions</p>
+              <ul>
+                {mappingExceptions.map((e, i) => (
+                  <li key={`${e.code}-${i}`}>
+                    <code>{e.code}</code> {e.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {rowExceptions.length > 0 ? (
             <div className="tc-lab-exceptions">
               <p className="tc-kicker">Row exceptions</p>
               <ul>
-                {exceptions.slice(0, 8).map((e, i) => (
+                {rowExceptions.slice(0, 8).map((e, i) => (
                   <li key={`${e.code}-${i}`}>
                     <code>{e.code}</code> {e.message}
                   </li>

@@ -135,6 +135,7 @@ describe("SPEC 8 mill deposits Route Handler", () => {
     assert.equal(empty[0]?.row, 4);
     assert.equal(empty[0]?.column, "A");
     assert.ok(empty[0]?.message);
+    assert.equal(body.exceptions.filter((e) => e.code === "unknown_header").length, 0);
 
     assert.equal(body.qualities.length, 2);
     assert.deepEqual(

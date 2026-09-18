@@ -2,6 +2,7 @@ import { IngestException } from "./exceptions";
 import type {
   BaseQuality,
   Colourway,
+  RowException,
   SourceCell,
   StandardField,
   WidthAttribute,
@@ -33,11 +34,30 @@ function cellValue(cells: SourceCell[], field: StandardField): SourceCell | unde
   return cells.find((c) => c.standardField === field);
 }
 
+function rowHasUnmappedHeader(cells: SourceCell[]): boolean {
+  return cells.some((cell) => cell.header.trim() && !cell.standardField);
+}
+
+/** One exception per mill header that never attached to the Fruma standard. */
+export function unknownHeaderExceptions(cells: SourceCell[]): RowException[] {
+  const firstByHeader = new Map<string, SourceCell>();
+  for (const cell of cells) {
+    const header = cell.header.trim();
+    if (!header || cell.standardField) continue;
+    if (!firstByHeader.has(header)) firstByHeader.set(header, cell);
+  }
+  return [...firstByHeader.entries()].map(([header, cell]) => ({
+    code: "unknown_header",
+    message: `Mill header “${header}” is not on the Fruma standard. Mapping work — not a blank article.`,
+    pointer: cell.pointer,
+  }));
+}
+
 export function qualitiesFromCells(input: {
   supplierOrgId: string;
   depositId: string;
   cells: SourceCell[];
-}): { qualities: BaseQuality[]; exceptions: { code: "empty_article"; message: string; pointer?: SourceCell["pointer"] }[] } {
+}): { qualities: BaseQuality[]; exceptions: RowException[] } {
   const byRow = new Map<string, SourceCell[]>();
   for (const cell of input.cells) {
     const key = `${cell.pointer.sheet}:${cell.pointer.row}`;
@@ -47,16 +67,26 @@ export function qualitiesFromCells(input: {
   }
 
   const qualities = new Map<string, BaseQuality>();
-  const exceptions: { code: "empty_article"; message: string; pointer?: SourceCell["pointer"] }[] = [];
+  const exceptions: RowException[] = unknownHeaderExceptions(input.cells);
 
   for (const rowCells of byRow.values()) {
     const articleCell = cellValue(rowCells, "article");
-    const written = articleCell ? articleAsWritten(articleCell.sourceValue) : null;
+    if (!articleCell) {
+      // Unmapped identity is mapping work. Do not pretend the article was blank.
+      if (rowHasUnmappedHeader(rowCells)) continue;
+      exceptions.push({
+        code: "empty_article",
+        message: "Empty article is an exception; ingest will not generate an id.",
+        pointer: rowCells[0]?.pointer,
+      });
+      continue;
+    }
+    const written = articleAsWritten(articleCell.sourceValue);
     if (written === null) {
       exceptions.push({
         code: "empty_article",
         message: "Empty article is an exception; ingest will not generate an id.",
-        pointer: articleCell?.pointer ?? rowCells[0]?.pointer,
+        pointer: articleCell.pointer,
       });
       continue;
     }
