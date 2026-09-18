@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --port 43147 --hostname 0.0.0.0",
     "lint": "eslint",
-    "test": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts lib/fruma/mill-deposit.test.ts lib/fruma/mill-ingest.test.ts lib/fruma/doors.test.ts lib/fruma/test-corpus/test-corpus.test.ts lib/fruma/surfaces.test.ts lib/fruma/agents/agents.test.ts lib/fruma/agents/retrieval.test.ts lib/fruma/agents/continuity.test.ts lib/fruma/agents/evidence.test.ts lib/fruma/agents/multi-brand.test.ts",
+    "test": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts lib/fruma/mill-deposit.test.ts lib/fruma/mill-ingest.test.ts lib/fruma/doors.test.ts lib/fruma/test-corpus/test-corpus.test.ts lib/fruma/surfaces.test.ts lib/fruma/agents/agents.test.ts lib/fruma/agents/retrieval.test.ts lib/fruma/agents/continuity.test.ts lib/fruma/agents/evidence.test.ts lib/fruma/agents/multi-brand.test.ts lib/fruma/intelligence/intelligence.test.ts",
     "test:ingest": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts"
   },
   "dependencies": {

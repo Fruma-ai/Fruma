@@ -11,7 +11,12 @@ export { parseMillBytes, detectMillFormat } from "./parse";
 export { buildXlsx } from "./parse-xlsx";
 export { PrivateByteStore } from "./store";
 export { sha256Hex } from "./hash";
-export { BUILTIN_HEADER_TO_FIELD, resolveHeaderField } from "./header-map";
+export {
+  BUILTIN_HEADER_TO_FIELD,
+  BUILTIN_HEADER_ALIASES,
+  resolveHeaderField,
+  headerKey,
+} from "./header-map";
 export {
   VISIBILITY_PRIVATE,
   VISIBILITY_GRANTED,

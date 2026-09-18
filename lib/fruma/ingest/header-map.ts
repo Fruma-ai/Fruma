@@ -44,6 +44,13 @@ export const BUILTIN_HEADER_TO_FIELD: Record<string, StandardField> = {
   certificate: "cert",
 };
 
+/** Alias kept for main intelligence callers. */
+export const BUILTIN_HEADER_ALIASES = BUILTIN_HEADER_TO_FIELD;
+
+export function headerKey(header: string): string {
+  return header.trim().toLowerCase();
+}
+
 /**
  * Resolve a mill header as written → standard field (case-insensitive).
  * Mapping-agent confirmed overlays win over builtins for unknowns the mill taught us.
@@ -52,7 +59,7 @@ export function resolveHeaderField(
   header: string,
   overlays?: Record<string, StandardField>,
 ): StandardField | undefined {
-  const key = header.trim().toLowerCase();
+  const key = headerKey(header);
   if (!key) return undefined;
   return overlays?.[key] ?? BUILTIN_HEADER_TO_FIELD[key];
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   TEST_BRANDS,
@@ -8,14 +8,19 @@ import {
   hangerCsvFor,
   linksForBrand,
   productsForBrand,
-  testCorpusSummary,
   type TestFactory,
 } from "@/lib/fruma/test-corpus";
 import { VersionBanner } from "@/components/fruma/VersionBanner";
+import { scoreCorpusCoverage, type CorpusCoverage, type FactoryCoverage } from "@/lib/fruma/intelligence/coverage";
+import type { StandardField } from "@/lib/fruma/ingest/types";
+import type { HangerDialect } from "@/lib/fruma/test-corpus/types";
+import { TestOverviewPanel } from "@/components/fruma/test/TestOverviewPanel";
+import { TestSourcePanel } from "@/components/fruma/test/TestSourcePanel";
+import { TestClothPanel } from "@/components/fruma/test/TestClothPanel";
 
-type Tab = "overview" | "brands" | "factories" | "hangers" | "lab" | "agents";
+type Tab = "overview" | "brands" | "factories" | "hangers" | "lab" | "source" | "agents";
 
-const TABS: Tab[] = ["overview", "brands", "factories", "hangers", "lab", "agents"];
+const TABS: Tab[] = ["overview", "brands", "factories", "hangers", "lab", "source", "agents"];
 const AGENT_BRANDS = TEST_BRANDS;
 
 function isTab(value: string | null): value is Tab {
@@ -31,247 +36,6 @@ function downloadCsv(factory: TestFactory) {
   a.download = factory.filename;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-function Overview() {
-  const summary = testCorpusSummary();
-  return (
-    <section className="tc-panel">
-      <header className="tc-head">
-        <p className="tc-kicker">Test environment</p>
-        <h1>Three brands. Fifty factories. Private hanger files.</h1>
-        <p>
-          Build and break here. The customer demo on <code>/app</code> stays frozen until you
-          explicitly promote. Full focus order: <code>docs/FOCUS_NOW.md</code>.
-        </p>
-      </header>
-      <div className="tc-stats">
-        <div><b>{summary.brands}</b><span>brands</span></div>
-        <div><b>{summary.factories}</b><span>factories</span></div>
-        <div><b>{summary.products}</b><span>products</span></div>
-        <div><b>{summary.hangerRows}</b><span>hanger rows</span></div>
-        <div><b>{summary.links}</b><span>brand↔factory links</span></div>
-      </div>
-      <ol className="tc-focus">
-        <li>
-          <b>Agents tab</b> — Harness → Mapping → Retrieval (Northline brand value).
-        </li>
-        <li>
-          <b>Continuity / Evidence</b> — exception-only diffs; honest cert gaps (next).
-        </li>
-        <li>
-          <b>Persist</b> — Postgres when confirmations must survive deploys.
-        </li>
-        <li>
-          <b>Promote</b> — only then copy accepted behaviour into Demo.
-        </li>
-        <li>
-          <b>Never</b> — invent facts, leak private supplier memory, or broaden into MES/PLM.
-        </li>
-      </ol>
-      <div className="tc-grid three">
-        {TEST_BRANDS.map((brand) => (
-          <article key={brand.id} className="tc-card">
-            <p className="tc-kicker">{brand.hq} · {brand.market}</p>
-            <h2>{brand.name}</h2>
-            <p>{brand.summary}</p>
-            <small>{brand.categoryFocus.join(" · ")}</small>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function BrandsPanel({
-  brandId,
-  setBrandId,
-}: {
-  brandId: string;
-  setBrandId: (id: string) => void;
-}) {
-  const brand = TEST_BRANDS.find((b) => b.id === brandId) ?? TEST_BRANDS[0];
-  const products = productsForBrand(brand.id);
-  const links = linksForBrand(brand.id);
-  const preferred = links.filter((l) => l.relationship === "preferred" || l.relationship === "proven");
-  const excluded = links.filter((l) => l.relationship === "excluded");
-
-  return (
-    <section className="tc-panel">
-      <header className="tc-head">
-        <p className="tc-kicker">Brands</p>
-        <h1>Tenant-private relationship memory</h1>
-        <p>Each brand sees its own preferred / proven / excluded factory set. Nothing leaks across brands.</p>
-      </header>
-      <div className="tc-brand-tabs">
-        {TEST_BRANDS.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            className={b.id === brand.id ? "active" : ""}
-            onClick={() => setBrandId(b.id)}
-          >
-            {b.name}
-          </button>
-        ))}
-      </div>
-      <div className="tc-grid two">
-        <article className="tc-card">
-          <p className="tc-kicker">{brand.id}</p>
-          <h2>{brand.name}</h2>
-          <p>{brand.summary}</p>
-          <div className="tc-meta">
-            <span>{preferred.length} preferred/proven</span>
-            <span>{excluded.length} excluded</span>
-            <span>{products.length} products</span>
-          </div>
-        </article>
-        <article className="tc-card">
-          <p className="tc-kicker">Products</p>
-          <ul className="tc-list">
-            {products.map((p) => (
-              <li key={p.id}>
-                <b>{p.sku}</b>
-                <span>{p.name}</span>
-                <em>{p.stage}</em>
-              </li>
-            ))}
-          </ul>
-        </article>
-      </div>
-      <article className="tc-card">
-        <p className="tc-kicker">Factory relationships · {brand.name}</p>
-        <div className="tc-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Factory</th>
-                <th>Relationship</th>
-                <th>Granted articles</th>
-                <th>Country</th>
-              </tr>
-            </thead>
-            <tbody>
-              {links
-                .filter((l) => l.relationship !== "new")
-                .slice(0, 24)
-                .map((link) => {
-                  const factory = TEST_FACTORIES.find((f) => f.id === link.factoryId)!;
-                  return (
-                    <tr key={`${link.brandId}-${link.factoryId}`}>
-                      <td>{factory.name}</td>
-                      <td>{link.relationship}</td>
-                      <td>{link.grantedArticles.length || "—"}</td>
-                      <td>{factory.country}</td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-  );
-}
-
-function FactoriesPanel({
-  factoryId,
-  setFactoryId,
-}: {
-  factoryId: string;
-  setFactoryId: (id: string) => void;
-}) {
-  const factory = TEST_FACTORIES.find((f) => f.id === factoryId) ?? TEST_FACTORIES[0];
-  const preview = useMemo(() => hangerCsvFor(factory).split("\n").slice(0, 8).join("\n"), [factory]);
-
-  return (
-    <section className="tc-panel">
-      <header className="tc-head">
-        <p className="tc-kicker">Factories</p>
-        <h1>Fifty mills with their own data dialects</h1>
-        <p>
-          Each factory owns a private hanger CSV. Dialects vary (PT / IT / TR / UK imperial / PL / messy)
-          so ingest and mapping can be tested against real variance.
-        </p>
-      </header>
-      <div className="tc-grid factories">
-        <aside className="tc-factory-list">
-          {TEST_FACTORIES.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              className={f.id === factory.id ? "active" : ""}
-              onClick={() => setFactoryId(f.id)}
-            >
-              <b>{f.name}</b>
-              <span>{f.country} · {f.rowCount} rows · {f.dialect}</span>
-            </button>
-          ))}
-        </aside>
-        <article className="tc-card">
-          <p className="tc-kicker">{factory.id}</p>
-          <h2>{factory.name}</h2>
-          <p>
-            {factory.region}, {factory.country}. MOQ {factory.moqM}m · lead {factory.leadWeeks} weeks.
-          </p>
-          <div className="tc-meta">
-            <span>{factory.specialties.join(" · ")}</span>
-            <span>{factory.certifications.join(" · ") || "No programme on file"}</span>
-            <span>{factory.markets.join(" / ")}</span>
-          </div>
-          <div className="tc-actions">
-            <button type="button" className="tc-primary" onClick={() => downloadCsv(factory)}>
-              Download {factory.filename}
-            </button>
-            <a className="tc-secondary" href={`/api/test/factories/${factory.id}/hanger`}>
-              API CSV
-            </a>
-          </div>
-          <pre className="tc-preview">{preview}</pre>
-        </article>
-      </div>
-    </section>
-  );
-}
-
-function HangersPanel() {
-  return (
-    <section className="tc-panel">
-      <header className="tc-head">
-        <p className="tc-kicker">Hanger index</p>
-        <h1>All factory datasets</h1>
-        <p>Download any hanger file, or open Lab to run Test-only ingest without touching Demo.</p>
-      </header>
-      <div className="tc-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Factory</th>
-              <th>Dialect</th>
-              <th>Rows</th>
-              <th>File</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {TEST_FACTORIES.map((factory) => (
-              <tr key={factory.id}>
-                <td>{factory.name}</td>
-                <td>{factory.dialect}</td>
-                <td>{factory.rowCount}</td>
-                <td><code>{factory.filename}</code></td>
-                <td>
-                  <button type="button" className="tc-link" onClick={() => downloadCsv(factory)}>
-                    Download
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
 }
 
 type AgentRunView = {
@@ -1048,11 +812,193 @@ function AgentsPanel() {
   );
 }
 
+
+function BrandsPanel({
+  brandId,
+  setBrandId,
+  onSourceProduct,
+}: {
+  brandId: string;
+  setBrandId: (id: string) => void;
+  onSourceProduct: (brandId: string, productId: string) => void;
+}) {
+  const brand = TEST_BRANDS.find((b) => b.id === brandId) ?? TEST_BRANDS[0];
+  const products = productsForBrand(brand.id);
+  const links = linksForBrand(brand.id);
+  const preferred = links.filter((l) => l.relationship === "preferred" || l.relationship === "proven");
+  const excluded = links.filter((l) => l.relationship === "excluded");
+
+  return (
+    <section className="tc-panel">
+      <header className="tc-head">
+        <p className="tc-kicker">Brands</p>
+        <h1>Tenant-private relationship memory</h1>
+        <p>
+          Each brand sees its own preferred / proven / excluded mill set. Nothing leaks across brands.
+          Source uses this memory to reorder mill <em>fabric books</em> — never to invent a mill product list.
+        </p>
+      </header>
+      <div className="tc-brand-tabs">
+        {TEST_BRANDS.map((b) => (
+          <button
+            key={b.id}
+            type="button"
+            className={b.id === brand.id ? "active" : ""}
+            onClick={() => setBrandId(b.id)}
+          >
+            {b.name}
+          </button>
+        ))}
+      </div>
+      <div className="tc-grid two">
+        <article className="tc-card">
+          <p className="tc-kicker">{brand.id}</p>
+          <h2>{brand.name}</h2>
+          <p>{brand.summary}</p>
+          <div className="tc-meta">
+            <span>{preferred.length} preferred/proven</span>
+            <span>{excluded.length} excluded</span>
+            <span>{products.length} end products</span>
+          </div>
+        </article>
+        <article className="tc-card">
+          <p className="tc-kicker">Products</p>
+          <ul className="tc-list">
+            {products.map((p) => (
+              <li key={p.id}>
+                <b>{p.sku}</b>
+                <span>{p.name}</span>
+                <button type="button" className="tc-link" onClick={() => onSourceProduct(brand.id, p.id)}>
+                  Source
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </div>
+      <article className="tc-card">
+        <p className="tc-kicker">Factory relationships · {brand.name}</p>
+        <div className="tc-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Factory</th>
+                <th>Relationship</th>
+                <th>Granted articles</th>
+                <th>Country</th>
+              </tr>
+            </thead>
+            <tbody>
+              {links
+                .filter((l) => l.relationship !== "new")
+                .slice(0, 24)
+                .map((link) => {
+                  const factory = TEST_FACTORIES.find((f) => f.id === link.factoryId)!;
+                  return (
+                    <tr key={`${link.brandId}-${link.factoryId}`}>
+                      <td>{factory.name}</td>
+                      <td>{link.relationship}</td>
+                      <td>{link.grantedArticles.length || "—"}</td>
+                      <td>{factory.country}</td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  );
+}
+
+function FactoriesPanel({
+  factoryId,
+  setFactoryId,
+  byId,
+}: {
+  factoryId: string;
+  setFactoryId: (id: string) => void;
+  byId: Map<string, FactoryCoverage>;
+}) {
+  const factory = TEST_FACTORIES.find((f) => f.id === factoryId) ?? TEST_FACTORIES[0];
+  const preview = useMemo(() => hangerCsvFor(factory).split("\n").slice(0, 8).join("\n"), [factory]);
+  const health = byId.get(factory.id);
+
+  return (
+    <section className="tc-panel">
+      <header className="tc-head">
+        <p className="tc-kicker">Factories</p>
+        <h1>Fifty mills with their own fabric-book dialects</h1>
+        <p>
+          Each mill owns a private fabric / material file — qualities, not product SKUs. Coverage
+          badges show whether that cloth is searchable, partially mapped, or dark.
+        </p>
+      </header>
+      <div className="tc-grid factories">
+        <aside className="tc-factory-list">
+          {TEST_FACTORIES.map((f) => {
+            const row = byId.get(f.id);
+            return (
+              <button
+                key={f.id}
+                type="button"
+                className={f.id === factory.id ? "active" : ""}
+                onClick={() => setFactoryId(f.id)}
+              >
+                <b>{f.name}</b>
+                <span>
+                  {f.country} · {f.dialect}
+                  {row ? ` · ${row.status}` : ""}
+                </span>
+              </button>
+            );
+          })}
+        </aside>
+        <article className="tc-card">
+          <p className="tc-kicker">{factory.id}</p>
+          <h2>{factory.name}</h2>
+          {health ? (
+            <div className="tc-meta">
+              <span className={`tc-pill ${health.status}`}>{health.status}</span>
+              <span>{health.qualities} qualities</span>
+              <span>{health.mappedCellPct}% cells mapped</span>
+            </div>
+          ) : null}
+          {health?.blocker ? <p className="tc-error">{health.blocker}</p> : null}
+          <p>
+            {factory.region}, {factory.country}. MOQ {factory.moqM}m · lead {factory.leadWeeks} weeks
+            <span className="tc-historical"> · historical until mill-confirmed</span>.
+          </p>
+          <div className="tc-meta">
+            <span>{factory.specialties.join(" · ")}</span>
+            <span>{factory.certifications.join(" · ") || "No programme on file"}</span>
+            <span>{factory.markets.join(" / ")}</span>
+          </div>
+          {health?.unmappedHeaders.length ? (
+            <p>Silent headers: {health.unmappedHeaders.join(" · ")}</p>
+          ) : null}
+          <div className="tc-actions">
+            <button type="button" className="tc-primary" onClick={() => downloadCsv(factory)}>
+              Download {factory.filename}
+            </button>
+            <a className="tc-secondary" href={`/api/test/factories/${factory.id}/hanger`}>
+              API CSV
+            </a>
+          </div>
+          <pre className="tc-preview">{preview}</pre>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 type LabResult = {
   surface: string;
   factoryId: string;
   factoryName: string;
   dialect: string;
+  unmappedHeaders?: string[];
+  coverage?: FactoryCoverage;
   deposit: {
     depositId: string;
     filename: string;
@@ -1077,12 +1023,15 @@ type HarnessResult = {
   };
 };
 
+
 function LabPanel({
   factoryId,
   setFactoryId,
+  byId,
 }: {
   factoryId: string;
   setFactoryId: (id: string) => void;
+  byId: Map<string, FactoryCoverage>;
 }) {
   const factory = useMemo(
     () => TEST_FACTORIES.find((f) => f.id === factoryId) ?? TEST_FACTORIES[0],
@@ -1092,6 +1041,7 @@ function LabPanel({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<LabResult | null>(null);
   const [harness, setHarness] = useState<HarnessResult | null>(null);
+  const previewHealth = byId.get(factory.id);
 
   async function runIngest() {
     setBusy(true);
@@ -1145,25 +1095,32 @@ function LabPanel({
     }
   }
 
+
+  const unmapped = result?.unmappedHeaders ?? previewHealth?.unmappedHeaders ?? [];
+  const exceptions = result?.deposit.exceptions ?? [];
+
   return (
     <section className="tc-panel">
       <header className="tc-head">
         <p className="tc-kicker">Lab · test only</p>
-        <h1>Harness factory data without touching Demo</h1>
+        <h1>Harness mill fabric files without touching Demo</h1>
         <p>
-          Runs hangers through the <strong>Test</strong> ingest engine (
-          <code>org_mill_test</code>). Demo memory stays separate.
+          Runs the selected mill fabric / material file through the <strong>Test</strong> ingest
+          engine. This is cloth on file — not a product catalogue. Confirmed dialect overlays apply.
         </p>
       </header>
       <div className="tc-lab">
         <label className="tc-lab-pick">
           <span>Factory</span>
           <select value={factory.id} onChange={(e) => setFactoryId(e.target.value)}>
-            {TEST_FACTORIES.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name} · {f.dialect} · {f.rowCount} rows
-              </option>
-            ))}
+            {TEST_FACTORIES.map((f) => {
+              const row = byId.get(f.id);
+              return (
+                <option key={f.id} value={f.id}>
+                  {f.name} · {f.dialect} · {row?.status ?? "unscored"}
+                </option>
+              );
+            })}
           </select>
         </label>
         <button type="button" className="tc-primary" disabled={busy} onClick={() => void runIngest()}>
@@ -1173,6 +1130,12 @@ function LabPanel({
           Prove all 50 dialects
         </button>
       </div>
+      {previewHealth ? (
+        <p>
+          Before deposit: <span className={`tc-pill ${previewHealth.status}`}>{previewHealth.status}</span>{" "}
+          · {previewHealth.qualities} qualities · {previewHealth.mappedCellPct}% cells mapped
+        </p>
+      ) : null}
       {error ? <p className="tc-error" role="alert">{error}</p> : null}
       {harness ? (
         <div className="tc-lab-result">
@@ -1198,10 +1161,11 @@ function LabPanel({
         <div className="tc-lab-result">
           <p className="tc-kicker">
             {result.surface} · {result.factoryName} · {result.dialect}
+            {result.coverage ? ` · ${result.coverage.status}` : ""}
           </p>
           <p>
             Deposit <code>{result.deposit.depositId}</code> · {result.deposit.qualities.length}{" "}
-            qualities · {result.deposit.exceptions.length} exceptions
+            qualities · {exceptions.length} row exceptions · {unmapped.length} silent headers
           </p>
           <ul>
             {result.deposit.qualities.slice(0, 12).map((q) => (
@@ -1213,20 +1177,36 @@ function LabPanel({
               <li>+{result.deposit.qualities.length - 12} more</li>
             ) : null}
           </ul>
-          {result.deposit.exceptions.length > 0 ? (
+          {unmapped.length > 0 ? (
             <div className="tc-lab-exceptions">
-              <p className="tc-kicker">Exceptions (mapping agent fuel)</p>
+              <p className="tc-kicker">Silent headers (not exceptions — mapping fuel)</p>
               <ul>
-                {result.deposit.exceptions.slice(0, 8).map((e, i) => (
+                {unmapped.map((header) => (
+                  <li key={header}><code>{header}</code></li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {exceptions.length > 0 ? (
+            <div className="tc-lab-exceptions">
+              <p className="tc-kicker">Row exceptions</p>
+              <ul>
+                {exceptions.slice(0, 8).map((e, i) => (
                   <li key={`${e.code}-${i}`}>
                     <code>{e.code}</code> {e.message}
                   </li>
                 ))}
               </ul>
             </div>
-          ) : (
-            <p>No mapping exceptions on this pass — good baseline for this dialect.</p>
-          )}
+          ) : null}
+          {unmapped.length === 0 && exceptions.length === 0 ? (
+            <p>This dialect is on the standard. Qualities are still Private until a named grant.</p>
+          ) : null}
+          {result.deposit.qualities.length === 0 && unmapped.length > 0 ? (
+            <p className="tc-error">
+              File received. Not mapped. Not a live catalogue — article identity never attached.
+            </p>
+          ) : null}
         </div>
       ) : null}
     </section>
@@ -1241,6 +1221,22 @@ export function TestCorpusPlatform() {
   const tab: Tab = isTab(tabParam) ? tabParam : "overview";
   const [brandId, setBrandId] = useState(TEST_BRANDS[0].id);
   const [factoryId, setFactoryId] = useState(TEST_FACTORIES[0].id);
+  const [overlays, setOverlays] = useState<Record<string, StandardField>>({});
+  const [mapBusy, setMapBusy] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const brandParam = searchParams.get("brand");
+    if (brandParam && TEST_BRANDS.some((b) => b.id === brandParam)) {
+      setBrandId(brandParam);
+    }
+  }, [searchParams]);
+
+  const coverage: CorpusCoverage = useMemo(() => scoreCorpusCoverage(overlays), [overlays]);
+  const byId = useMemo(
+    () => new Map(coverage.factories.map((row) => [row.factoryId, row])),
+    [coverage],
+  );
 
   const setTab = useCallback(
     (next: Tab) => {
@@ -1252,6 +1248,52 @@ export function TestCorpusPlatform() {
     },
     [pathname, router, searchParams],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/test/mapping", {
+          credentials: "same-origin",
+          headers: { "X-Fruma-Version": "test" },
+        });
+        if (!res.ok) return;
+        const json = (await res.json()) as { overlays?: Record<string, StandardField> };
+        if (!cancelled && json.overlays) setOverlays(json.overlays);
+      } catch {
+        /* Overview still scores locally with builtin aliases. */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function confirmDialect(dialect: HangerDialect) {
+    setMapBusy(true);
+    setMapError(null);
+    try {
+      const res = await fetch("/api/test/mapping", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
+        body: JSON.stringify({ dialect }),
+      });
+      const json = (await res.json()) as {
+        error?: string;
+        overlays?: Record<string, StandardField>;
+      };
+      if (!res.ok || !json.overlays) {
+        setMapError(json.error ?? `Mapping confirm failed (${res.status})`);
+        return;
+      }
+      setOverlays(json.overlays);
+    } catch (err) {
+      setMapError(err instanceof Error ? err.message : "Mapping confirm failed");
+    } finally {
+      setMapBusy(false);
+    }
+  }
 
   return (
     <div className="tc-shell">
@@ -1265,9 +1307,10 @@ export function TestCorpusPlatform() {
           {(
             [
               ["overview", "Overview"],
+              ["source", "Source"],
               ["brands", "Brands"],
               ["factories", "Factories"],
-              ["hangers", "Hangers"],
+              ["hangers", "Cloth"],
               ["lab", "Lab"],
               ["agents", "Agents"],
             ] as const
@@ -1285,13 +1328,44 @@ export function TestCorpusPlatform() {
         </nav>
       </header>
       <main className="tc-main">
-        {tab === "overview" ? <Overview /> : null}
-        {tab === "brands" ? <BrandsPanel brandId={brandId} setBrandId={setBrandId} /> : null}
-        {tab === "factories" ? (
-          <FactoriesPanel factoryId={factoryId} setFactoryId={setFactoryId} />
+        {tab === "overview" ? (
+          <TestOverviewPanel
+            coverage={coverage}
+            overlays={overlays}
+            busy={mapBusy}
+            error={mapError}
+            onConfirmDialect={(dialect) => void confirmDialect(dialect)}
+            onOpenSource={() => setTab("source")}
+            onOpenLab={() => setTab("lab")}
+          />
         ) : null}
-        {tab === "hangers" ? <HangersPanel /> : null}
-        {tab === "lab" ? <LabPanel factoryId={factoryId} setFactoryId={setFactoryId} /> : null}
+        {tab === "source" ? <TestSourcePanel brandId={brandId} setBrandId={setBrandId} /> : null}
+        {tab === "brands" ? (
+          <BrandsPanel
+            brandId={brandId}
+            setBrandId={setBrandId}
+            onSourceProduct={(nextBrand, productId) => {
+              setBrandId(nextBrand);
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("tab", "source");
+              params.set("brand", nextBrand);
+              params.set("product", productId);
+              router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+            }}
+          />
+        ) : null}
+        {tab === "factories" ? (
+          <FactoriesPanel factoryId={factoryId} setFactoryId={setFactoryId} byId={byId} />
+        ) : null}
+        {tab === "hangers" ? (
+          <TestClothPanel
+            factoryId={factoryId}
+            setFactoryId={setFactoryId}
+            overlays={overlays}
+            byId={byId}
+          />
+        ) : null}
+        {tab === "lab" ? <LabPanel factoryId={factoryId} setFactoryId={setFactoryId} byId={byId} /> : null}
         {tab === "agents" ? <AgentsPanel /> : null}
       </main>
     </div>

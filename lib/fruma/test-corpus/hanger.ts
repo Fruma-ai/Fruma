@@ -2,31 +2,29 @@ import type { HangerDialect, TestFactory } from "./types";
 
 type Row = Record<string, string>;
 
-const STRUCTURES = [
-  "S/J 30/1",
-  "PIQUE 20/1",
-  "INTERLOCK 40/1",
-  "WARP MESH",
-  "FRENCH TERRY",
-  "RIB 1X1",
-  "RIB 2X2",
-  "LOOPBACK",
-  "POPLIN",
-  "OXFORD",
-  "COMPACT TWILL",
-  "BRUSHED FLEECE",
-] as const;
+/**
+ * Dummy mill files are fabric / material qualities — construction, fibre,
+ * weight, colour as written. Mills do not submit product SKUs or garment hangers.
+ * Dialect-specific cloth is what lets Source infer possible end products.
+ */
 
-const COMPOSITIONS = [
-  "100% CO",
-  "CO 95 / EA 5",
-  "100% SUPIMA COTTON",
-  "70% ORGANIC COTTON / 30% COTTON",
-  "WOOL 80 / PA 20",
-  "CV 100%",
-  "COTTON / SPN",
-  "MERINO 100%",
-] as const;
+const STRUCTURES_BY_DIALECT: Record<HangerDialect, readonly string[]> = {
+  "pt-standard": ["S/J 30/1", "PIQUE 20/1", "INTERLOCK 40/1", "WARP MESH"],
+  "it-shirting": ["POPLIN", "OXFORD", "COMPACT TWILL"],
+  "tr-knit": ["S/J 30/1", "RIB 1X1", "RIB 2X2", "INTERLOCK 40/1"],
+  "uk-imperial": ["S/J 30/1", "PIQUE 20/1", "OXFORD", "COMPACT TWILL"],
+  "pl-fleece": ["BRUSHED FLEECE", "FRENCH TERRY", "LOOPBACK"],
+  "messy-mixed": ["S/J 30/1", "WARP MESH", "POPLIN", "BRUSHED FLEECE"],
+};
+
+const COMPOSITIONS_BY_DIALECT: Record<HangerDialect, readonly string[]> = {
+  "pt-standard": ["100% SUPIMA COTTON", "100% CO", "CO 95 / EA 5", "70% ORGANIC COTTON / 30% COTTON"],
+  "it-shirting": ["100% CO", "CO 95 / EA 5", "LINEN 55 / CO 45"],
+  "tr-knit": ["100% CO", "CO 95 / EA 5", "MERINO 100%"],
+  "uk-imperial": ["100% CO", "100% SUPIMA COTTON", "WOOL 80 / PA 20"],
+  "pl-fleece": ["100% CO", "CO 95 / EA 5", "70% ORGANIC COTTON / 30% COTTON"],
+  "messy-mixed": ["100% CO", "CV 100%", "COTTON / SPN", "MERINO 100%"],
+};
 
 const COLOURS = [
   "Navy",
@@ -117,7 +115,10 @@ function articleCode(factory: TestFactory, row: number) {
 }
 
 function weightFor(dialect: HangerDialect, i: number) {
-  const gsm = 160 + ((i * 17) % 220);
+  let gsm = 160 + ((i * 17) % 220);
+  if (dialect === "pl-fleece") gsm = 280 + ((i * 13) % 160);
+  if (dialect === "it-shirting") gsm = 110 + ((i * 11) % 70);
+  if (dialect === "pt-standard") gsm = 140 + ((i * 15) % 90);
   if (dialect === "uk-imperial") return `${(gsm / 33.906).toFixed(1)} OZ`;
   if (dialect === "it-shirting" || dialect === "pl-fleece") return String(gsm);
   if (dialect === "messy-mixed" && i % 4 === 0) return `${gsm}gr`;
@@ -155,10 +156,12 @@ function customerFor(i: number, brandHints: string[]) {
 
 function buildRow(factory: TestFactory, i: number, brandHints: string[]): Row {
   const headers = HEADERS[factory.dialect];
+  const structures = STRUCTURES_BY_DIALECT[factory.dialect];
+  const compositions = COMPOSITIONS_BY_DIALECT[factory.dialect];
   const values = [
     articleCode(factory, i),
-    STRUCTURES[i % STRUCTURES.length],
-    COMPOSITIONS[i % COMPOSITIONS.length],
+    structures[i % structures.length],
+    compositions[i % compositions.length],
     weightFor(factory.dialect, i),
     widthFor(factory.dialect, i),
     COLOURS[i % COLOURS.length],
