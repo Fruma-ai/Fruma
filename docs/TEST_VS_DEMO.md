@@ -17,7 +17,7 @@ Fruma keeps two surfaces so engineering work does not quietly rewrite the custom
 6. **Preview branches** — Vercel preview URLs for feature PRs are sandboxes. Production (`fruma.vercel.app`) only changes when merges land on `main`.
 7. **Promotion is manual** — when Test feels right, tell the agent to promote accepted behaviour into Demo. Until then Demo stays the customer story.
 
-See also `docs/FOCUS_NOW.md` for the ordered engineering focus after the dummy corpus.
+See also `docs/FOCUS_NOW.md` for the ordered engineering focus after the dummy corpus, and `docs/WHERE_WE_ARE.md` for measured ingest results and enterprise-readiness status.
 
 ## Test corpus contents
 
