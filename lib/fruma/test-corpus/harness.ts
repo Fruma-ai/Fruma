@@ -1,3 +1,8 @@
+/**
+ * Server-only corpus harness (IngestEngine → PrivateByteStore → node:fs).
+ * Import from this path in API routes / tests — never from the client-safe
+ * `@/lib/fruma/test-corpus` barrel (that would break `next build`).
+ */
 import { confirmedHeaderOverlays } from "../agents/confirmed-headers";
 import { millIngestEngineFor } from "../ingest/deposits-http";
 import type { DepositResult, StandardField } from "../ingest/types";

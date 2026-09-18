@@ -1,6 +1,7 @@
 import { DEMO_COOKIE, sessionFounder } from "@/lib/gate";
 import { confirmedHeaderOverlays } from "@/lib/fruma/agents/confirmed-headers";
-import { factoryById, hangerCsvFor, runCorpusHarness } from "@/lib/fruma/test-corpus";
+import { factoryById, hangerCsvFor } from "@/lib/fruma/test-corpus";
+import { runCorpusHarness } from "@/lib/fruma/test-corpus/harness";
 import { millIngestEngineFor } from "@/lib/fruma/ingest/deposits-http";
 import { toMillDepositResponse } from "@/lib/fruma/mill-deposit";
 import { surfaceMillOrgId, TEST_SURFACE } from "@/lib/fruma/surfaces";

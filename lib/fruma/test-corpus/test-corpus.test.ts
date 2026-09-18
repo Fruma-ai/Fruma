@@ -10,9 +10,9 @@ import {
   allHangerFiles,
   hangerCsvFor,
   hangerRowsFor,
-  runCorpusHarness,
   testCorpusSummary,
 } from "./index";
+import { runCorpusHarness } from "./harness";
 
 describe("test corpus", () => {
   it("has exactly 3 brands and 50 factories", () => {
