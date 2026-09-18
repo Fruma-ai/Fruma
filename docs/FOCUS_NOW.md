@@ -36,5 +36,8 @@ Copy accepted behaviour into `/app`.
 
 ## Your job vs the agent’s job
 
-**You decide:** pilot brand/mill, what “done” looks like, when to promote, when to add Postgres, secrets/hosting.  
-**Agents implement:** harness scoring, mapping proposals, branches/PRs on Test, then Demo promotion on request.
+**You decide (rare):** merge PRs, promote Test→Demo, add Postgres, pilot mill, stop/go.  
+**Build steward does (continuous):** next FOCUS_NOW item on Test, draft PRs, tests, findings with brand value.  
+
+Low-touch operating model: `docs/STANDING_OPS.md`.
+

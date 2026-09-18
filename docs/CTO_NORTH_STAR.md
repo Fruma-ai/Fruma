@@ -34,4 +34,9 @@ As Test corpus + agents compound, brand value should show up as:
 
 ## Stage gate
 
-Prove value on Test with Harness → Mapping → Retrieval → Continuity before Postgres, network effects, or Demo promotion.
+Prove value on Test with Harness → Mapping → Retrieval → Continuity → Evidence before Postgres, network effects, or Demo promotion.
+
+## Low-touch build
+
+Standing steward contract: `docs/STANDING_OPS.md`. Prefer scheduled Cloud Agent turns over waiting for Owen to prompt “Go”.
+
