@@ -8,35 +8,34 @@ Standing CTO brief: `docs/CTO_NORTH_STAR.md`.
 
 | Agent | Job | Status |
 | --- | --- | --- |
-| **Corpus Harness** | Deposit all 50 Test factory hangers; score by dialect; list unmapped headers | Live |
-| **Mapping** | Propose / auto-confirm high-confidence dialect headers | Live |
-| **Retrieval** | Northline brief → structured filters → evidence-linked shortlist (private memory reorders; exclusions hidden) | Live |
+| **Corpus Harness** | Score all 50 Test hangers by dialect | Live |
+| **Mapping** | Confirm dialect header overlays | Live |
+| **Retrieval** | Northline brief → evidence-linked shortlist | Live |
+| **Continuity** | Diff vs prior harness/retrieval — **exceptions only** | Live |
 | **CI** | `npm test` on every PR | Live |
 
 ## Key findings
 
 ### Harness → Mapping
-- Before Mapping: **42/50** ok · **pl-fleece** failed on `Art.` article header
-- After Mapping: **50/50** ok · 19 dialect aliases confirmed
+- 42/50 → **50/50** after confirming `Art.` and 18 other dialect headers
 
-### Retrieval (Northline) — brand value proof
-Measured on `Refined navy polo` (TST-LINE-1006):
+### Retrieval (Northline)
+- Refined navy polo → 12 shortlisted · 3 excluded hidden · preferred/proven boosted
+- Evidence keeps PREFER colour misses and cert scope gaps honest
 
-- **12** deep-match qualities from preferred mills (Lima Group, Brescia Works)
-- **3** excluded mills never shown
-- **40** structured candidates capped before deep match
-- Evidence on #1 is explicit: UK market ✓, warp-knit specialty ✓, MOQ 365m ✓, colour Ecru ≠ navy (PREFER miss shown), cert ISO 14001 needs scope confirm, private **preferred** relationship ✓
-- **CTO note:** relationship memory correctly dominates ordering; colour is PREFER so non-navy rows can still rank high — evidence keeps that honest for the brand
+### Continuity — rebuy value
+- First run **establishes baseline**
+- After Mapping recovers pl-fleece, Continuity emits **factory_recovered / dialect_ok_changed** only — not a full re-catalogue
+- Two identical retrievals → **0 retrieval exceptions** + stable shortlist count = clean rebuy pass
+- **Brand pitch:** “Next season you only resolve what changed.”
 
-## Next agents
+## Next
 
-1. **Continuity** — diff harness/retrieval vs last run; exceptions only
-2. **Evidence** — scope/issuer checks on cert strings
-3. **Build steward** — standing Cursor agent on Test backlog
-4. **Multi-brand retrieval** — Harbour + Field & Form same path
+1. **Evidence agent** — scope/issuer on cert strings
+2. Multi-brand Retrieval (Harbour, Field & Form)
+3. Optional MUST colour when brief names a colourway
+4. Postgres when snapshots must survive deploys
 
 ## How Owen uses this
 
-1. `/app/test?tab=agents`
-2. Harness → Mapping → **Retrieval (Northline)**
-3. Read **Brand value** bullets + shortlist evidence on #1
+`/app/test?tab=agents` → 1 Harness → 2 Mapping → 3 Retrieval → **4 Continuity** (run twice to see exception-only)

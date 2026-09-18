@@ -321,15 +321,28 @@ type AgentRunView = {
     }[];
     excludedFactoriesSkipped?: number;
     brandValue?: { headline: string; bullets: string[] };
+    exceptions?: {
+      scope: string;
+      code: string;
+      severity: string;
+      message: string;
+      before?: string;
+      after?: string;
+    }[];
+    unchanged?: { harnessDialectsStable: number; retrievalShortlistStable: number };
+    baseline?: { established: boolean };
   };
 };
 
 function AgentsPanel() {
-  const [busy, setBusy] = useState<"harness" | "mapping" | "retrieval" | null>(null);
+  const [busy, setBusy] = useState<
+    "harness" | "mapping" | "retrieval" | "continuity" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [harness, setHarness] = useState<AgentRunView | null>(null);
   const [mapping, setMapping] = useState<AgentRunView | null>(null);
   const [retrieval, setRetrieval] = useState<AgentRunView | null>(null);
+  const [continuity, setContinuity] = useState<AgentRunView | null>(null);
 
   async function runHarness() {
     setBusy("harness");
