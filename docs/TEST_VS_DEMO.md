@@ -5,7 +5,7 @@ Fruma keeps two surfaces so engineering work does not quietly rewrite the custom
 | Version | Path | Purpose |
 | --- | --- | --- |
 | **Demo** | `/app` | Customer-facing story. Update only when the test corpus behaviour is accepted. |
-| **Test** | `/app/test` | Three dummy brands + fifty factories with private hanger CSVs. Safe to break. |
+| **Test** | `/app/test` | Three dummy brands + fifty mills with private fabric/material CSVs. Safe to break. |
 
 ## Environment protection (do not skip)
 
@@ -17,17 +17,17 @@ Fruma keeps two surfaces so engineering work does not quietly rewrite the custom
 6. **Preview branches** — Vercel preview URLs for feature PRs are sandboxes. Production (`fruma.vercel.app`) only changes when merges land on `main`.
 7. **Promotion is manual** — when Test feels right, tell the agent to promote accepted behaviour into Demo. Until then Demo stays the customer story.
 
-See also `docs/FOCUS_NOW.md` for the ordered engineering focus after the dummy corpus.
+See also `docs/FOCUS_NOW.md` for the ordered engineering focus after the dummy corpus, and `docs/WHERE_WE_ARE.md` for measured ingest results and enterprise-readiness status.
 
 ## Test corpus contents
 
 - **Brands:** Northline Studio, Harbour Standard, Field & Form
 - **Factories:** 50 mills across PT / IT / TR / PL / UK with distinct dialects
-- **Products:** 12 per brand (36 total)
+- **Products:** 12 intended end products per brand (36 total)
 - **Links:** 150 brand↔factory relationship rows (tenant-private)
-- **Hangers:** deterministic CSV per factory (`lib/fruma/test-corpus/hanger.ts`)
+- **Mill files:** deterministic fabric/material CSV per mill (`lib/fruma/test-corpus/hanger.ts`) — not product SKUs
 
-Download a hanger from the Factories / Hangers / Lab tabs, or (signed-in):
+Download a mill file from the Factories / Cloth / Lab tabs, or (signed-in):
 
 ```
 GET /api/test/factories/factory-001/hanger

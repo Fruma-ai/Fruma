@@ -1,25 +1,7 @@
 import { IngestException } from "./exceptions";
-import type { SourceCell } from "./types";
+import { resolveHeaderField } from "./header-map";
+import type { SourceCell, StandardField } from "./types";
 import { columnLetter } from "./columns";
-
-const HEADER_TO_FIELD: Record<string, SourceCell["standardField"]> = {
-  article: "article",
-  "article code": "article",
-  "fabric no": "article",
-  "mill article code": "article",
-  construction: "construction",
-  composition: "composition",
-  weight: "weight",
-  width: "width",
-  colour: "colour",
-  color: "colour",
-  colours: "colour",
-  colors: "colour",
-  moq: "moq",
-  customer: "customer",
-  cert: "cert",
-  certification: "cert",
-};
 
 export function decodeUtf8(bytes: Uint8Array): string {
   if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
@@ -97,7 +79,11 @@ export function parseCsvRecords(text: string): string[][] {
   return rows.filter((r) => r.some((c) => c.length > 0));
 }
 
-export function cellsFromTable(sheet: string, records: string[][]): SourceCell[] {
+export function cellsFromTable(
+  sheet: string,
+  records: string[][],
+  overlays?: Record<string, StandardField>,
+): SourceCell[] {
   if (records.length < 2) {
     throw new IngestException(
       "uncertain_bytes",
@@ -111,7 +97,7 @@ export function cellsFromTable(sheet: string, records: string[][]): SourceCell[]
     for (let c = 0; c < headers.length; c += 1) {
       const header = headers[c] ?? "";
       const sourceValue = record[c] ?? "";
-      const standardField = HEADER_TO_FIELD[header.toLowerCase()];
+      const standardField = resolveHeaderField(header, overlays);
       cells.push({
         pointer: {
           sheet,
@@ -127,10 +113,14 @@ export function cellsFromTable(sheet: string, records: string[][]): SourceCell[]
   return cells;
 }
 
-export function parseCsvBytes(filename: string, bytes: Uint8Array): SourceCell[] {
+export function parseCsvBytes(
+  filename: string,
+  bytes: Uint8Array,
+  overlays?: Record<string, StandardField>,
+): SourceCell[] {
   const text = decodeUtf8(bytes);
   if (text.includes("\u0000")) {
     throw new IngestException("uncertain_bytes", "CSV contains NUL bytes.");
   }
-  return cellsFromTable(filename, parseCsvRecords(text));
+  return cellsFromTable(filename, parseCsvRecords(text), overlays);
 }

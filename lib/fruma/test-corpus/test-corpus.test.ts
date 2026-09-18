@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { IngestEngine } from "../ingest/engine";
+import { scoreCorpusCoverage } from "../intelligence/coverage";
 import {
   TEST_BRANDS,
   TEST_FACTORIES,
   TEST_LINKS,
   TEST_PRODUCTS,
   allHangerFiles,
+  hangerBytesFor,
   hangerCsvFor,
   testCorpusSummary,
 } from "./index";
@@ -34,7 +36,7 @@ describe("test corpus", () => {
     assert.equal(files.size, 50);
   });
 
-  it("produces non-empty CSV hangers with a header row", () => {
+  it("produces non-empty mill fabric CSVs with a header row", () => {
     for (const factory of TEST_FACTORIES) {
       const csv = hangerCsvFor(factory);
       const lines = csv.trim().split("\n");
@@ -60,6 +62,24 @@ describe("test corpus", () => {
     }
     assert.equal(deposits, 50);
     assert.ok(qualities > 100);
+    const pl = TEST_FACTORIES.filter((f) => f.dialect === "pl-fleece");
+    assert.equal(pl.length, 8);
+  });
+
+  it("does not treat Polish fleece mill files as a searchable mill catalogue", () => {
+    const coverage = scoreCorpusCoverage();
+    const pl = coverage.byDialect.find((d) => d.dialect === "pl-fleece");
+    assert.ok(pl);
+    assert.equal(pl.qualities, 0);
+    const engine = new IngestEngine();
+    for (const factory of TEST_FACTORIES.filter((f) => f.dialect === "pl-fleece")) {
+      const result = engine.deposit({
+        supplierOrgId: factory.id,
+        filename: factory.filename,
+        bytes: hangerBytesFor(factory),
+      });
+      assert.equal(result.qualities.length, 0, factory.id);
+    }
   });
 
   it("keeps brand relationship memory tenant-scoped", () => {

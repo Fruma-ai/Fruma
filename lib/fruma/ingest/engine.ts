@@ -27,6 +27,7 @@ export type DepositInput = {
   filename: string;
   bytes: Uint8Array;
   receivedAt?: string;
+  headerOverlays?: Record<string, StandardField>;
 };
 
 export class IngestEngine {
@@ -40,7 +41,7 @@ export class IngestEngine {
   }
 
   deposit(input: DepositInput): DepositResult {
-    const { cells } = parseMillBytes(input.filename, input.bytes);
+    const { cells } = parseMillBytes(input.filename, input.bytes, input.headerOverlays);
     const deposit = this.store.put({
       supplierOrgId: input.supplierOrgId,
       filename: input.filename,
