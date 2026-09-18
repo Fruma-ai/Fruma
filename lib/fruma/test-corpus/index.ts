@@ -1,12 +1,15 @@
 import { TEST_BRANDS } from "./brands";
 import { TEST_FACTORIES, factoryById } from "./factories";
 import { articleCodesFor, hangerBytesFor, hangerCsvFor, hangerRowsFor } from "./hanger";
+import { runCorpusHarness } from "./harness";
 import { TEST_LINKS, TEST_PRODUCTS, linksForBrand, productsForBrand } from "./products";
 import type { TestCorpusSummary, TestFactory } from "./types";
 
 export { TEST_BRANDS } from "./brands";
 export { TEST_FACTORIES, factoryById } from "./factories";
 export { hangerBytesFor, hangerCsvFor, hangerRowsFor, articleCodesFor } from "./hanger";
+export { runCorpusHarness } from "./harness";
+export type { CorpusHarnessResult, FactoryHarnessRow } from "./harness";
 export { TEST_LINKS, TEST_PRODUCTS, linksForBrand, productsForBrand } from "./products";
 export type {
   BrandFactoryLink,

@@ -286,6 +286,22 @@ type LabResult = {
   };
 };
 
+type HarnessResult = {
+  surface: string;
+  harness: {
+    factoriesTotal: number;
+    factoriesOk: number;
+    factoriesFailed: number;
+    qualitiesTotal: number;
+    exceptionsTotal: number;
+    unmappedHeaderCount: number;
+    byDialect: Record<
+      string,
+      { factories: number; ok: number; qualities: number; exceptions: number; unmapped: string[] }
+    >;
+  };
+};
+
 function LabPanel({
   factoryId,
   setFactoryId,
@@ -300,10 +316,12 @@ function LabPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<LabResult | null>(null);
+  const [harness, setHarness] = useState<HarnessResult | null>(null);
 
   async function runIngest() {
     setBusy(true);
     setError(null);
+    setHarness(null);
     try {
       const res = await fetch("/api/test/ingest", {
         method: "POST",
@@ -326,13 +344,39 @@ function LabPanel({
     }
   }
 
+  async function runAllHarness() {
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await fetch("/api/test/ingest", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
+        body: JSON.stringify({ all: true }),
+      });
+      const json = (await res.json()) as HarnessResult & { error?: string };
+      if (!res.ok) {
+        setHarness(null);
+        setError(json.error ?? `Harness failed (${res.status})`);
+        return;
+      }
+      setHarness(json);
+    } catch (err) {
+      setHarness(null);
+      setError(err instanceof Error ? err.message : "Harness failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="tc-panel">
       <header className="tc-head">
         <p className="tc-kicker">Lab · test only</p>
         <h1>Harness factory data without touching Demo</h1>
         <p>
-          Runs the selected hanger through the <strong>Test</strong> ingest engine (
+          Runs hangers through the <strong>Test</strong> ingest engine (
           <code>org_mill_test</code>). Demo memory stays separate.
         </p>
       </header>
@@ -350,8 +394,31 @@ function LabPanel({
         <button type="button" className="tc-primary" disabled={busy} onClick={() => void runIngest()}>
           {busy ? "Running…" : "Run Test ingest"}
         </button>
+        <button type="button" className="tc-link" disabled={busy} onClick={() => void runAllHarness()}>
+          Prove all 50 dialects
+        </button>
       </div>
       {error ? <p className="tc-error" role="alert">{error}</p> : null}
+      {harness ? (
+        <div className="tc-lab-result">
+          <p className="tc-kicker">
+            {harness.surface} · corpus harness · {harness.harness.factoriesOk}/
+            {harness.harness.factoriesTotal} factories ok
+          </p>
+          <p>
+            {harness.harness.qualitiesTotal} qualities · {harness.harness.exceptionsTotal} exceptions
+            · {harness.harness.unmappedHeaderCount} unmapped headers
+          </p>
+          <ul>
+            {Object.entries(harness.harness.byDialect).map(([dialect, stats]) => (
+              <li key={dialect}>
+                <code>{dialect}</code> · {stats.ok}/{stats.factories} · {stats.qualities} qualities
+                {stats.unmapped.length ? ` · unmapped: ${stats.unmapped.join(", ")}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {result ? (
         <div className="tc-lab-result">
           <p className="tc-kicker">
