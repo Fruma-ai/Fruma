@@ -81,12 +81,13 @@ On `/app/test?tab=agents` that branch runs Harness → Mapping → Retrieval →
 
 These are product conclusions, not a feature list.
 
-1. **Dialect coverage is the mill wedge.** The corpus was built to break English aliases. It did. Fruma’s first durable advantage is “drop the file you already have” — that only holds if unknown headers become mapping work, not silent data loss.
-2. **Silence is worse than an exception.** `empty_article` is honest. Unmapped `Weave` / `Art.` is not. Mapping-agent fuel must be **unknown headers**, not only blank articles.
-3. **Relationship memory is already a moat if we never leak it.** Dummy brands prove the same factory can be preferred for one tenant and excluded for another. Retrieval that reorders on that memory, without overriding evidence, is the brand pitch.
-4. **Honesty compounds.** Evidence agent + `honesty.ts` + “not an audit” scoring are the same product. Do not let Demo animations or `FactoryCatalogueEnhancer` (12,480 fake qualities) outrun that.
-5. **Do not broaden.** Channel publish, MES, proto, legal pass, and marketplace dashboards are correctly deferred. They would spend the next months on surfaces that still sit on unmapped mill rows.
-6. **Demo and Test must stay split until Test is accepted.** Promoting choreography as intelligence would weaken the commercial story.
+1. **Dialect coverage is the mill wedge.** The corpus was built to break English aliases. It did. Fruma’s first durable advantage is “drop the file you already have” — that only holds if unknown headers become mapping work, not silent data loss. Test Overview now shows dark mills and dialect playbooks: confirm `Art.` once and all eight Polish mills become searchable. Source values stay as written.
+2. **Silence is worse than an exception.** `empty_article` is honest. Unmapped `Weave` / `Art.` is not. Mapping-agent fuel must be **unknown headers**, not only blank articles. Lab no longer reports “no mapping exceptions” when columns are silent.
+3. **Relationship memory is already a moat if we never leak it.** Dummy brands prove the same factory can be preferred for one tenant and excluded for another. The Source tab reorders on that memory, without overriding evidence.
+4. **Honesty compounds.** Evidence flags + `honesty.ts` + “not an audit” scoring are the same product. Organic fibre is not GOTS. Mill programmes stay mill-scope. Hanger MOQ is labelled historical. Do not let Demo animations or `FactoryCatalogueEnhancer` (12,480 fake qualities) outrun that.
+5. **Answerability is a better UI than a score.** Source shows which MUST/PREFER/OPEN requirements a mill can actually answer from mapped fields — on-file, unmapped, missing, or needs confirm.
+6. **Do not broaden.** Channel publish, MES, proto, legal pass, and marketplace dashboards are correctly deferred. They would spend the next months on surfaces that still sit on unmapped mill rows.
+7. **Demo and Test must stay split until Test is accepted.** Promoting choreography as intelligence would weaken the commercial story.
 
 ## What to do next
 

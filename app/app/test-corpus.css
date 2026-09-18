@@ -134,7 +134,7 @@
   font-size: clamp(28px, 4vw, 42px);
   line-height: 1.05;
   letter-spacing: -0.02em;
-  max-width: 18ch;
+  max-width: 22ch;
 }
 
 .tc-head p {
@@ -423,11 +423,161 @@
   border-top: 1px solid #2a3037;
 }
 
+.tc-stats-six {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.tc-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 700;
+  border: 1px solid #323843;
+}
+
+.tc-pill.searchable {
+  background: #d7f0df;
+  color: #102418;
+  border-color: #d7f0df;
+}
+
+.tc-pill.partial {
+  background: #efe0a8;
+  color: #2a2108;
+  border-color: #efe0a8;
+}
+
+.tc-pill.dark {
+  background: #ffb4a8;
+  color: #3a0d08;
+  border-color: #ffb4a8;
+}
+
+.tc-historical {
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+.tc-muted {
+  opacity: 0.68;
+  margin: 0;
+}
+
+.tc-list.stacked li {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.tc-grid.playbooks {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.tc-playbook {
+  border: 1px solid #2a3037;
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+  background: #0a0c0f;
+}
+
+.tc-playbook h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.tc-playbook .tc-primary {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+.tc-playbook .tc-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tc-grid.source-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tc-source-card h2 {
+  font-size: 20px;
+}
+
+.tc-req,
+.tc-answer,
+.tc-evidence {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.tc-req li {
+  display: grid;
+  grid-template-columns: 4.5rem auto 1fr;
+  gap: 8px 12px;
+  align-items: baseline;
+}
+
+.tc-answer li {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr;
+  gap: 8px 12px;
+  align-items: baseline;
+}
+
+.tc-req li span,
+.tc-answer li span {
+  opacity: 0.75;
+}
+
+.tc-req em,
+.tc-answer em {
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.tc-evidence li {
+  border-top: 1px solid #232830;
+  padding-top: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.tc-evidence li.block b {
+  color: #ffb4a8;
+}
+
+.tc-evidence li.warn b {
+  color: #efe0a8;
+}
+
+.tc-continuity {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px dashed #323843;
+  opacity: 0.86;
+}
+
 @media (max-width: 900px) {
   .tc-stats,
+  .tc-stats-six,
   .tc-grid.two,
   .tc-grid.three,
-  .tc-grid.factories {
+  .tc-grid.factories,
+  .tc-grid.playbooks,
+  .tc-grid.source-cards {
     grid-template-columns: 1fr;
   }
 

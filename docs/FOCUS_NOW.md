@@ -1,8 +1,8 @@
 # What to focus on now
 
-Dummy brands/factories are on `/app/test`. Demo agents in `/app` are still **UI choreography**. Status, measured corpus results, and next decisions: **`docs/WHERE_WE_ARE.md`**. The next work is the data + job spine — only on Test until you say promote.
+Dummy brands/factories are on `/app/test`. Demo agents in `/app` are still **UI choreography**. Status, measured corpus results, and next decisions: **`docs/WHERE_WE_ARE.md`**.
 
-Draft [PR #34](https://github.com/Fruma-ai/Fruma/pull/34) already runs Harness → Mapping → Retrieval → Continuity → Evidence on Test. Merge that rather than rebuilding it here.
+Test UI now has **Overview health**, **dialect playbooks**, **silent-header Lab**, and a **Source shortlist**. Use those. The next work is still the data + job spine — only on Test until you say promote.
 
 ## Protect production / demo
 
@@ -16,8 +16,8 @@ Use Test for all experiments. Preview deployments on feature branches are also s
 
 ## Focus order (do this next)
 
-### 1. Harness the test corpus (Lab ingest is live; coverage is not)
-Lab ingest on Test is real. On `main`, all 50 CSVs parse, but **`pl-fleece` (8 mills) yields zero qualities** because `Art.` is not an article alias. Unmapped headers are silent. See `docs/WHERE_WE_ARE.md`. Do not treat “ingests without throwing” as done.
+### 1. Harness the test corpus (Lab ingest is live; coverage is now visible)
+Lab ingest on Test is real. Overview scores all 50 hangers: **`pl-fleece` starts dark** because `Art.` is not an article alias. Confirm the Polish fleece playbook to recover those mills. Unmapped headers show as mapping work, not “no exceptions”. See `docs/WHERE_WE_ARE.md`.
 
 ### 2. First bounded agent: Mapping
 On `main` this is still types only (`lib/fruma/agent-runtime.ts`). On PR #34 it is live: lexicon proposals for the 19 silent headers, confirm required, no invented fields. Merge #34 instead of rewriting.
