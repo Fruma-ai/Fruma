@@ -104,11 +104,12 @@ export function TestSourcePanel({
   return (
     <section className="tc-panel">
       <header className="tc-head">
-        <p className="tc-kicker">Source · brand-private shortlist</p>
-        <h1>What this brand can actually answer.</h1>
+        <p className="tc-kicker">Source · cloth that can become this product</p>
+        <h1>Which mill fabrics can become this end product.</h1>
         <p>
-          Structured filters first. Relationship memory reorders; it never invents a mill, a
-          colour, or a certificate. Excluded factories stay hidden. Hanger MOQ is historical.
+          Mills submit fabrics and materials — not product hangers. Fruma reads that mass of cloth
+          and names which garments it can support. Relationship memory reorders mills; it never
+          invents a quality, a colour, or a certificate.
         </p>
       </header>
 
@@ -132,7 +133,7 @@ export function TestSourcePanel({
 
       <div className="tc-lab">
         <label className="tc-lab-pick">
-          <span>Product brief</span>
+          <span>End product to make</span>
           <select value={selected.id} onChange={(e) => { setProductId(e.target.value); setResult(null); }}>
             {products.map((p) => (
               <option key={p.id} value={p.id}>
@@ -142,7 +143,7 @@ export function TestSourcePanel({
           </select>
         </label>
         <button type="button" className="tc-primary" disabled={busy} onClick={() => void runSource()}>
-          {busy ? "Shortlisting…" : "Run Source"}
+          {busy ? "Matching cloth…" : "Match fabrics"}
         </button>
       </div>
 
@@ -150,15 +151,16 @@ export function TestSourcePanel({
 
       {result ? (
         <>
-          <div className="tc-stats">
-            <div><b>{result.candidates.length}</b><span>shortlist</span></div>
+          <div className="tc-stats tc-stats-six">
+            <div><b>{result.candidates.length}</b><span>mill books</span></div>
+            <div><b>{result.matchingFabricTotal}</b><span>matching fabrics</span></div>
             <div><b>{result.excludedHidden}</b><span>excluded hidden</span></div>
-            <div><b>{result.darkMillsSkipped}</b><span>dark mills skipped</span></div>
+            <div><b>{result.darkMillsSkipped}</b><span>dark mill books</span></div>
+            <div><b>{result.fabricMisses}</b><span>books without that cloth</span></div>
             <div>
               <b>{result.continuity.addedFactoryIds.length + result.continuity.removedFactoryIds.length}</b>
               <span>continuity exceptions</span>
             </div>
-            <div><b>{result.brief.requirements.filter((r) => r.kind === "MUST").length}</b><span>MUST reqs</span></div>
           </div>
 
           <article className="tc-card">
@@ -210,14 +212,29 @@ export function TestSourcePanel({
                   {mill.country} · {mill.dialect} · {mill.relationship}
                 </p>
                 <h2>{mill.factoryName}</h2>
+                <p className="tc-muted">
+                  {mill.matchingFabricCount} mill fabrics can become {mill.endProduct ?? "this product"}.
+                  The mill did not submit that garment.
+                </p>
                 <div className="tc-meta">
                   <span className={`tc-pill ${mill.coverage}`}>{mill.coverage}</span>
-                  <span>{mill.qualities} qualities</span>
-                  <span>{mill.grantedArticles} granted articles</span>
+                  <span>{mill.qualities} qualities in book</span>
                   <span className="tc-historical">
                     MOQ {mill.commercials.moqM}m · {mill.commercials.leadWeeks}w · historical
                   </span>
                 </div>
+                <ul className="tc-fabric">
+                  {mill.matchedFabrics.map((fabric) => (
+                    <li key={fabric.articleCode}>
+                      <code>{fabric.articleCode}</code>
+                      <span>
+                        {fabric.constructionAsWritten} · {fabric.compositionAsWritten} · {fabric.weightAsWritten}
+                        {fabric.colourAsWritten ? ` · ${fabric.colourAsWritten}` : ""}
+                      </span>
+                      <em>can become {fabric.possibleEndProducts.join(" · ")}</em>
+                    </li>
+                  ))}
+                </ul>
                 <ul className="tc-answer">
                   {mill.answerability.map((row) => (
                     <li key={row.requirementId}>
@@ -240,7 +257,7 @@ export function TestSourcePanel({
         </>
       ) : (
         <p className="tc-muted">
-          Pick a {brand.name} product and run Source. Shortlists stay inside this tenant.
+          Pick a {brand.name} end product. Source matches mill fabrics, not factory product lists.
         </p>
       )}
     </section>

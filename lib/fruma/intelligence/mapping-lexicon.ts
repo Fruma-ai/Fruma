@@ -2,7 +2,7 @@ import { resolveHeaderField } from "../ingest/header-map";
 import type { StandardField } from "../ingest/types";
 
 /**
- * Proposals only. Never auto-applied. Covers the six Test hanger dialects
+ * Proposals only. Never auto-applied. Covers the six Test mill-file dialects
  * that builtin aliases miss (Art., Weave, GSM, imperial units, …).
  */
 export const PROPOSAL_LEXICON: Record<string, StandardField> = {

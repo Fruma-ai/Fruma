@@ -16,6 +16,7 @@ import type { StandardField } from "@/lib/fruma/ingest/types";
 import type { HangerDialect } from "@/lib/fruma/test-corpus/types";
 import { TestOverviewPanel } from "@/components/fruma/test/TestOverviewPanel";
 import { TestSourcePanel } from "@/components/fruma/test/TestSourcePanel";
+import { TestClothPanel } from "@/components/fruma/test/TestClothPanel";
 
 type Tab = "overview" | "brands" | "factories" | "hangers" | "lab" | "source";
 
@@ -56,7 +57,10 @@ function BrandsPanel({
       <header className="tc-head">
         <p className="tc-kicker">Brands</p>
         <h1>Tenant-private relationship memory</h1>
-        <p>Each brand sees its own preferred / proven / excluded factory set. Nothing leaks across brands. Source uses this memory to reorder — never to invent a mill.</p>
+        <p>
+          Each brand sees its own preferred / proven / excluded mill set. Nothing leaks across brands.
+          Source uses this memory to reorder mill <em>fabric books</em> — never to invent a mill product list.
+        </p>
       </header>
       <div className="tc-brand-tabs">
         {TEST_BRANDS.map((b) => (
@@ -78,7 +82,7 @@ function BrandsPanel({
           <div className="tc-meta">
             <span>{preferred.length} preferred/proven</span>
             <span>{excluded.length} excluded</span>
-            <span>{products.length} products</span>
+            <span>{products.length} end products</span>
           </div>
         </article>
         <article className="tc-card">
@@ -148,10 +152,10 @@ function FactoriesPanel({
     <section className="tc-panel">
       <header className="tc-head">
         <p className="tc-kicker">Factories</p>
-        <h1>Fifty mills with their own data dialects</h1>
+        <h1>Fifty mills with their own fabric-book dialects</h1>
         <p>
-          Each factory owns a private hanger CSV. Coverage badges show whether ingest produced a
-          searchable catalogue, a partial map, or a dark mill.
+          Each mill owns a private fabric / material file — qualities, not product SKUs. Coverage
+          badges show whether that cloth is searchable, partially mapped, or dark.
         </p>
       </header>
       <div className="tc-grid factories">
@@ -207,51 +211,6 @@ function FactoriesPanel({
           </div>
           <pre className="tc-preview">{preview}</pre>
         </article>
-      </div>
-    </section>
-  );
-}
-
-function HangersPanel({ byId }: { byId: Map<string, FactoryCoverage> }) {
-  return (
-    <section className="tc-panel">
-      <header className="tc-head">
-        <p className="tc-kicker">Hanger index</p>
-        <h1>All factory datasets</h1>
-        <p>Download any hanger file, or open Lab to run Test-only ingest without touching Demo.</p>
-      </header>
-      <div className="tc-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Factory</th>
-              <th>Dialect</th>
-              <th>Coverage</th>
-              <th>Qualities</th>
-              <th>Silent headers</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {TEST_FACTORIES.map((factory) => {
-              const row = byId.get(factory.id);
-              return (
-                <tr key={factory.id}>
-                  <td>{factory.name}</td>
-                  <td>{factory.dialect}</td>
-                  <td>{row ? <span className={`tc-pill ${row.status}`}>{row.status}</span> : "—"}</td>
-                  <td>{row?.qualities ?? "—"}</td>
-                  <td>{row?.unmappedHeaders.join(", ") || "—"}</td>
-                  <td>
-                    <button type="button" className="tc-link" onClick={() => downloadCsv(factory)}>
-                      Download
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
     </section>
   );
@@ -322,11 +281,10 @@ function LabPanel({
     <section className="tc-panel">
       <header className="tc-head">
         <p className="tc-kicker">Lab · test only</p>
-        <h1>Harness factory data without touching Demo</h1>
+        <h1>Harness mill fabric files without touching Demo</h1>
         <p>
-          Runs the selected hanger through the <strong>Test</strong> ingest engine. Confirmed
-          dialect overlays apply. Unmapped headers are mapping work even when there is no
-          empty-article exception.
+          Runs the selected mill fabric / material file through the <strong>Test</strong> ingest
+          engine. This is cloth on file — not a product catalogue. Confirmed dialect overlays apply.
         </p>
       </header>
       <div className="tc-lab">
@@ -507,7 +465,7 @@ export function TestCorpusPlatform() {
               ["source", "Source"],
               ["brands", "Brands"],
               ["factories", "Factories"],
-              ["hangers", "Hangers"],
+              ["hangers", "Cloth"],
               ["lab", "Lab"],
             ] as const
           ).map(([id, label]) => (
@@ -553,7 +511,14 @@ export function TestCorpusPlatform() {
         {tab === "factories" ? (
           <FactoriesPanel factoryId={factoryId} setFactoryId={setFactoryId} byId={byId} />
         ) : null}
-        {tab === "hangers" ? <HangersPanel byId={byId} /> : null}
+        {tab === "hangers" ? (
+          <TestClothPanel
+            factoryId={factoryId}
+            setFactoryId={setFactoryId}
+            overlays={overlays}
+            byId={byId}
+          />
+        ) : null}
         {tab === "lab" ? <LabPanel factoryId={factoryId} setFactoryId={setFactoryId} byId={byId} /> : null}
       </main>
     </div>

@@ -11,3 +11,10 @@ export {
 export { briefFromProduct, sourceShortlist, tenantIsolationProof } from "./retrieval";
 export type { BrandBrief, EvidenceFlag, SourceCandidate, SourceShortlist } from "./retrieval";
 export { DIALECT_PLAYBOOKS, playbookHeaders, playbookReady } from "./playbooks";
+export {
+  fabricBookFor,
+  fabricsMatchingEndProduct,
+  endProductsFromCloth,
+  categoryToEndProduct,
+} from "./fabrics";
+export type { FabricBook, FabricQuality, EndProductFamily } from "./fabrics";

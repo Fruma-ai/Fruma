@@ -19,7 +19,7 @@ export type TestFactory = {
   markets: ("UK" | "EU" | "US")[];
   moqM: number;
   leadWeeks: number;
-  /** Dialect of their native hanger list — drives column headers + units. */
+  /** Dialect of their native mill fabric/material file — drives column headers + units. */
   dialect: HangerDialect;
   rowCount: number;
   filename: string;

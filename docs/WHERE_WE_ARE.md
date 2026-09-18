@@ -4,7 +4,7 @@ Snapshot for Owen (CTO). Measured on `main` (`11e8425`) plus findings already ru
 
 ## Verdict
 
-Fruma is an **architecture-approved prototype** with a **real mill-file ingest engine** and a **choreographed customer demo**. It is **not enterprise ready**. Dummy brands and factories are performing their job: they exposed that “ingests without throwing” is not the same as “searchable mill truth.”
+Fruma is an **architecture-approved prototype** with a **real mill-file ingest engine** and a **choreographed customer demo**. It is **not enterprise ready**. Dummy brands and mill fabric books are performing their job: they exposed that “ingests without throwing” is not the same as “searchable mill cloth,” and that mill files are **fabrics and materials**, not product hangers. The mass of that cloth is what tells a brand which end products can actually be made.
 
 The product position gets stronger by **deepening that spine** (map → retrieve → evidence → confirm), not by adding rooms, dashboards, or more dummy factories.
 
@@ -13,7 +13,7 @@ The product position gets stronger by **deepening that spine** (map → retrieve
 | Surface | Path | What it actually is |
 | --- | --- | --- |
 | **Demo** | `/app` | Customer story. Named agents are **UI timers**. Seeded mills, synthetic channel scores. Do not treat as live intelligence. |
-| **Test** | `/app/test` | 3 brands, 50 factories, 36 products, 150 private links, 1,400 hanger rows. Lab ingest is **real**. Product agents are **types on `main`**, **live on PR #34**. |
+| **Test** | `/app/test` | 3 brands, 50 mill **fabric books**, 36 intended end products, 150 private links, ~1,400 mill quality rows. Lab ingest is **real**. |
 | **Production site** | `fruma.vercel.app` | Same repo. Founder gate. Apply emails `owen@fruma.ai`. |
 
 Public site, honesty copy, and product-truth rules are coherent. Persistence is in-memory. Auth is three founder passwords. There is no tenant database, job queue, mill login, or brand SSO.
@@ -27,7 +27,7 @@ The ten product gates in `docs/PLATFORM_REVIEW.md` are **decided**. Enforcement 
 | 1. Product truth from intent | Types only (`product-truth.ts`) | Brief → retrieval facts, not a versioned product record |
 | 2. Immutable source | **Yes** — deposits keep original bytes + cells | Same |
 | 3. Scope-aware evidence | Types + ingest certs never inferred | Evidence agent **blocks** organic-fibre ≠ GOTS and mill-programme promotion |
-| 4. Commercial freshness | Not implemented | **Next steward pull** — hanger MOQ/lead still look current |
+| 4. Commercial freshness | Not implemented | **Next steward pull** — fabric-book MOQ/lead still look current |
 | 5. Private brand memory | Corpus links exist; unused by search | Retrieval **hides exclusions**; same mill differs per brand; no leak in tests |
 | 6. Anonymous mill requests | Architecture only | Not built |
 | 7. Bounded agents | `agent-runtime.ts` unused | Harness / Mapping / Retrieval / Continuity / Evidence runs, in-memory |
@@ -42,7 +42,7 @@ The ten product gates in `docs/PLATFORM_REVIEW.md` are **decided**. Enforcement 
 Corpus on Test (`lib/fruma/test-corpus`):
 
 - **Brands:** Northline Studio, Harbour Standard, Field & Form
-- **Factories:** 50 across PT / IT / TR / PL / UK, six hanger dialects
+- **Factories:** 50 across PT / IT / TR / PL / UK, six mill-file dialects
 - **Links:** 150 tenant-private rows — preferred 17, proven 24, previous 29, new 71, excluded 9
 - **Tests on `main`:** all 50 files deposit without throwing, and `qualities > 100`. That bar is too low.
 
@@ -71,23 +71,24 @@ On `/app/test?tab=agents` that branch runs Harness → Mapping → Retrieval →
 
 **Tenant moat.** Same mill `factory-001`: Northline = excluded, Harbour = previous, Field & Form = excluded. Switching brands never diffs another tenant’s shortlist. One catalogue spine, three private intelligence views. That is the compounding asset in `PRODUCT_TRUTH_ARCHITECTURE.md`.
 
-**Evidence.** Organic fibre in a hanger is **not** GOTS. Mill-level programmes stay mill-level. Audited claims are **not** auto brand-safe. This is the honesty rule working on data, not just copy.
+**Evidence.** Organic fibre on a mill quality is **not** GOTS. Mill-level programmes stay mill-level. Audited claims are **not** auto brand-safe. This is the honesty rule working on data, not just copy.
 
 **Continuity.** Rebuy is exception-only against a **brand-scoped** prior snapshot. Cross-brand diffs stay at zero.
 
-**What is still fake even there.** Runs live in process memory (gone on deploy). Commercials on the hanger are not marked historical. No mill has confirmed current MOQ/lead. No real workbook. Demo still choreographs the same story with timers.
+**What is still fake even there.** Runs live in process memory (gone on deploy). Commercials on the mill file are not marked historical. No mill has confirmed current MOQ/lead. No real workbook. Demo still choreographs the same story with timers.
 
 ## What makes the position stronger
 
 These are product conclusions, not a feature list.
 
-1. **Dialect coverage is the mill wedge.** The corpus was built to break English aliases. It did. Fruma’s first durable advantage is “drop the file you already have” — that only holds if unknown headers become mapping work, not silent data loss. Test Overview now shows dark mills and dialect playbooks: confirm `Art.` once and all eight Polish mills become searchable. Source values stay as written.
+1. **Dialect coverage is the mill wedge.** Mills drop the fabric book they already have. Fruma’s first durable advantage is mapping that mass of materials — that only holds if unknown headers become mapping work, not silent data loss. Test Overview now shows dark mill books and dialect playbooks.
 2. **Silence is worse than an exception.** `empty_article` is honest. Unmapped `Weave` / `Art.` is not. Mapping-agent fuel must be **unknown headers**, not only blank articles. Lab no longer reports “no mapping exceptions” when columns are silent.
 3. **Relationship memory is already a moat if we never leak it.** Dummy brands prove the same factory can be preferred for one tenant and excluded for another. The Source tab reorders on that memory, without overriding evidence.
-4. **Honesty compounds.** Evidence flags + `honesty.ts` + “not an audit” scoring are the same product. Organic fibre is not GOTS. Mill programmes stay mill-scope. Hanger MOQ is labelled historical. Do not let Demo animations or `FactoryCatalogueEnhancer` (12,480 fake qualities) outrun that.
+4. **Honesty compounds.** Evidence flags + `honesty.ts` + “not an audit” scoring are the same product. Organic fibre is not GOTS. Mill programmes stay mill-scope. Fabric-book MOQ is labelled historical. Do not let Demo animations or `FactoryCatalogueEnhancer` (12,480 fake qualities) outrun that.
 5. **Answerability is a better UI than a score.** Source shows which MUST/PREFER/OPEN requirements a mill can actually answer from mapped fields — on-file, unmapped, missing, or needs confirm.
-6. **Do not broaden.** Channel publish, MES, proto, legal pass, and marketplace dashboards are correctly deferred. They would spend the next months on surfaces that still sit on unmapped mill rows.
-7. **Demo and Test must stay split until Test is accepted.** Promoting choreography as intelligence would weaken the commercial story.
+6. **Mills file cloth, not garments.** Source matches mill fabrics that can become an end product. A fleece book never shortlists as a polo catalogue. The volume of materials is the catalogue.
+7. **Do not broaden.** Channel publish, MES, proto, legal pass, and marketplace dashboards are correctly deferred. They would spend the next months on surfaces that still sit on unmapped mill rows.
+8. **Demo and Test must stay split until Test is accepted.** Promoting choreography as intelligence would weaken the commercial story.
 
 ## What to do next
 
@@ -103,7 +104,7 @@ These are product conclusions, not a feature list.
 
 Ordered. One theme per PR. Test only.
 
-1. **Commercial freshness on Retrieval** — hanger MOQ / lead are historical until a mill confirmation timestamp exists. Never invent current price. (First ready item in `steward-queue.ts`.)
+1. **Commercial freshness on Retrieval** — fabric-book MOQ / lead are historical until a mill confirmation timestamp exists. Never invent current price. (First ready item in `steward-queue.ts`.)
 2. **Brief as Agents step 0** — MUST / PREFER / OPEN visible before the shortlist.
 3. **Unknown-header exceptions on `main` ingest** if #34’s overlays are not yet merged — so Lab cannot report “no exceptions” for `pl-fleece`.
 4. **One real XLSX** through object storage → confirmed maps → searchable quality → evidence-first shortlist → mill response → versioned product truth. That is enterprise-prototype done, not “50 more factories.”

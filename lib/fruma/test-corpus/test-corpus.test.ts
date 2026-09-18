@@ -36,7 +36,7 @@ describe("test corpus", () => {
     assert.equal(files.size, 50);
   });
 
-  it("produces non-empty CSV hangers with a header row", () => {
+  it("produces non-empty mill fabric CSVs with a header row", () => {
     for (const factory of TEST_FACTORIES) {
       const csv = hangerCsvFor(factory);
       const lines = csv.trim().split("\n");
@@ -66,7 +66,7 @@ describe("test corpus", () => {
     assert.equal(pl.length, 8);
   });
 
-  it("does not treat Polish fleece hangers as a searchable mill catalogue", () => {
+  it("does not treat Polish fleece mill files as a searchable mill catalogue", () => {
     const coverage = scoreCorpusCoverage();
     const pl = coverage.byDialect.find((d) => d.dialect === "pl-fleece");
     assert.ok(pl);

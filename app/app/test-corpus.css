@@ -562,6 +562,27 @@
   color: #efe0a8;
 }
 
+.tc-fabric {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.tc-fabric li {
+  display: grid;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1px solid #232830;
+}
+
+.tc-fabric em {
+  font-style: normal;
+  font-size: 12px;
+  opacity: 0.62;
+}
+
 .tc-continuity {
   margin: 0;
   padding: 12px 14px;

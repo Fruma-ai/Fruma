@@ -1,10 +1,16 @@
 import type { StandardField } from "../ingest/types";
 import { TEST_BRANDS } from "../test-corpus/brands";
 import { TEST_FACTORIES, factoryById } from "../test-corpus/factories";
-import { hangerRowsFor } from "../test-corpus/hanger";
 import { TEST_LINKS, TEST_PRODUCTS } from "../test-corpus/products";
 import type { BrandFactoryLink, TestFactory, TestProduct } from "../test-corpus/types";
 import { scoreFactoryCoverage, type CoverageStatus } from "./coverage";
+import {
+  categoryToEndProduct,
+  fabricBookFor,
+  fabricsMatchingEndProduct,
+  type EndProductFamily,
+  type FabricQuality,
+} from "./fabrics";
 
 export type RequirementKind = "MUST" | "PREFER" | "OPEN";
 
@@ -51,12 +57,18 @@ export type SourceCandidate = {
   evidence: EvidenceFlag[];
   commercials: { moqM: number; leadWeeks: number; freshness: "historical" };
   excluded: false;
+  /** Cloth that can become the intended end product. Not mill product SKUs. */
+  matchedFabrics: FabricQuality[];
+  matchingFabricCount: number;
+  endProduct: EndProductFamily | null;
 };
 
 export type SourceShortlist = {
   brief: BrandBrief;
   excludedHidden: number;
   darkMillsSkipped: number;
+  fabricMisses: number;
+  matchingFabricTotal: number;
   candidates: SourceCandidate[];
   continuity: {
     priorProductId: string | null;
@@ -75,13 +87,16 @@ function namedColour(product: TestProduct): string | null {
 export function briefFromProduct(product: TestProduct): BrandBrief {
   const brand = TEST_BRANDS.find((b) => b.id === product.brandId);
   const colour = namedColour(product);
+  const endProduct = categoryToEndProduct(product.category);
   const requirements: BriefRequirement[] = [
     {
       id: "req-category",
       field: "construction",
       kind: "MUST",
-      label: "Category / construction",
-      value: product.category,
+      label: "End product from cloth",
+      value: endProduct
+        ? `${endProduct} — match mill fabrics that can become this. Mills do not file product SKUs.`
+        : product.category,
     },
     colour
       ? {
@@ -103,7 +118,7 @@ export function briefFromProduct(product: TestProduct): BrandBrief {
       field: "moq",
       kind: "PREFER",
       label: "MOQ discipline",
-      value: "realistic mill MOQ (hanger figure is historical)",
+      value: "realistic mill MOQ (fabric-book figure is historical)",
     },
     {
       id: "req-geo",
@@ -125,22 +140,24 @@ export function briefFromProduct(product: TestProduct): BrandBrief {
   };
 }
 
-function rowHasColour(factory: TestFactory, colour: string): boolean {
+function rowHasColour(factory: TestFactory, colour: string, overlays?: Record<string, StandardField>): boolean {
+  const book = fabricBookFor(factory, overlays);
   const needle = colour.toLowerCase();
-  return hangerRowsFor(factory).some((row) =>
-    Object.values(row).some((value) => value.toLowerCase().includes(needle)),
-  );
+  return book.qualities.some((q) => q.colourAsWritten.toLowerCase().includes(needle));
 }
 
-function compositionSamples(factory: TestFactory): string[] {
-  return hangerRowsFor(factory)
-    .map((row) => row.Composition || row["Comp."] || row.Fibre || row.composition || "")
+function compositionSamples(factory: TestFactory, overlays?: Record<string, StandardField>): string[] {
+  return fabricBookFor(factory, overlays)
+    .qualities.map((q) => q.compositionAsWritten)
     .filter(Boolean);
 }
 
-export function evidenceForFactory(factory: TestFactory): EvidenceFlag[] {
+export function evidenceForFactory(
+  factory: TestFactory,
+  overlays?: Record<string, StandardField>,
+): EvidenceFlag[] {
   const flags: EvidenceFlag[] = [];
-  const compositions = compositionSamples(factory);
+  const compositions = compositionSamples(factory, overlays);
   const organicOnRow = compositions.some((c) => /organic/i.test(c));
   const millHasGots = factory.certifications.some((c) => /GOTS/i.test(c));
   const millHasAny = factory.certifications.length > 0;
@@ -151,7 +168,7 @@ export function evidenceForFactory(factory: TestFactory): EvidenceFlag[] {
       severity: "block",
       title: "Organic fibre is not GOTS",
       detail:
-        "A hanger composition mentions organic cotton. That is not a product-level GOTS claim. Missing stays missing.",
+        "A mill fabric composition mentions organic cotton. That is not a product-level GOTS claim. Missing stays missing.",
     });
   }
 
@@ -175,7 +192,7 @@ export function evidenceForFactory(factory: TestFactory): EvidenceFlag[] {
     code: "historical-commercial",
     severity: "info",
     title: "MOQ and lead are historical",
-    detail: `Hanger MOQ ${factory.moqM}m / lead ${factory.leadWeeks}w is not a current mill confirmation.`,
+    detail: `Fabric-book MOQ ${factory.moqM}m / lead ${factory.leadWeeks}w is not a current mill confirmation.`,
   });
 
   return flags;
@@ -186,6 +203,8 @@ function answerFor(
   factory: TestFactory,
   coverage: ReturnType<typeof scoreFactoryCoverage>,
   colour: string | null,
+  overlays: Record<string, StandardField> | undefined,
+  matchingFabricCount: number,
 ): { requirementId: string; result: Answerability; note: string } {
   if (req.field === "geography") {
     const ukEu = factory.markets.includes("UK") || factory.markets.includes("EU");
@@ -202,31 +221,45 @@ function answerFor(
     if (coverage.unmappedHeaders.some((h) => /colou?r/i.test(h))) {
       return { requirementId: req.id, result: "unmapped", note: "Colour column is not on the Fruma standard yet." };
     }
-    if (colour && rowHasColour(factory, colour)) {
-      return { requirementId: req.id, result: "on-file", note: `Hanger includes ${colour} as written.` };
+    if (colour && rowHasColour(factory, colour, overlays)) {
+      return { requirementId: req.id, result: "on-file", note: `A mill colourway includes ${colour} as written.` };
     }
-    return { requirementId: req.id, result: "missing", note: `No ${colour} colourway on this hanger.` };
+    return { requirementId: req.id, result: "missing", note: `No ${colour} colourway on this fabric book.` };
   }
   if (req.field === "moq") {
     const mapped = !coverage.unmappedHeaders.some((h) => /moq|min order/i.test(h));
     return {
       requirementId: req.id,
       result: mapped ? "needs-confirm" : "unmapped",
-      note: "Hanger MOQ is historical until the mill reconfirms.",
+      note: "Fabric-book MOQ is historical until the mill reconfirms.",
     };
   }
   if (req.field === "construction") {
+    if (coverage.status === "dark") {
+      return {
+        requirementId: req.id,
+        result: "unmapped",
+        note: "Mill is dark until article identity is mapped.",
+      };
+    }
+    if (matchingFabricCount === 0) {
+      return {
+        requirementId: req.id,
+        result: "missing",
+        note: "No mill fabric in this book can become that end product.",
+      };
+    }
     if (coverage.unmappedHeaders.some((h) => /weave|knit|structure/i.test(h))) {
       return {
         requirementId: req.id,
         result: "unmapped",
-        note: "Construction column is present but not mapped.",
+        note: `${matchingFabricCount} fabrics match from mill wording; construction column is not on the standard yet.`,
       };
     }
     return {
       requirementId: req.id,
-      result: coverage.status === "dark" ? "unmapped" : "on-file",
-      note: coverage.status === "dark" ? "Mill is dark until article identity is mapped." : "Construction on file as written.",
+      result: "on-file",
+      note: `${matchingFabricCount} mill fabrics can become this end product.`,
     };
   }
   return { requirementId: req.id, result: "needs-confirm", note: "Needs mill confirmation." };
@@ -237,16 +270,21 @@ function scoreCandidate(
   link: BrandFactoryLink,
   brief: BrandBrief,
   overlays: Record<string, StandardField> | undefined,
+  endProduct: EndProductFamily | null,
 ): SourceCandidate {
   const coverage = scoreFactoryCoverage(factory, overlays);
+  const book = fabricBookFor(factory, overlays);
   const colourReq = brief.requirements.find((r) => r.field === "colour");
   const colour = colourReq?.kind === "MUST" ? colourReq.value : null;
-  const colourOk = !colour || rowHasColour(factory, colour);
+  const matchedFabrics = endProduct
+    ? fabricsMatchingEndProduct(book, endProduct, colour)
+    : book.qualities.slice(0, 4);
+  const colourOk = !colour || matchedFabrics.length > 0 || rowHasColour(factory, colour, overlays);
   const colourMatch: SourceCandidate["colourMatch"] = !colour ? "open" : colourOk ? "match" : "mismatch";
 
   let eligibility: SourceCandidate["eligibility"] = "eligible";
   if (coverage.status === "dark") eligibility = "ineligible";
-  else if (colour && !colourOk) eligibility = "ineligible";
+  else if (endProduct && matchedFabrics.length === 0) eligibility = "ineligible";
 
   const relationshipBoost =
     link.relationship === "preferred"
@@ -257,10 +295,13 @@ function scoreCandidate(
           ? 8
           : 0;
   const coverageBoost = coverage.status === "searchable" ? 20 : coverage.status === "partial" ? 8 : 0;
+  const fabricBoost = Math.min(matchedFabrics.length, 12);
   const geoBoost = factory.country === "Portugal" ? 6 : 0;
   const grantBoost = Math.min(link.grantedArticles.length, 6);
   const retrievalScore =
-    eligibility === "ineligible" ? 0 : 40 + relationshipBoost + coverageBoost + geoBoost + grantBoost;
+    eligibility === "ineligible"
+      ? 0
+      : 40 + relationshipBoost + coverageBoost + fabricBoost + geoBoost + grantBoost;
 
   return {
     factoryId: factory.id,
@@ -274,10 +315,15 @@ function scoreCandidate(
     eligibility,
     retrievalScore,
     colourMatch,
-    answerability: brief.requirements.map((req) => answerFor(req, factory, coverage, colour)),
-    evidence: evidenceForFactory(factory),
+    answerability: brief.requirements.map((req) =>
+      answerFor(req, factory, coverage, colour, overlays, matchedFabrics.length),
+    ),
+    evidence: evidenceForFactory(factory, overlays),
     commercials: { moqM: factory.moqM, leadWeeks: factory.leadWeeks, freshness: "historical" },
     excluded: false,
+    matchedFabrics: matchedFabrics.slice(0, 4),
+    matchingFabricCount: matchedFabrics.length,
+    endProduct,
   };
 }
 
@@ -293,21 +339,26 @@ export function sourceShortlist(input: {
     throw new Error("unknown_product");
   }
   const brief = briefFromProduct(product);
+  const endProduct = categoryToEndProduct(product.category);
   const links = TEST_LINKS.filter((l) => l.brandId === input.brandId);
   const excludedHidden = links.filter((l) => l.relationship === "excluded").length;
   const visible = links.filter((l) => l.relationship !== "excluded");
 
   const scored: SourceCandidate[] = [];
   let darkMillsSkipped = 0;
+  let fabricMisses = 0;
   for (const link of visible) {
     const factory = factoryById(link.factoryId) ?? TEST_FACTORIES.find((f) => f.id === link.factoryId);
     if (!factory) continue;
-    const candidate = scoreCandidate(factory, link, brief, input.overlays);
+    const candidate = scoreCandidate(factory, link, brief, input.overlays, endProduct);
     if (candidate.eligibility === "ineligible" && candidate.coverage === "dark") {
       darkMillsSkipped += 1;
       continue;
     }
-    if (candidate.eligibility === "ineligible") continue;
+    if (candidate.eligibility === "ineligible") {
+      fabricMisses += 1;
+      continue;
+    }
     scored.push(candidate);
   }
 
@@ -324,6 +375,8 @@ export function sourceShortlist(input: {
     brief,
     excludedHidden,
     darkMillsSkipped,
+    fabricMisses,
+    matchingFabricTotal: candidates.reduce((n, c) => n + c.matchingFabricCount, 0),
     candidates,
     continuity: {
       priorProductId: hasBaseline ? input.productId : null,

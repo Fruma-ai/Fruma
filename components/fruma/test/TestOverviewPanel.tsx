@@ -30,22 +30,22 @@ export function TestOverviewPanel({
     <section className="tc-panel">
       <header className="tc-head">
         <p className="tc-kicker">Test environment · live corpus health</p>
-        <h1>Ingest success is not a mill catalogue.</h1>
+        <h1>Mill fabric files are not a product catalogue.</h1>
         <p>
-          Fifty hangers all parse.{" "}
+          Mills send fabrics and materials — a mass of qualities, not hangers of finished goods.
+          Mapping that cloth is what tells a brand which end products can actually be made.{" "}
           {coverage.dark
-            ? `${coverage.dark} mills are still dark because unknown columns stay silent.`
-            : `${coverage.partial} mills are partial — rows exist, but some mill vocabulary is still unmapped.`}{" "}
-          Confirm a dialect playbook to attach mill vocabulary — source values never change. Demo on{" "}
-          <code>/app</code> stays frozen.
+            ? `${coverage.dark} mill books are still dark because unknown columns stay silent.`
+            : `${coverage.partial} mill books are partial — rows exist, but some mill vocabulary is still unmapped.`}{" "}
+          Demo on <code>/app</code> stays frozen.
         </p>
       </header>
       <div className="tc-stats tc-stats-six">
-        <div><b>{coverage.factoriesTotal}</b><span>factories</span></div>
+        <div><b>{coverage.factoriesTotal}</b><span>mill books</span></div>
         <div><b>{coverage.searchable}</b><span>searchable</span></div>
         <div><b>{coverage.partial}</b><span>partial map</span></div>
         <div><b>{coverage.dark}</b><span>dark mills</span></div>
-        <div><b>{coverage.qualitiesTotal}</b><span>qualities</span></div>
+        <div><b>{coverage.qualitiesTotal}</b><span>fabric qualities</span></div>
         <div><b>{coverage.unmappedHeaderCount}</b><span>silent headers</span></div>
       </div>
 
@@ -84,7 +84,7 @@ export function TestOverviewPanel({
           <p className="tc-kicker">Dark mill queue</p>
           <h2>{darkFactories.length} mills with zero qualities</h2>
           {darkFactories.length === 0 ? (
-            <p>No dark mills. Article identity is mapped for every hanger.</p>
+            <p>No dark mills. Article identity is mapped for every fabric book.</p>
           ) : (
             <ul className="tc-list stacked">
               {darkFactories.slice(0, 8).map((factory) => (
@@ -180,7 +180,7 @@ export function TestOverviewPanel({
 
       <div className="tc-actions">
         <button type="button" className="tc-primary" onClick={onOpenSource}>
-          Open Source shortlist
+          Open cloth matching
         </button>
         <button type="button" className="tc-secondary" onClick={onOpenLab}>
           Open Lab ingest

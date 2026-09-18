@@ -7,6 +7,7 @@ import { TEST_PRODUCTS } from "../test-corpus/products";
 import { scoreCorpusCoverage } from "./coverage";
 import { confirmLexiconForHeaders, resetHeaderOverlaysForTests } from "./overlays";
 import { sourceShortlist, tenantIsolationProof } from "./retrieval";
+import { fabricBookFor } from "./fabrics";
 import { playbookHeaders } from "./playbooks";
 
 describe("test intelligence — coverage and mapping", () => {
@@ -114,7 +115,59 @@ describe("test intelligence — source shortlist", () => {
     }
   });
 
-  it("marks hanger MOQ as historical and never auto-promotes mill GOTS", () => {
+  it("matches mill fabrics that can become the end product — mills do not file product SKUs", () => {
+    const polo = TEST_PRODUCTS.find((p) => p.brandId === "brand-northline" && p.category === "Polo")!;
+    const result = sourceShortlist({ brandId: polo.brandId, productId: polo.id });
+    assert.ok(result.candidates.length > 0);
+    assert.ok(result.matchingFabricTotal > 0);
+    assert.ok(result.candidates.every((c) => c.matchingFabricCount > 0));
+    assert.ok(result.candidates.every((c) => c.matchedFabrics.length > 0));
+    assert.ok(
+      result.candidates.every((c) =>
+        c.matchedFabrics.every((f) => f.possibleEndProducts.includes("Polo")),
+      ),
+    );
+    assert.ok(result.candidates.every((c) => c.dialect !== "pl-fleece"));
+  });
+
+  it("reads end products from mill cloth, so a shirting mill is not a fleece mill", () => {
+    const shirting = TEST_FACTORIES.find((f) => f.dialect === "it-shirting")!;
+    const fleece = TEST_FACTORIES.find((f) => f.dialect === "pl-fleece")!;
+    const jersey = TEST_FACTORIES.find((f) => f.dialect === "pt-standard")!;
+    const shirtBook = fabricBookFor(shirting);
+    const fleeceBook = fabricBookFor(fleece);
+    const jerseyBook = fabricBookFor(jersey);
+    assert.ok(shirtBook.endProductSupport.some((s) => s.family === "Shirt"));
+    assert.ok(!shirtBook.endProductSupport.some((s) => s.family === "Polo"));
+    assert.ok(fleeceBook.endProductSupport.some((s) => s.family === "Sweat"));
+    assert.ok(!fleeceBook.endProductSupport.some((s) => s.family === "Shirt"));
+    assert.ok(jerseyBook.endProductSupport.some((s) => s.family === "Polo"));
+    assert.ok(!jerseyBook.endProductSupport.some((s) => s.family === "Shirt"));
+  });
+
+  it("shortlists shirting mill books for a shirt, not fleece books", () => {
+    const shirt = TEST_PRODUCTS.find((p) => p.category === "Shirt")!;
+    const result = sourceShortlist({ brandId: shirt.brandId, productId: shirt.id });
+    assert.ok(result.candidates.length > 0);
+    assert.ok(result.candidates.some((c) => c.dialect === "it-shirting"));
+    assert.ok(result.candidates.every((c) => c.dialect !== "pl-fleece"));
+    assert.ok(
+      result.candidates.every((c) =>
+        c.matchedFabrics.every((f) => f.possibleEndProducts.includes("Shirt")),
+      ),
+    );
+  });
+
+  it("does not treat a fleece mill book as a polo product catalogue", () => {
+    const factory = TEST_FACTORIES.find((f) => f.dialect === "pl-fleece")!;
+    const book = fabricBookFor(factory);
+    assert.equal(book.millSubmits, "fabrics-and-materials");
+    assert.ok(book.qualities.length > 0);
+    assert.ok(book.endProductSupport.some((s) => s.family === "Sweat"));
+    assert.ok(!book.endProductSupport.some((s) => s.family === "Polo"));
+  });
+
+  it("marks fabric-book MOQ as historical and never auto-promotes mill GOTS", () => {
     const product = TEST_PRODUCTS.find((p) => p.brandId === "brand-harbour")!;
     const result = sourceShortlist({ brandId: product.brandId, productId: product.id });
     assert.ok(result.candidates.length > 0);

@@ -9,7 +9,7 @@ import { surfaceMillOrgId, TEST_SURFACE } from "@/lib/fruma/surfaces";
 export const runtime = "nodejs";
 
 /**
- * Test-only ingest: run a corpus factory hanger through the Test ingest engine.
+ * Test-only ingest: run a corpus mill fabric/material file through the Test ingest engine.
  * Never writes to the Demo engine.
  */
 export async function POST(request: Request) {

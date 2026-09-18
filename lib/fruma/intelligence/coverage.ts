@@ -75,7 +75,7 @@ function blockerFor(factory: TestFactory, unmapped: string[], qualities: number)
   if (unmapped.length) {
     return `No qualities — identity column not mapped (${unmapped.join(", ")}).`;
   }
-  return "No qualities created from this hanger.";
+  return "No qualities created from this mill fabric file.";
 }
 
 export function scoreFactoryCoverage(
