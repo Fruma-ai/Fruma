@@ -17,8 +17,8 @@ Use Test for all experiments. Preview deployments on feature branches are also s
 ### 1. Full Test agent loop (live)
 `/app/test?tab=agents` — Harness → Mapping → Retrieval → Continuity → Evidence → **All brands**.
 
-### 2. Colour MUST option + continuity across multi-brand
-Tighten colour when brief names it; diff multi-brand snapshots.
+### 2. Continuity across multi-brand snapshots
+Diff Continuity baselines when switching brand / All brands runs.
 
 ### 3. Persist the spine (when memory is not enough)
 Postgres when baselines must survive deploys. See `docs/MEMORY_AND_DATABASE.md`.
