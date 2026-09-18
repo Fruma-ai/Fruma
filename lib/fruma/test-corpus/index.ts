@@ -4,6 +4,13 @@ import { articleCodesFor, hangerBytesFor, hangerCsvFor, hangerRowsFor } from "./
 import { TEST_LINKS, TEST_PRODUCTS, linksForBrand, productsForBrand } from "./products";
 import type { TestCorpusSummary, TestFactory } from "./types";
 
+/**
+ * Client-safe barrel: brands / factories / hangers / products only.
+ * Do not re-export harness here — it pulls IngestEngine → PrivateByteStore → node:fs
+ * and would break `next build` for the Test Lab client page.
+ * Server callers: `import { runCorpusHarness } from "@/lib/fruma/test-corpus/harness"`.
+ */
+
 export { TEST_BRANDS } from "./brands";
 export { TEST_FACTORIES, factoryById } from "./factories";
 export { hangerBytesFor, hangerCsvFor, hangerRowsFor, articleCodesFor } from "./hanger";

@@ -1,0 +1,47 @@
+name: Steward task
+description: Bounded Test work a Cloud Agent can pick up when Owen is away
+title: "steward: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep the task on **Test** (`/app/test`). Demo stays frozen unless this issue explicitly says Promote.
+        After labelling, a Cursor Automation (see `docs/CURSOR_AUTOMATIONS.md`) can open a draft PR.
+  - type: textarea
+    id: done-when
+    attributes:
+      label: Done when
+      description: One measurable outcome. Not “improve agents”.
+      placeholder: Retrieval marks hanger MOQ as historical unless mill-confirmed; tests prove it; Demo untouched.
+    validations:
+      required: true
+  - type: textarea
+    id: brand-value
+    attributes:
+      label: Brand value
+      description: Why this helps a brand decide what to make, with whom, on what evidence.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Test only (default)
+        - Ask Owen before Demo
+        - Blocked on Owen (Postgres / Promote / pilot mill)
+      default: 0
+    validations:
+      required: true
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Guardrails
+      options:
+        - label: Will not invent fibre, origin, certs, or current commercials
+          required: true
+        - label: Will not leak brand-private supplier memory
+          required: true
+        - label: Will not expand into MES / PLM / proto / live retailer publishing
+          required: true
