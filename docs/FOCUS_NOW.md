@@ -17,8 +17,8 @@ Use Test for all experiments. Preview deployments on feature branches are also s
 ### 1. Full Test agent loop (live)
 `/app/test?tab=agents` — Harness → Mapping → Retrieval → Continuity → Evidence → **All brands**.
 
-### 2. Continuity across multi-brand snapshots
-Diff Continuity baselines when switching brand / All brands runs.
+### 2. Continuity across multi-brand snapshots — done on PR #33
+Brand-scoped Continuity + All brands exception-only diffs (Harbour, Field & Form, Northline). Demo still frozen.
 
 ### 3. Persist the spine (when memory is not enough)
 Postgres when baselines must survive deploys. See `docs/MEMORY_AND_DATABASE.md`.

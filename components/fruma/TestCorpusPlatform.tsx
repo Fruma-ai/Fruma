@@ -329,9 +329,36 @@ type AgentRunView = {
       message: string;
       before?: string;
       after?: string;
+      brandName?: string;
     }[];
     unchanged?: { harnessDialectsStable: number; retrievalShortlistStable: number };
     baseline?: { established: boolean };
+    scope?: string;
+    brandId?: string;
+    brandName?: string;
+    slices?: {
+      brandName: string;
+      productName?: string;
+      sku?: string;
+      shortlistSize?: number;
+      excludedSkipped?: number;
+      preferredOrProven?: number;
+      evidenceClaims?: number;
+      evidenceNotBrandSafe?: number;
+      fibreTraps?: number;
+      topMills?: string[];
+      established?: boolean;
+      exceptionCount?: number;
+      retrievalShortlistStable?: number;
+    }[];
+    tenantIsolation?: {
+      checkedFactoryId?: string;
+      leakDetected: boolean;
+      note: string;
+      relationshipsByBrand?: { brandName: string; relationship: string }[];
+      brandsCompared?: number;
+      crossBrandRetrievalDiffs?: number;
+    };
     assessments?: {
       verdict: string;
       claimAsWritten: string;
@@ -344,24 +371,6 @@ type AgentRunView = {
       articleCode?: string;
     }[];
     summaryCounts?: Record<string, number>;
-    slices?: {
-      brandName: string;
-      productName: string;
-      sku: string;
-      shortlistSize: number;
-      excludedSkipped: number;
-      preferredOrProven: number;
-      evidenceClaims: number;
-      evidenceNotBrandSafe: number;
-      fibreTraps: number;
-      topMills: string[];
-    }[];
-    tenantIsolation?: {
-      checkedFactoryId: string;
-      leakDetected: boolean;
-      note: string;
-      relationshipsByBrand: { brandName: string; relationship: string }[];
-    };
   };
 };
 
@@ -424,6 +433,10 @@ function AgentsPanel() {
   }
 
   async function runRetrieval() {
+    if (agentBrandId === "__all__") {
+      setError("Pick a single brand for Retrieval, or use 6. All brands.");
+      return;
+    }
     setBusy("retrieval");
     setError(null);
     try {
@@ -450,11 +463,16 @@ function AgentsPanel() {
     setBusy("continuity");
     setError(null);
     try {
+      const allBrands = agentBrandId === "__all__";
       const res = await fetch("/api/test/agents/continuity", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
-        body: JSON.stringify({ refresh: true, brandId: agentBrandId }),
+        body: JSON.stringify({
+          refresh: true,
+          allBrands,
+          brandId: allBrands ? undefined : agentBrandId,
+        }),
       });
       const json = (await res.json()) as { run?: AgentRunView; error?: string };
       if (!res.ok) {
@@ -462,10 +480,6 @@ function AgentsPanel() {
         return;
       }
       setContinuity(json.run ?? null);
-      // Refresh may have produced new harness/retrieval runs — pull latest summaries if present
-      if (json.run?.output && !harness) {
-        /* keep existing UI state; continuity carries its own brand value */
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Continuity failed");
     } finally {
@@ -474,6 +488,10 @@ function AgentsPanel() {
   }
 
   async function runEvidence() {
+    if (agentBrandId === "__all__") {
+      setError("Pick a single brand for Evidence, or use 6. All brands.");
+      return;
+    }
     setBusy("evidence");
     setError(null);
     try {
@@ -547,7 +565,7 @@ function AgentsPanel() {
 
       <div className="tc-lab">
         <label className="tc-lab-pick">
-          <span>Brand for steps 3–5</span>
+          <span>Brand for steps 3–5 (Continuity supports All)</span>
           <select
             value={agentBrandId}
             onChange={(e) => setAgentBrandId(e.target.value)}
@@ -558,6 +576,7 @@ function AgentsPanel() {
                 {b.name}
               </option>
             ))}
+            <option value="__all__">All brands (Continuity)</option>
           </select>
         </label>
       </div>
@@ -790,7 +809,14 @@ function AgentsPanel() {
 
       {continuity ? (
         <div className="tc-lab-result" style={{ marginTop: 16 }}>
-          <p className="tc-kicker">Continuity · {continuity.status}</p>
+          <p className="tc-kicker">
+            Continuity · {continuity.status}
+            {continuity.output?.scope === "all-test-brands"
+              ? " · all brands"
+              : continuity.output?.brandName
+                ? ` · ${continuity.output.brandName}`
+                : ""}
+          </p>
           <p>{continuity.summary}</p>
           {continuity.output?.brandValue ? (
             <div style={{ marginTop: 12 }}>
@@ -804,6 +830,40 @@ function AgentsPanel() {
               </ul>
             </div>
           ) : null}
+          {continuity.output?.tenantIsolation ? (
+            <p style={{ marginTop: 12 }}>
+              Isolation:{" "}
+              {continuity.output.tenantIsolation.leakDetected
+                ? "FAIL"
+                : "ok"}{" "}
+              · {continuity.output.tenantIsolation.note}
+            </p>
+          ) : null}
+          {continuity.output?.slices?.length &&
+          continuity.output.scope === "all-test-brands" ? (
+            <div className="tc-table-wrap" style={{ marginTop: 12 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Brand</th>
+                    <th>Baseline</th>
+                    <th>Exceptions</th>
+                    <th>Shortlist stable</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {continuity.output.slices.map((s) => (
+                    <tr key={s.brandName}>
+                      <td>{s.brandName}</td>
+                      <td>{s.established ? "paired" : "new"}</td>
+                      <td>{s.exceptionCount ?? "—"}</td>
+                      <td>{s.retrievalShortlistStable ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           {continuity.output?.unchanged ? (
             <p style={{ marginTop: 12 }}>
               Stable: {continuity.output.unchanged.harnessDialectsStable} dialects ·{" "}
@@ -815,6 +875,7 @@ function AgentsPanel() {
               <table>
                 <thead>
                   <tr>
+                    <th>Brand</th>
                     <th>Scope</th>
                     <th>Severity</th>
                     <th>Code</th>
@@ -822,8 +883,9 @@ function AgentsPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {continuity.output.exceptions.slice(0, 20).map((e, i) => (
+                  {continuity.output.exceptions.slice(0, 24).map((e, i) => (
                     <tr key={`${e.code}-${i}`}>
+                      <td>{e.brandName ?? "—"}</td>
                       <td>{e.scope}</td>
                       <td>{e.severity}</td>
                       <td>
@@ -931,10 +993,11 @@ function AgentsPanel() {
           ) : null}
           {multi.output?.tenantIsolation ? (
             <p style={{ marginTop: 12 }}>
-              Isolation probe <code>{multi.output.tenantIsolation.checkedFactoryId}</code>:{" "}
-              {multi.output.tenantIsolation.relationshipsByBrand
+              Isolation probe{" "}
+              <code>{multi.output.tenantIsolation.checkedFactoryId ?? "—"}</code>:{" "}
+              {(multi.output.tenantIsolation.relationshipsByBrand ?? [])
                 .map((r) => `${r.brandName}=${r.relationship}`)
-                .join(" · ")}
+                .join(" · ") || "n/a"}
               <br />
               <small>{multi.output.tenantIsolation.note}</small>
             </p>
@@ -957,21 +1020,21 @@ function AgentsPanel() {
                     <tr key={s.brandName}>
                       <td>{s.brandName}</td>
                       <td>
-                        {s.productName}
+                        {s.productName ?? "—"}
                         <br />
-                        <code>{s.sku}</code>
+                        <code>{s.sku ?? "—"}</code>
                       </td>
                       <td>
-                        {s.shortlistSize}{" "}
-                        <small>({s.preferredOrProven} preferred/proven)</small>
+                        {s.shortlistSize ?? "—"}{" "}
+                        <small>({s.preferredOrProven ?? 0} preferred/proven)</small>
                       </td>
-                      <td>{s.excludedSkipped}</td>
+                      <td>{s.excludedSkipped ?? "—"}</td>
                       <td>
-                        {s.evidenceNotBrandSafe}/{s.evidenceClaims} not safe
+                        {s.evidenceNotBrandSafe ?? 0}/{s.evidenceClaims ?? 0} not safe
                         {s.fibreTraps ? ` · ${s.fibreTraps} fibre traps` : ""}
                       </td>
                       <td>
-                        <small>{s.topMills.join(", ")}</small>
+                        <small>{(s.topMills ?? []).join(", ")}</small>
                       </td>
                     </tr>
                   ))}

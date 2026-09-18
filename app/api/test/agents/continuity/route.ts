@@ -18,17 +18,22 @@ export async function POST(request: Request) {
     return Response.json({ error: "Sign in to run the Continuity agent." }, { status: 401 });
   }
 
-  let body: { refresh?: boolean; brandId?: string } = {};
+  let body: { refresh?: boolean; brandId?: string; allBrands?: boolean } = {};
   try {
     body = (await request.json()) as typeof body;
   } catch {
     body = {};
   }
 
+  const allBrands = body.allBrands === true || body.brandId === "__all__";
+
   const run = runContinuityAgent({
     refresh: body.refresh ?? true,
-    brandId: body.brandId ?? "brand-northline",
-    idempotencyKey: `continuity:manual:${Date.now()}`,
+    brandId: allBrands ? undefined : (body.brandId ?? "brand-northline"),
+    allBrands,
+    idempotencyKey: allBrands
+      ? `continuity:manual:all:${Date.now()}`
+      : `continuity:manual:${body.brandId ?? "brand-northline"}:${Date.now()}`,
   });
 
   return Response.json(

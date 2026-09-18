@@ -2,6 +2,7 @@ import type { CorpusHarnessOutput } from "./corpus-harness";
 import type { RetrievalAgentOutput } from "./retrieval-agent";
 import { runCorpusHarness } from "./corpus-harness";
 import { runRetrievalAgent } from "./retrieval-agent";
+import { TEST_BRANDS } from "../test-corpus";
 import { TEST_SURFACE, surfaceMillOrgId } from "../surfaces";
 import {
   createAgentRun,
@@ -23,9 +24,25 @@ export type ContinuityException = {
   factoryId?: string;
   dialect?: string;
   articleCode?: string;
+  /** Present when the exception is scoped to one brand’s retrieval snapshot. */
+  brandId?: string;
+  brandName?: string;
+};
+
+export type BrandContinuitySlice = {
+  brandId: string;
+  brandName: string;
+  established: boolean;
+  exceptionCount: number;
+  retrievalShortlistStable: number;
+  baselineRetrievalRunId?: string;
+  currentRetrievalRunId?: string;
 };
 
 export type ContinuityAgentOutput = {
+  scope: "single" | "all-test-brands";
+  brandId?: string;
+  brandName?: string;
   baseline: {
     harnessRunId?: string;
     retrievalRunId?: string;
@@ -40,6 +57,13 @@ export type ContinuityAgentOutput = {
     harnessDialectsStable: number;
     retrievalShortlistStable: number;
   };
+  slices?: BrandContinuitySlice[];
+  tenantIsolation?: {
+    brandsCompared: number;
+    crossBrandRetrievalDiffs: number;
+    leakDetected: boolean;
+    note: string;
+  };
   brandValue: {
     headline: string;
     bullets: string[];
@@ -50,6 +74,25 @@ function completedRuns(kind: AgentKind): StoredAgentRun[] {
   return listAgentRuns(100).filter(
     (r) => r.kind === kind && r.status !== "running" && r.completedAt,
   );
+}
+
+function retrievalBrandId(run: StoredAgentRun): string | undefined {
+  const fromInput = (run.input as { brandId?: string } | undefined)?.brandId;
+  if (fromInput) return fromInput;
+  const fromOutput = (run.output as RetrievalAgentOutput | undefined)?.brief?.brandId;
+  if (fromOutput) return fromOutput;
+  if (run.organisationId?.startsWith("brand-")) return run.organisationId;
+  return undefined;
+}
+
+/** Tenant-safe: only retrieval snapshots belonging to this brand. */
+function completedRetrievalRunsForBrand(brandId: string): StoredAgentRun<
+  unknown,
+  RetrievalAgentOutput
+>[] {
+  return completedRuns("retrieval").filter(
+    (r) => retrievalBrandId(r) === brandId,
+  ) as StoredAgentRun<unknown, RetrievalAgentOutput>[];
 }
 
 function harnessFingerprint(output: CorpusHarnessOutput) {
@@ -167,9 +210,35 @@ function diffHarness(
 function diffRetrieval(
   before: RetrievalAgentOutput,
   after: RetrievalAgentOutput,
+  brandMeta?: { brandId: string; brandName: string },
 ): ContinuityException[] {
   const a = retrievalFingerprint(before);
   const b = retrievalFingerprint(after);
+  const tag = brandMeta
+    ? { brandId: brandMeta.brandId, brandName: brandMeta.brandName }
+    : a.brandId
+      ? {
+          brandId: a.brandId,
+          brandName:
+            TEST_BRANDS.find((br) => br.id === a.brandId)?.name ?? a.brandId,
+        }
+      : {};
+
+  // Hard guard — never invent a cross-tenant continuity story or leak private memory.
+  if (a.brandId && b.brandId && a.brandId !== b.brandId) {
+    return [
+      {
+        scope: "retrieval",
+        code: "brand_scope_guard",
+        severity: "block",
+        message: `Refused to diff ${a.brandId} against ${b.brandId} — brand-private shortlists stay tenant-isolated.`,
+        before: a.brandId,
+        after: b.brandId,
+        ...tag,
+      },
+    ];
+  }
+
   const out: ContinuityException[] = [];
 
   if (a.productId !== b.productId) {
@@ -180,6 +249,7 @@ function diffRetrieval(
       message: `Brief product ${a.productId} → ${b.productId}`,
       before: a.productId,
       after: b.productId,
+      ...tag,
     });
   }
 
@@ -191,6 +261,7 @@ function diffRetrieval(
       message: `Excluded mills ${a.excluded} → ${b.excluded}`,
       before: String(a.excluded),
       after: String(b.excluded),
+      ...tag,
     });
   }
 
@@ -208,6 +279,7 @@ function diffRetrieval(
         articleCode: key.split(":")[1],
         factoryId: key.split(":")[0],
         after: `rank ${row.rank}`,
+        ...tag,
       });
       continue;
     }
@@ -221,6 +293,21 @@ function diffRetrieval(
         factoryId: key.split(":")[0],
         before: String(prev.rank),
         after: String(row.rank),
+        ...tag,
+      });
+    }
+    if (prev.relationship !== row.relationship) {
+      // Relationship is brand-private; only emit within the same brand scope.
+      out.push({
+        scope: "retrieval",
+        code: "relationship_changed",
+        severity: "warn",
+        message: `${key} private relationship ${prev.relationship} → ${row.relationship}`,
+        articleCode: key.split(":")[1],
+        factoryId: key.split(":")[0],
+        before: prev.relationship,
+        after: row.relationship,
+        ...tag,
       });
     }
     if (prev.evidenceDigest !== row.evidenceDigest) {
@@ -233,6 +320,7 @@ function diffRetrieval(
         factoryId: key.split(":")[0],
         before: prev.evidenceDigest,
         after: row.evidenceDigest,
+        ...tag,
       });
     }
   }
@@ -248,6 +336,7 @@ function diffRetrieval(
         factoryId: key.split(":")[0],
         before: "on shortlist",
         after: "removed",
+        ...tag,
       });
     }
   }
@@ -255,56 +344,72 @@ function diffRetrieval(
   return out;
 }
 
+function pickHarnessPair(refresh: boolean): {
+  baseline?: StoredAgentRun<unknown, CorpusHarnessOutput>;
+  current?: StoredAgentRun<unknown, CorpusHarnessOutput>;
+} {
+  const harnessRuns = completedRuns("ingest") as StoredAgentRun<unknown, CorpusHarnessOutput>[];
+  const current = harnessRuns[0];
+  const baseline = refresh ? harnessRuns[1] : harnessRuns[1];
+  return { baseline, current };
+}
+
+function pickBrandRetrievalPair(
+  brandId: string,
+): {
+  baseline?: StoredAgentRun<unknown, RetrievalAgentOutput>;
+  current?: StoredAgentRun<unknown, RetrievalAgentOutput>;
+} {
+  const runs = completedRetrievalRunsForBrand(brandId);
+  return { current: runs[0], baseline: runs[1] };
+}
+
+function brandLabel(brandId: string): string {
+  return TEST_BRANDS.find((b) => b.id === brandId)?.name ?? brandId;
+}
+
 /**
  * Continuity agent: emit only what changed vs the prior harness/retrieval snapshot.
- * Brand value = exception-only workload on rebuy / remapping.
+ * Retrieval baselines are brand-scoped so switching Harbour ↔ Field & Form ↔ Northline
+ * never diffs another tenant’s shortlist or private relationships.
  */
 export function runContinuityAgent(args?: {
   refresh?: boolean;
   brandId?: string;
+  allBrands?: boolean;
   idempotencyKey?: string;
-}): StoredAgentRun<{ refresh: boolean }, ContinuityAgentOutput> {
-  const refresh = args?.refresh ?? true;
-  const brandId = args?.brandId ?? "brand-northline";
-
-  let baselineHarness = completedRuns("ingest")[0] as
-    | StoredAgentRun<unknown, CorpusHarnessOutput>
-    | undefined;
-  let baselineRetrieval = completedRuns("retrieval")[0] as
-    | StoredAgentRun<unknown, RetrievalAgentOutput>
-    | undefined;
-
-  if (refresh) {
-    // Capture current latest as baseline, then produce fresh runs to diff.
-    runCorpusHarness({ idempotencyKey: `continuity-harness:${Date.now()}` });
-    runRetrievalAgent({
-      brandId,
-      idempotencyKey: `continuity-retrieval:${Date.now()}`,
+}): StoredAgentRun<{ refresh: boolean; scope: string; brandId?: string }, ContinuityAgentOutput> {
+  if (args?.allBrands) {
+    return runMultiBrandContinuity({
+      refresh: args.refresh,
+      idempotencyKey: args.idempotencyKey,
     });
   }
 
-  const harnessRuns = completedRuns("ingest") as StoredAgentRun<unknown, CorpusHarnessOutput>[];
-  const retrievalRuns = completedRuns("retrieval") as StoredAgentRun<
-    unknown,
-    RetrievalAgentOutput
-  >[];
+  const refresh = args?.refresh ?? true;
+  const brandId = args?.brandId ?? "brand-northline";
+  const brandName = brandLabel(brandId);
 
-  const currentHarness = harnessRuns[0];
-  const currentRetrieval = retrievalRuns[0];
-  // After refresh, baseline is the previous completed run (index 1)
   if (refresh) {
-    baselineHarness = harnessRuns[1] ?? baselineHarness;
-    baselineRetrieval = retrievalRuns[1] ?? baselineRetrieval;
-  } else {
-    baselineHarness = harnessRuns[1];
-    baselineRetrieval = retrievalRuns[1];
+    runCorpusHarness({ idempotencyKey: `continuity-harness:${Date.now()}` });
+    runRetrievalAgent({
+      brandId,
+      idempotencyKey: `continuity-retrieval:${brandId}:${Date.now()}`,
+    });
   }
 
-  const run = createAgentRun<{ refresh: boolean }, ContinuityAgentOutput>({
-    organisationId: surfaceMillOrgId(TEST_SURFACE),
+  const { baseline: baselineHarness, current: currentHarness } = pickHarnessPair(refresh);
+  const { baseline: baselineRetrieval, current: currentRetrieval } =
+    pickBrandRetrievalPair(brandId);
+
+  const run = createAgentRun<
+    { refresh: boolean; scope: string; brandId?: string },
+    ContinuityAgentOutput
+  >({
+    organisationId: brandId,
     kind: "continuity",
-    idempotencyKey: args?.idempotencyKey ?? `continuity:${Date.now()}`,
-    input: { refresh },
+    idempotencyKey: args?.idempotencyKey ?? `continuity:${brandId}:${Date.now()}`,
+    input: { refresh, scope: "single", brandId },
     surface: TEST_SURFACE,
   });
 
@@ -327,7 +432,10 @@ export function runContinuityAgent(args?: {
   }
 
   if (baselineRetrieval?.output && currentRetrieval?.output) {
-    const retrievalDiff = diffRetrieval(baselineRetrieval.output, currentRetrieval.output);
+    const retrievalDiff = diffRetrieval(baselineRetrieval.output, currentRetrieval.output, {
+      brandId,
+      brandName,
+    });
     exceptions.push(...retrievalDiff);
     const beforeKeys = new Set(
       baselineRetrieval.output.shortlist.map((s) => `${s.factoryId}:${s.articleCode}`),
@@ -343,8 +451,7 @@ export function runContinuityAgent(args?: {
     findings.push({
       severity: "info",
       code: "baseline_established",
-      message:
-        "No prior completed harness/retrieval pair to diff. Continuity established a baseline — run again after Mapping or a brief change to see exceptions only.",
+      message: `No prior ${brandName} harness/retrieval pair to diff. Continuity established a brand-scoped baseline — run again after Mapping or a brief change to see exceptions only.`,
     });
   }
 
@@ -355,17 +462,20 @@ export function runContinuityAgent(args?: {
     findings.push({
       severity: "info",
       code: "no_exceptions",
-      message: "No continuity exceptions — brand can treat this as a clean rebuy pass.",
+      message: `No continuity exceptions — ${brandName} can treat this as a clean rebuy pass.`,
     });
   } else if (exceptions.length) {
     findings.push({
       severity: blocks ? "block" : warns ? "warn" : "info",
       code: "exceptions_only",
-      message: `${exceptions.length} continuity exceptions (${blocks} block, ${warns} warn) — ignore stable mills/qualities.`,
+      message: `${exceptions.length} continuity exceptions for ${brandName} (${blocks} block, ${warns} warn) — ignore stable mills/qualities.`,
     });
   }
 
   const output: ContinuityAgentOutput = {
+    scope: "single",
+    brandId,
+    brandName,
     baseline: {
       harnessRunId: baselineHarness?.id,
       retrievalRunId: baselineRetrieval?.id,
@@ -373,7 +483,7 @@ export function runContinuityAgent(args?: {
     },
     current: {
       harnessRunId: currentHarness?.id ?? latestAgentRun("ingest")?.id,
-      retrievalRunId: currentRetrieval?.id ?? latestAgentRun("retrieval")?.id,
+      retrievalRunId: currentRetrieval?.id,
     },
     exceptions,
     unchanged: {
@@ -383,15 +493,15 @@ export function runContinuityAgent(args?: {
     brandValue: {
       headline: established
         ? exceptions.length === 0
-          ? "Continuity: nothing material changed — Northline only needs to confirm the same shortlist."
-          : `Continuity: ${exceptions.length} exceptions need attention; the rest of the network stays quiet.`
-        : "Continuity baseline set — next run becomes exception-only work for the brand.",
+          ? `Continuity: nothing material changed — ${brandName} only needs to confirm the same shortlist.`
+          : `Continuity: ${exceptions.length} exceptions need attention for ${brandName}; the rest of the network stays quiet.`
+        : `Continuity baseline set for ${brandName} — next run becomes exception-only work for this tenant.`,
       bullets: [
         established
           ? `${harnessDialectsStable} harness dialects stable; ${retrievalShortlistStable} shortlist articles unchanged.`
-          : "First snapshot stored in agent memory (in-process until Postgres).",
+          : "First brand-scoped snapshot stored in agent memory (in-process until Postgres).",
         `${exceptions.filter((e) => e.scope === "harness").length} harness exceptions · ${exceptions.filter((e) => e.scope === "retrieval").length} retrieval exceptions.`,
-        "Excluded mills and private preferred/proven memory remain tenant-private across diffs.",
+        "Excluded mills and private preferred/proven memory remain tenant-private across diffs — never compared to other brands.",
         "This is the rebuy value: teams resolve only what changed since last confirmed truth.",
       ],
     },
@@ -402,7 +512,192 @@ export function runContinuityAgent(args?: {
     output,
     findings,
     summary: established
-      ? `Continuity: ${exceptions.length} exceptions · ${retrievalShortlistStable} shortlist stable`
-      : "Continuity: baseline established — run again for exception-only diff",
-  }) as StoredAgentRun<{ refresh: boolean }, ContinuityAgentOutput>;
+      ? `Continuity: ${brandName} · ${exceptions.length} exceptions · ${retrievalShortlistStable} shortlist stable`
+      : `Continuity: ${brandName} baseline established — run again for exception-only diff`,
+  }) as StoredAgentRun<
+    { refresh: boolean; scope: string; brandId?: string },
+    ContinuityAgentOutput
+  >;
+}
+
+/**
+ * Continuity across all Test brands: one shared harness spine + per-brand
+ * retrieval snapshots. Never diffs one brand’s shortlist against another’s.
+ */
+export function runMultiBrandContinuity(args?: {
+  refresh?: boolean;
+  idempotencyKey?: string;
+}): StoredAgentRun<{ refresh: boolean; scope: string }, ContinuityAgentOutput> {
+  const refresh = args?.refresh ?? true;
+
+  if (refresh) {
+    runCorpusHarness({ idempotencyKey: `continuity-harness:all:${Date.now()}` });
+    for (const brand of TEST_BRANDS) {
+      runRetrievalAgent({
+        brandId: brand.id,
+        idempotencyKey: `continuity-retrieval:${brand.id}:${Date.now()}`,
+      });
+    }
+  }
+
+  const { baseline: baselineHarness, current: currentHarness } = pickHarnessPair(refresh);
+
+  const exceptions: ContinuityException[] = [];
+  let harnessDialectsStable = 0;
+  const slices: BrandContinuitySlice[] = [];
+  let totalRetrievalStable = 0;
+  let brandsEstablished = 0;
+
+  if (baselineHarness?.output && currentHarness?.output) {
+    const dialectNames = Object.keys(currentHarness.output.byDialect);
+    const harnessDiff = diffHarness(baselineHarness.output, currentHarness.output);
+    exceptions.push(...harnessDiff);
+    harnessDialectsStable = dialectNames.filter(
+      (d) =>
+        !harnessDiff.some((e) => e.dialect === d && e.code.startsWith("dialect")),
+    ).length;
+  }
+
+  for (const brand of TEST_BRANDS) {
+    const { baseline, current } = pickBrandRetrievalPair(brand.id);
+    const established = Boolean(baseline?.output && current?.output);
+    let shortlistStable = 0;
+    let brandExceptions: ContinuityException[] = [];
+
+    if (baseline?.output && current?.output) {
+      brandExceptions = diffRetrieval(baseline.output, current.output, {
+        brandId: brand.id,
+        brandName: brand.name,
+      });
+      exceptions.push(...brandExceptions);
+      const beforeKeys = new Set(
+        baseline.output.shortlist.map((s) => `${s.factoryId}:${s.articleCode}`),
+      );
+      const afterKeys = current.output.shortlist.map(
+        (s) => `${s.factoryId}:${s.articleCode}`,
+      );
+      shortlistStable = afterKeys.filter((k) => beforeKeys.has(k)).length;
+      totalRetrievalStable += shortlistStable;
+      brandsEstablished += 1;
+    }
+
+    slices.push({
+      brandId: brand.id,
+      brandName: brand.name,
+      established,
+      exceptionCount: brandExceptions.length,
+      retrievalShortlistStable: shortlistStable,
+      baselineRetrievalRunId: baseline?.id,
+      currentRetrievalRunId: current?.id,
+    });
+  }
+
+  const crossBrandGuards = exceptions.filter((e) => e.code === "brand_scope_guard");
+  const leakDetected = crossBrandGuards.length > 0;
+  const established = Boolean(
+    (baselineHarness?.output && currentHarness?.output) || brandsEstablished > 0,
+  );
+
+  const run = createAgentRun<{ refresh: boolean; scope: string }, ContinuityAgentOutput>({
+    organisationId: surfaceMillOrgId(TEST_SURFACE),
+    kind: "continuity",
+    idempotencyKey: args?.idempotencyKey ?? `continuity:all:${Date.now()}`,
+    input: { refresh, scope: "all-test-brands" },
+    surface: TEST_SURFACE,
+  });
+
+  const findings: AgentFinding[] = [];
+  if (!established) {
+    findings.push({
+      severity: "info",
+      code: "baseline_established",
+      message:
+        "Multi-brand Continuity established shared harness + per-brand retrieval baselines. Run again after Mapping to see exception-only diffs per tenant.",
+    });
+  }
+
+  for (const slice of slices) {
+    findings.push({
+      severity: "info",
+      code: "brand_continuity_slice",
+      message: slice.established
+        ? `${slice.brandName}: ${slice.exceptionCount} retrieval exceptions · ${slice.retrievalShortlistStable} shortlist stable`
+        : `${slice.brandName}: brand-scoped baseline set (no prior pair to diff)`,
+    });
+  }
+
+  findings.push({
+    severity: leakDetected ? "block" : "info",
+    code: leakDetected ? "tenant_isolation_fail" : "tenant_isolation_ok",
+    message: leakDetected
+      ? `Blocked ${crossBrandGuards.length} cross-brand retrieval diff attempt(s).`
+      : `Tenant isolation ok — Continuity compared ${TEST_BRANDS.length} brands only against their own prior snapshots (0 cross-brand retrieval diffs).`,
+  });
+
+  const blocks = exceptions.filter((e) => e.severity === "block").length;
+  const warns = exceptions.filter((e) => e.severity === "warn").length;
+
+  if (established && exceptions.length === 0) {
+    findings.push({
+      severity: "info",
+      code: "no_exceptions",
+      message:
+        "No continuity exceptions across Harbour, Field & Form, and Northline — clean multi-brand rebuy pass.",
+    });
+  } else if (exceptions.length) {
+    findings.push({
+      severity: blocks ? "block" : warns ? "warn" : "info",
+      code: "exceptions_only",
+      message: `${exceptions.length} continuity exceptions across brands (${blocks} block, ${warns} warn) — each brand only sees its own deltas.`,
+    });
+  }
+
+  const output: ContinuityAgentOutput = {
+    scope: "all-test-brands",
+    baseline: {
+      harnessRunId: baselineHarness?.id,
+      established,
+    },
+    current: {
+      harnessRunId: currentHarness?.id ?? latestAgentRun("ingest")?.id,
+    },
+    exceptions,
+    unchanged: {
+      harnessDialectsStable,
+      retrievalShortlistStable: totalRetrievalStable,
+    },
+    slices,
+    tenantIsolation: {
+      brandsCompared: TEST_BRANDS.length,
+      crossBrandRetrievalDiffs: crossBrandGuards.length,
+      leakDetected,
+      note: leakDetected
+        ? "Cross-brand retrieval diff was attempted and blocked."
+        : "Each brand’s shortlist and private relationships are diffed only against that brand’s prior snapshot. Shared harness spine is compared once.",
+    },
+    brandValue: {
+      headline: established
+        ? exceptions.length === 0
+          ? "Continuity: three brands, one catalogue spine — nothing material changed for any tenant."
+          : `Continuity: ${exceptions.length} exceptions across Harbour, Field & Form, and Northline — each brand only resolves its own deltas.`
+        : "Multi-brand Continuity baselines set — next run is exception-only work per tenant.",
+      bullets: [
+        `Shared harness: ${harnessDialectsStable} dialects stable · ${exceptions.filter((e) => e.scope === "harness").length} harness exceptions.`,
+        ...slices.map(
+          (s) =>
+            `${s.brandName}: ${s.established ? `${s.exceptionCount} retrieval exceptions · ${s.retrievalShortlistStable} shortlist stable` : "baseline set"}`,
+        ),
+        "No brand’s preferred/excluded memory is compared to another brand’s — tenant moat holds across snapshot diffs.",
+      ],
+    },
+  };
+
+  return finishAgentRun(run, {
+    status: leakDetected || blocks ? "needs-review" : "succeeded",
+    output,
+    findings,
+    summary: established
+      ? `Continuity: all brands · ${exceptions.length} exceptions · ${brandsEstablished}/${TEST_BRANDS.length} tenants with pairs · isolation ${leakDetected ? "FAIL" : "ok"}`
+      : "Continuity: multi-brand baselines established — run again for exception-only diffs",
+  }) as StoredAgentRun<{ refresh: boolean; scope: string }, ContinuityAgentOutput>;
 }

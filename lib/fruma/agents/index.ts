@@ -5,8 +5,12 @@ export type { MappingAgentOutput } from "./mapping-agent";
 export type { MappingProposal } from "./mapping-lexicon";
 export { runRetrievalAgent } from "./retrieval-agent";
 export type { RetrievalAgentOutput, ShortlistItem } from "./retrieval-agent";
-export { runContinuityAgent } from "./continuity-agent";
-export type { ContinuityAgentOutput, ContinuityException } from "./continuity-agent";
+export { runContinuityAgent, runMultiBrandContinuity } from "./continuity-agent";
+export type {
+  ContinuityAgentOutput,
+  ContinuityException,
+  BrandContinuitySlice,
+} from "./continuity-agent";
 export { runEvidenceAgent, assessClaim } from "./evidence-agent";
 export type {
   EvidenceAgentOutput,
