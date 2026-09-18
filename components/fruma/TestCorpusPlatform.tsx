@@ -16,6 +16,7 @@ import { VersionBanner } from "@/components/fruma/VersionBanner";
 type Tab = "overview" | "brands" | "factories" | "hangers" | "lab" | "agents";
 
 const TABS: Tab[] = ["overview", "brands", "factories", "hangers", "lab", "agents"];
+const AGENT_BRANDS = TEST_BRANDS;
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as string[]).includes(value);
@@ -343,19 +344,39 @@ type AgentRunView = {
       articleCode?: string;
     }[];
     summaryCounts?: Record<string, number>;
+    slices?: {
+      brandName: string;
+      productName: string;
+      sku: string;
+      shortlistSize: number;
+      excludedSkipped: number;
+      preferredOrProven: number;
+      evidenceClaims: number;
+      evidenceNotBrandSafe: number;
+      fibreTraps: number;
+      topMills: string[];
+    }[];
+    tenantIsolation?: {
+      checkedFactoryId: string;
+      leakDetected: boolean;
+      note: string;
+      relationshipsByBrand: { brandName: string; relationship: string }[];
+    };
   };
 };
 
 function AgentsPanel() {
   const [busy, setBusy] = useState<
-    "harness" | "mapping" | "retrieval" | "continuity" | "evidence" | null
+    "harness" | "mapping" | "retrieval" | "continuity" | "evidence" | "multi" | null
   >(null);
+  const [agentBrandId, setAgentBrandId] = useState(AGENT_BRANDS[0].id);
   const [error, setError] = useState<string | null>(null);
   const [harness, setHarness] = useState<AgentRunView | null>(null);
   const [mapping, setMapping] = useState<AgentRunView | null>(null);
   const [retrieval, setRetrieval] = useState<AgentRunView | null>(null);
   const [continuity, setContinuity] = useState<AgentRunView | null>(null);
   const [evidence, setEvidence] = useState<AgentRunView | null>(null);
+  const [multi, setMulti] = useState<AgentRunView | null>(null);
 
   async function runHarness() {
     setBusy("harness");
@@ -410,7 +431,7 @@ function AgentsPanel() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
-        body: JSON.stringify({ brandId: "brand-northline" }),
+        body: JSON.stringify({ brandId: agentBrandId }),
       });
       const json = (await res.json()) as { run?: AgentRunView; error?: string };
       if (!res.ok) {
@@ -433,7 +454,7 @@ function AgentsPanel() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
-        body: JSON.stringify({ refresh: true, brandId: "brand-northline" }),
+        body: JSON.stringify({ refresh: true, brandId: agentBrandId }),
       });
       const json = (await res.json()) as { run?: AgentRunView; error?: string };
       if (!res.ok) {
@@ -460,7 +481,7 @@ function AgentsPanel() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
-        body: JSON.stringify({ brandId: "brand-northline", refreshRetrieval: true }),
+        body: JSON.stringify({ brandId: agentBrandId, refreshRetrieval: true }),
       });
       const json = (await res.json()) as { run?: AgentRunView; error?: string };
       if (!res.ok) {
@@ -470,6 +491,28 @@ function AgentsPanel() {
       setEvidence(json.run ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Evidence failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function runMultiBrand() {
+    setBusy("multi");
+    setError(null);
+    try {
+      const res = await fetch("/api/test/agents/multi-brand", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-Fruma-Version": "test" },
+      });
+      const json = (await res.json()) as { run?: AgentRunView; error?: string };
+      if (!res.ok) {
+        setError(json.error ?? `Multi-brand failed (${res.status})`);
+        return;
+      }
+      setMulti(json.run ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Multi-brand failed");
     } finally {
       setBusy(null);
     }
@@ -495,11 +538,29 @@ function AgentsPanel() {
     <section className="tc-panel">
       <header className="tc-head">
         <p className="tc-kicker">Agents · test only</p>
-        <h1>Harness → Mapping → Retrieval → Continuity → Evidence</h1>
+        <h1>Harness → Mapping → Retrieval → Continuity → Evidence → Multi-brand</h1>
         <p>
-          Full Test loop for sourcing intelligence. Demo frozen. Memory in-process until Postgres.
+          Full Test loop for sourcing intelligence across tenants. Demo frozen. Memory in-process
+          until Postgres.
         </p>
       </header>
+
+      <div className="tc-lab">
+        <label className="tc-lab-pick">
+          <span>Brand for steps 3–5</span>
+          <select
+            value={agentBrandId}
+            onChange={(e) => setAgentBrandId(e.target.value)}
+            disabled={busy !== null}
+          >
+            {AGENT_BRANDS.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <div className="tc-lab">
         <button
@@ -541,6 +602,14 @@ function AgentsPanel() {
           onClick={() => void runEvidence()}
         >
           {busy === "evidence" ? "Auditing…" : "5. Evidence"}
+        </button>
+        <button
+          type="button"
+          className="tc-primary"
+          disabled={busy !== null}
+          onClick={() => void runMultiBrand()}
+        >
+          {busy === "multi" ? "All brands…" : "6. All brands"}
         </button>
       </div>
 
@@ -834,6 +903,75 @@ function AgentsPanel() {
                       </td>
                       <td>
                         <small>{a.blockers[0]}</small>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {multi ? (
+        <div className="tc-lab-result" style={{ marginTop: 16 }}>
+          <p className="tc-kicker">Multi-brand · {multi.status}</p>
+          <p>{multi.summary}</p>
+          {multi.output?.brandValue ? (
+            <div style={{ marginTop: 12 }}>
+              <p>
+                <strong>Brand value:</strong> {multi.output.brandValue.headline}
+              </p>
+              <ul>
+                {multi.output.brandValue.bullets.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {multi.output?.tenantIsolation ? (
+            <p style={{ marginTop: 12 }}>
+              Isolation probe <code>{multi.output.tenantIsolation.checkedFactoryId}</code>:{" "}
+              {multi.output.tenantIsolation.relationshipsByBrand
+                .map((r) => `${r.brandName}=${r.relationship}`)
+                .join(" · ")}
+              <br />
+              <small>{multi.output.tenantIsolation.note}</small>
+            </p>
+          ) : null}
+          {multi.output?.slices?.length ? (
+            <div className="tc-table-wrap" style={{ marginTop: 12 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Brand</th>
+                    <th>Product</th>
+                    <th>Shortlist</th>
+                    <th>Excluded</th>
+                    <th>Evidence</th>
+                    <th>Top mills</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {multi.output.slices.map((s) => (
+                    <tr key={s.brandName}>
+                      <td>{s.brandName}</td>
+                      <td>
+                        {s.productName}
+                        <br />
+                        <code>{s.sku}</code>
+                      </td>
+                      <td>
+                        {s.shortlistSize}{" "}
+                        <small>({s.preferredOrProven} preferred/proven)</small>
+                      </td>
+                      <td>{s.excludedSkipped}</td>
+                      <td>
+                        {s.evidenceNotBrandSafe}/{s.evidenceClaims} not safe
+                        {s.fibreTraps ? ` · ${s.fibreTraps} fibre traps` : ""}
+                      </td>
+                      <td>
+                        <small>{s.topMills.join(", ")}</small>
                       </td>
                     </tr>
                   ))}

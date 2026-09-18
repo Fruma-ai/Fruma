@@ -156,15 +156,17 @@ function evaluateRequirement(
 
   switch (req.field) {
     case "market": {
-      const need = req.target as "UK" | "EU" | "US";
-      const ok = quality.factory.markets.includes(need);
+      const needs = targetParts(req.target).map((n) => n.toUpperCase());
+      const ok = needs.some((need) =>
+        quality.factory.markets.some((m) => m.toUpperCase() === need),
+      );
       return {
         ...base,
         sourceField: "factory.markets",
         result: ok ? "evidenced" : "mismatch",
         explanation: ok
-          ? `Factory markets include ${need}.`
-          : `Factory markets ${quality.factory.markets.join("/")} miss ${need}.`,
+          ? `Factory markets include ${needs.join(" or ")}.`
+          : `Factory markets ${quality.factory.markets.join("/")} miss ${needs.join("|")}.`,
       };
     }
     case "category": {
@@ -300,14 +302,35 @@ function evaluateRequirement(
   }
 }
 
-function defaultNorthlineProduct(): TestProduct {
-  const north = productsForBrand("brand-northline");
-  return (
-    north.find((p) => p.category === "Polo" && p.stage === "intent") ??
-    north.find((p) => p.category === "Polo") ??
-    north[0] ??
-    TEST_PRODUCTS[0]
-  );
+function defaultProductForBrand(brandId: string): TestProduct {
+  const products = productsForBrand(brandId);
+  if (brandId === "brand-northline") {
+    return (
+      products.find((p) => p.category === "Polo" && p.stage === "intent") ??
+      products.find((p) => p.category === "Polo") ??
+      products[0] ??
+      TEST_PRODUCTS[0]
+    );
+  }
+  if (brandId === "brand-harbour") {
+    return (
+      products.find((p) => p.category === "T-shirt" && p.stage === "intent") ??
+      products.find((p) => p.category === "T-shirt") ??
+      products.find((p) => p.category === "Sweater") ??
+      products[0] ??
+      TEST_PRODUCTS[0]
+    );
+  }
+  if (brandId === "brand-fieldform") {
+    return (
+      products.find((p) => p.category === "Jacket" && p.stage === "intent") ??
+      products.find((p) => p.category === "Jacket") ??
+      products.find((p) => p.category === "Overshirt") ??
+      products[0] ??
+      TEST_PRODUCTS[0]
+    );
+  }
+  return products[0] ?? TEST_PRODUCTS[0];
 }
 
 /**
@@ -326,10 +349,7 @@ export function runRetrievalAgent(args?: {
   const product =
     (args?.productId
       ? TEST_PRODUCTS.find((p) => p.id === args.productId)
-      : undefined) ??
-    (brandId === "brand-northline"
-      ? defaultNorthlineProduct()
-      : productsForBrand(brandId)[0] ?? TEST_PRODUCTS[0]);
+      : undefined) ?? defaultProductForBrand(brandId);
 
   const brief = briefFromProduct({
     product,

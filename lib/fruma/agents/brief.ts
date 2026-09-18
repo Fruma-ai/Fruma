@@ -51,6 +51,14 @@ const CATEGORY_SPECIALTY: Record<string, string[]> = {
   Dress: ["viscose", "modal", "cellulosics"],
 };
 
+function marketTargets(market: string): string {
+  const parts: string[] = [];
+  if (/\bUK\b/i.test(market)) parts.push("UK");
+  if (/\bEU\b/i.test(market)) parts.push("EU");
+  if (/\bUS\b/i.test(market)) parts.push("US");
+  return parts.length ? parts.join("|") : "UK";
+}
+
 /**
  * Turn a Test product into a bounded requirement contract.
  * Deterministic — no LLM. Agents retrieve against these IDs only.
@@ -74,7 +82,7 @@ export function briefFromProduct(args: {
       kind: "MUST",
       field: "market",
       label: `Serve ${market} markets`,
-      target: market.includes("UK") ? "UK" : market.includes("EU") ? "EU" : "UK",
+      target: marketTargets(market),
     },
     {
       id: "req-category",

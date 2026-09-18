@@ -13,6 +13,8 @@ export type {
   ClaimAssessment,
   ClaimVerdict,
 } from "./evidence-agent";
+export { runMultiBrandIntelligence } from "./multi-brand";
+export type { MultiBrandOutput, BrandIntelligenceSlice } from "./multi-brand";
 export { briefFromProduct } from "./brief";
 export type { ProductBrief, BriefRequirement } from "./brief";
 export {

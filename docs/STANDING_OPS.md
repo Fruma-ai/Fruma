@@ -56,6 +56,8 @@ In order from `FOCUS_NOW.md` (skip if already done):
 4. Docs/findings updates after each agent run
 5. Stop and ask before: Postgres, Demo promotion, real mill file ingest, public API changes
 
+Default next pull if FOCUS is stale: **optional MUST colour when brief names a colourway**.
+
 ## What “done” looks like for a steward turn
 
 - Branch pushed, draft PR open/updated
