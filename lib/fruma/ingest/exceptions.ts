@@ -4,6 +4,7 @@ export type IngestExceptionCode =
   | "unparsed_bytes"
   | "uncertain_bytes"
   | "empty_article"
+  | "unknown_header"
   | "grant_denied"
   | "unknown_deposit"
   | "unknown_grant"
