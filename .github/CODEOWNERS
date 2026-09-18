@@ -1,0 +1,9 @@
+# Default owner — Owen (Fruma-ai account)
+* @Fruma-ai
+
+# Stricter review on Demo freeze + auth gate surfaces
+/components/fruma/CustomerDemoPlatformV3.tsx @Fruma-ai
+/components/fruma/FactoryCatalogueEnhancer.tsx @Fruma-ai
+/app/app/page.tsx @Fruma-ai
+/lib/gate.ts @Fruma-ai
+/proxy.ts @Fruma-ai

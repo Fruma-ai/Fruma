@@ -1,0 +1,13 @@
+---
+description: Demo surface is frozen until Owen says Promote
+alwaysApply: true
+---
+
+# Demo freeze
+
+Do not modify `CustomerDemoPlatformV3.tsx`, `FactoryCatalogueEnhancer.tsx`, `app/app/page.tsx`, or `lib/fruma/demo-data.ts` unless the user said **Promote**.
+
+- Demo path: `/app` — customer story. Frozen by policy.
+- Test path: `/app/test` — safe to break. Build agents and ingest here.
+- Merge to `main` deploys production (`fruma.vercel.app`). Never merge experimental agent behaviour into Demo until Test is accepted.
+- Before coding: check open PRs (#34 / #33) for overlap. Do not rebuild PR #34’s agent runtime on another branch.
