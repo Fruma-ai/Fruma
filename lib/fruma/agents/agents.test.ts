@@ -14,33 +14,35 @@ describe("Corpus Harness + Mapping agents", () => {
     resetConfirmedHeadersForTests();
   });
 
-  it("harnesses all 50 factories and flags dialects with unmapped article headers", () => {
+  it("harnesses all 50 factories via builtin dialect headers (no Mapping required)", () => {
     const run = runCorpusHarness({ idempotencyKey: "test-harness-1" });
     assert.ok(run.output);
     assert.equal(run.output.factoriesTotal, 50);
-    assert.ok(run.output.factoriesOk < 50, "some dialects should fail before mapping");
-    assert.ok(run.output.unmappedHeaderCount > 0);
-    assert.ok(run.findings.some((f) => f.code === "dialect_total_failure" || f.code === "zero_qualities"));
-    assert.equal(run.status, "needs-review");
+    assert.equal(run.output.factoriesOk, 50);
+    assert.equal(run.output.factoriesFailed, 0);
+    assert.equal(run.output.unmappedHeaderCount, 0);
+    assert.equal(run.status, "succeeded");
+    assert.ok(run.output.qualitiesTotal > 100);
   });
 
-  it("mapping agent auto-confirms high-confidence lexicon headers and improves harness", () => {
+  it("mapping agent still confirms lexicon overlays and keeps harness green", () => {
     const before = runCorpusHarness({ idempotencyKey: "test-harness-before" });
-    const failedBefore = before.output!.factoriesFailed;
+    assert.equal(before.output!.factoriesOk, 50);
+
+    // Unknown header only Mapping can teach — prove overlays still apply.
+    confirmMappingProposal("Mystery Col", "colour");
 
     const mapping = runMappingAgent({
       autoConfirmHighConfidence: true,
       idempotencyKey: "test-mapping-1",
     });
     assert.ok(mapping.output);
-    assert.ok(mapping.output.confirmed.length > 0, "should confirm Weave, Art., etc.");
     assert.ok(
-      mapping.output.confirmed.some((c) => c.header === "art." && c.field === "article"),
+      mapping.output.confirmed.some((c) => c.header === "mystery col" && c.field === "colour"),
     );
 
     resetAgentRunsForTests();
     const after = runCorpusHarness({ idempotencyKey: "test-harness-after" });
-    assert.ok(after.output!.factoriesFailed < failedBefore, "mapping should recover factories");
     assert.equal(after.output!.factoriesOk, 50);
     assert.equal(after.status, "succeeded");
   });
