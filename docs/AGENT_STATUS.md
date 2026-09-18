@@ -2,37 +2,41 @@
 
 Live workers on `/app/test?tab=agents`. Demo `/app` is untouched.
 
+Standing CTO brief: `docs/CTO_NORTH_STAR.md`.
+
 ## Live now
 
 | Agent | Job | Status |
 | --- | --- | --- |
-| **Corpus Harness** | Deposit all 50 Test factory hangers; score by dialect; list unmapped headers + empty-article rows | Live |
-| **Mapping** | Propose Fruma fields for unmapped headers; auto-confirm high-confidence lexicon matches; queue the rest for human Confirm | Live |
-| **CI** | `npm test` on every PR (includes agent tests) | Live |
+| **Corpus Harness** | Deposit all 50 Test factory hangers; score by dialect; list unmapped headers | Live |
+| **Mapping** | Propose / auto-confirm high-confidence dialect headers | Live |
+| **Retrieval** | Northline brief → structured filters → evidence-linked shortlist (private memory reorders; exclusions hidden) | Live |
+| **CI** | `npm test` on every PR | Live |
 
-## Key findings (first harness pass, before mapping)
+## Key findings
 
-Measured on the Test corpus:
+### Harness → Mapping
+- Before Mapping: **42/50** ok · **pl-fleece** failed on `Art.` article header
+- After Mapping: **50/50** ok · 19 dialect aliases confirmed
 
-- **Before Mapping:** 42/50 factories ok · 1164 qualities · 19 headers unmapped
-- **pl-fleece** total failure — `Art.` not recognised as article → 0 qualities / 228 empty-article exceptions
-- Other dialects still produced qualities via known article headers, but left Weave / Comp. / GSM / etc. unmapped
-- **After Mapping auto-confirm:** 50/50 factories ok · 1392 qualities · 0 headers left
+### Retrieval (Northline) — brand value proof
+Measured on `Refined navy polo` (TST-LINE-1006):
 
-Built-in header map only knows “clean” English headers. Mapping lexicon recovers mill dialect aliases without inventing values.
+- **12** deep-match qualities from preferred mills (Lima Group, Brescia Works)
+- **3** excluded mills never shown
+- **40** structured candidates capped before deep match
+- Evidence on #1 is explicit: UK market ✓, warp-knit specialty ✓, MOQ 365m ✓, colour Ecru ≠ navy (PREFER miss shown), cert ISO 14001 needs scope confirm, private **preferred** relationship ✓
+- **CTO note:** relationship memory correctly dominates ordering; colour is PREFER so non-navy rows can still rank high — evidence keeps that honest for the brand
 
-## Next agents (recommended)
+## Next agents
 
-1. **Brief / Retrieval** — Northline product brief → structured filters → shortlist of Test factories with evidence links.
-2. **Continuity** — diff this harness vs last run; only emit new exceptions.
-3. **Evidence** — flag cert/origin claims that lack scope or issuer (never invent GOTS).
-4. **Build steward (Cursor)** — standing Cloud Agent: advance `docs/FOCUS_NOW.md` on Test only; open draft PRs; never touch Demo.
-5. **Dialect tutor** — when a new mill header appears three times, open a Mapping proposal automatically.
+1. **Continuity** — diff harness/retrieval vs last run; exceptions only
+2. **Evidence** — scope/issuer checks on cert strings
+3. **Build steward** — standing Cursor agent on Test backlog
+4. **Multi-brand retrieval** — Harbour + Field & Form same path
 
 ## How Owen uses this
 
-1. Open `/app/test?tab=agents`
-2. Run **Corpus Harness** — read findings
-3. Run **Mapping agent** — confirm anything left in needs-review
-4. Re-run Harness — expect 50/50
-5. Tell the coding agent when to start **Retrieval** or when to **connect Postgres** (see `docs/MEMORY_AND_DATABASE.md`)
+1. `/app/test?tab=agents`
+2. Harness → Mapping → **Retrieval (Northline)**
+3. Read **Brand value** bullets + shortlist evidence on #1

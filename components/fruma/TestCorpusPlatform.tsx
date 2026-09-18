@@ -53,19 +53,19 @@ function Overview() {
       </div>
       <ol className="tc-focus">
         <li>
-          <b>Agents tab</b> — run Corpus Harness + Mapping; review findings.
+          <b>Agents tab</b> — Harness → Mapping → Retrieval (Northline brand value).
         </li>
         <li>
-          <b>Lab ingest</b> — single-factory deposits through the Test-only engine.
-        </li>
-        <li>
-          <b>Brand retrieval</b> — shortlist from Test data with private relationship memory (next).
+          <b>Continuity / Evidence</b> — exception-only diffs; honest cert gaps (next).
         </li>
         <li>
           <b>Persist</b> — Postgres when confirmations must survive deploys.
         </li>
         <li>
           <b>Promote</b> — only then copy accepted behaviour into Demo.
+        </li>
+        <li>
+          <b>Never</b> — invent facts, leak private supplier memory, or broaden into MES/PLM.
         </li>
       </ol>
       <div className="tc-grid three">
@@ -299,14 +299,37 @@ type AgentRunView = {
       alreadyMapped: boolean;
     }[];
     confirmed?: { header: string; field: string }[];
+    brief?: {
+      brandName: string;
+      name: string;
+      sku: string;
+      intent: string;
+      requirements: { id: string; kind: string; label: string }[];
+    };
+    shortlist?: {
+      rank: number;
+      factoryName: string;
+      country: string;
+      relationship: string;
+      articleCode: string;
+      construction: string;
+      composition: string;
+      colour: string;
+      structuredScore: number;
+      brandValueNote: string;
+      evidence: { requirementId: string; result: string; explanation: string }[];
+    }[];
+    excludedFactoriesSkipped?: number;
+    brandValue?: { headline: string; bullets: string[] };
   };
 };
 
 function AgentsPanel() {
-  const [busy, setBusy] = useState<"harness" | "mapping" | null>(null);
+  const [busy, setBusy] = useState<"harness" | "mapping" | "retrieval" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [harness, setHarness] = useState<AgentRunView | null>(null);
   const [mapping, setMapping] = useState<AgentRunView | null>(null);
+  const [retrieval, setRetrieval] = useState<AgentRunView | null>(null);
 
   async function runHarness() {
     setBusy("harness");
@@ -353,6 +376,29 @@ function AgentsPanel() {
     }
   }
 
+  async function runRetrieval() {
+    setBusy("retrieval");
+    setError(null);
+    try {
+      const res = await fetch("/api/test/agents/retrieval", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
+        body: JSON.stringify({ brandId: "brand-northline" }),
+      });
+      const json = (await res.json()) as { run?: AgentRunView; error?: string };
+      if (!res.ok) {
+        setError(json.error ?? `Retrieval failed (${res.status})`);
+        return;
+      }
+      setRetrieval(json.run ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Retrieval failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function confirmHeader(header: string, field: string) {
     setError(null);
     const res = await fetch("/api/test/agents/mapping", {
@@ -373,11 +419,10 @@ function AgentsPanel() {
     <section className="tc-panel">
       <header className="tc-head">
         <p className="tc-kicker">Agents · test only</p>
-        <h1>Corpus Harness and Mapping</h1>
+        <h1>Harness, Mapping, Retrieval</h1>
         <p>
-          These workers improve Test ingest without touching Demo. Memory is{" "}
-          <strong>in-process</strong> until we connect Postgres — runs reset when the server
-          restarts.
+          Workers that turn mill files into brand-usable shortlists — without touching Demo.
+          Memory is <strong>in-process</strong> until Postgres.
         </p>
       </header>
 
@@ -388,7 +433,7 @@ function AgentsPanel() {
           disabled={busy !== null}
           onClick={() => void runHarness()}
         >
-          {busy === "harness" ? "Harness running…" : "1. Run Corpus Harness"}
+          {busy === "harness" ? "Harness running…" : "1. Corpus Harness"}
         </button>
         <button
           type="button"
@@ -396,7 +441,15 @@ function AgentsPanel() {
           disabled={busy !== null}
           onClick={() => void runMapping()}
         >
-          {busy === "mapping" ? "Mapping…" : "2. Run Mapping agent"}
+          {busy === "mapping" ? "Mapping…" : "2. Mapping"}
+        </button>
+        <button
+          type="button"
+          className="tc-primary"
+          disabled={busy !== null}
+          onClick={() => void runRetrieval()}
+        >
+          {busy === "retrieval" ? "Retrieving…" : "3. Retrieval (Northline)"}
         </button>
       </div>
 
@@ -499,6 +552,79 @@ function AgentsPanel() {
             After confirming, run Corpus Harness again — recovered dialects prove the agent improved
             the system.
           </p>
+        </div>
+      ) : null}
+
+      {retrieval ? (
+        <div className="tc-lab-result" style={{ marginTop: 16 }}>
+          <p className="tc-kicker">Retrieval · {retrieval.status}</p>
+          <p>{retrieval.summary}</p>
+          {retrieval.output?.brandValue ? (
+            <div style={{ marginTop: 12 }}>
+              <p>
+                <strong>Brand value:</strong> {retrieval.output.brandValue.headline}
+              </p>
+              <ul>
+                {retrieval.output.brandValue.bullets.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {retrieval.output?.brief ? (
+            <p className="tc-kicker" style={{ marginTop: 12 }}>
+              Brief · {retrieval.output.brief.brandName} · {retrieval.output.brief.name} ·{" "}
+              {retrieval.output.brief.sku}
+            </p>
+          ) : null}
+          {retrieval.output?.shortlist?.length ? (
+            <div className="tc-table-wrap" style={{ marginTop: 12 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Mill</th>
+                    <th>Rel.</th>
+                    <th>Article</th>
+                    <th>Construction</th>
+                    <th>Colour</th>
+                    <th>Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {retrieval.output.shortlist.map((row) => (
+                    <tr key={`${row.factoryName}-${row.articleCode}-${row.rank}`}>
+                      <td>{row.rank}</td>
+                      <td>
+                        {row.factoryName}
+                        <br />
+                        <small>{row.country}</small>
+                      </td>
+                      <td>{row.relationship}</td>
+                      <td>
+                        <code>{row.articleCode}</code>
+                      </td>
+                      <td>{row.construction || "—"}</td>
+                      <td>{row.colour || "—"}</td>
+                      <td>{row.structuredScore}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {retrieval.output?.shortlist?.[0]?.evidence?.length ? (
+            <div className="tc-lab-exceptions">
+              <p className="tc-kicker">Evidence on #1 (source-linked)</p>
+              <ul>
+                {retrieval.output.shortlist[0].evidence.map((e) => (
+                  <li key={e.requirementId}>
+                    <code>{e.result}</code> {e.explanation}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>

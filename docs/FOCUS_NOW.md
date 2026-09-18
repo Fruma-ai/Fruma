@@ -14,14 +14,14 @@ Use Test for all experiments. Preview deployments on feature branches are also s
 
 ## Focus order
 
-### 1. Corpus Harness + Mapping (live)
-`/app/test?tab=agents` — run Harness, run Mapping, re-run Harness until 50/50.
+### 1. Corpus Harness + Mapping + Retrieval (live)
+`/app/test?tab=agents` — Harness dialects, Mapping overlays, then **Retrieval** for a Northline brief (brand-facing value proof).
 
-### 2. Brand retrieval on Test data
-For one Test brand product brief: structured filters → candidate shortlist → bounded match/evidence.
+### 2. Continuity + Evidence agents
+Diff runs; flag cert scope gaps without inventing claims.
 
 ### 3. Persist the spine (when memory is not enough)
-Postgres + object storage when confirmations must survive deploys. See `docs/MEMORY_AND_DATABASE.md`. **Not required yet.**
+Postgres when confirmations must survive deploys. See `docs/MEMORY_AND_DATABASE.md`. **Not required yet.**
 
 ### 4. Promote Test → Demo (only when happy)
 Copy accepted behaviour into `/app`.

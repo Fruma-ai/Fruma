@@ -91,3 +91,8 @@ export function proposeFieldForHeader(
     confirmed: false,
   };
 }
+
+/** Read-time overlays from lexicon (not auto-confirmed into durable memory). */
+export function lexiconHeaderOverlays(): Record<string, StandardField> {
+  return { ...PROPOSAL_LEXICON };
+}
