@@ -1,6 +1,8 @@
+import { surfaceStorageKey, DEMO_SURFACE } from "./surfaces";
 import type { CatalogField } from "./types";
 
-const LEARN_KEY = "fruma-mill-learn";
+/** Demo-scoped only — Test must never reuse this key. */
+const LEARN_KEY = surfaceStorageKey(DEMO_SURFACE, "mill-learn");
 
 export type MillLearn = {
   picks: number;

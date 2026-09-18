@@ -11,14 +11,14 @@ export const FRUMA_VERSIONS = {
     label: "Demo",
     path: "/app",
     description:
-      "Customer demo. Stable story surface. Promote changes here only after the test corpus is accepted.",
+      "Customer demo. Frozen until you promote accepted Test behaviour.",
   },
   test: {
     id: "test" as const,
     label: "Test",
     path: "/app/test",
     description:
-      "Test corpus. Three dummy brands and fifty factories with private hanger files for ingest, mapping and retrieval experiments.",
+      "Test environment. Dummy brands, fifty factories, and Lab ingest — safe to break.",
   },
 } as const;
 
