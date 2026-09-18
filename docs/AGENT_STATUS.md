@@ -10,7 +10,7 @@ Standing ops: `docs/STANDING_OPS.md` · CTO brief: `docs/CTO_NORTH_STAR.md`
 | --- | --- | --- |
 | 1 | Harness | Live |
 | 2 | Mapping | Live |
-| 3 | Retrieval (brand picker) | Live |
+| 3 | Retrieval (brand picker + colour MUST when named) | Live |
 | 4 | Continuity | Live |
 | 5 | Evidence | Live |
 | 6 | **All brands** (Northline + Harbour + Field & Form) | Live |
@@ -20,9 +20,9 @@ Standing ops: `docs/STANDING_OPS.md` · CTO brief: `docs/CTO_NORTH_STAR.md`
 
 | Brand | Product | Shortlist | Excluded hidden | Evidence not brand-safe | Colour |
 | --- | --- | --- | --- | --- | --- |
-| Northline Studio | Refined navy polo | navy MUST shortlist | 3 | all audited claims | MUST navy |
-| Harbour Standard | (T-shirt default) | navy MUST shortlist | 3 | all audited claims | MUST navy |
-| Field & Form | (Jacket default) | navy MUST shortlist | 3 | all audited claims | MUST navy |
+| Northline Studio | Refined navy polo | 12 | 3 | all audited claims | MUST navy |
+| Harbour Standard | Refined navy t-shirt | 12 | 3 | all audited claims | MUST navy |
+| Field & Form | Refined navy jacket | 12 | 3 | all audited claims | MUST navy |
 
 - Same mill (`factory-001`) can carry **different private relationships** per brand
 - No brand ever sees another brand’s preferred/excluded set
