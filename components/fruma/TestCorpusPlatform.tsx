@@ -13,9 +13,9 @@ import {
 } from "@/lib/fruma/test-corpus";
 import { VersionBanner } from "@/components/fruma/VersionBanner";
 
-type Tab = "overview" | "brands" | "factories" | "hangers" | "lab";
+type Tab = "overview" | "brands" | "factories" | "hangers" | "lab" | "agents";
 
-const TABS: Tab[] = ["overview", "brands", "factories", "hangers", "lab"];
+const TABS: Tab[] = ["overview", "brands", "factories", "hangers", "lab", "agents"];
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as string[]).includes(value);
@@ -53,16 +53,16 @@ function Overview() {
       </div>
       <ol className="tc-focus">
         <li>
-          <b>Lab ingest</b> — run factory hangers through the Test-only ingest engine (this surface).
+          <b>Agents tab</b> — run Corpus Harness + Mapping; review findings.
         </li>
         <li>
-          <b>Mapping agent</b> — propose mappings on exceptions; never invent facts.
+          <b>Lab ingest</b> — single-factory deposits through the Test-only engine.
         </li>
         <li>
-          <b>Brand retrieval</b> — shortlist from Test data with private relationship memory.
+          <b>Brand retrieval</b> — shortlist from Test data with private relationship memory (next).
         </li>
         <li>
-          <b>Persist</b> — Postgres + jobs when in-memory is not enough.
+          <b>Persist</b> — Postgres when confirmations must survive deploys.
         </li>
         <li>
           <b>Promote</b> — only then copy accepted behaviour into Demo.
@@ -273,6 +273,238 @@ function HangersPanel() {
   );
 }
 
+type AgentRunView = {
+  id: string;
+  kind: string;
+  status: string;
+  summary: string;
+  findings: { severity: string; code: string; message: string }[];
+  output?: {
+    factoriesTotal?: number;
+    factoriesOk?: number;
+    factoriesFailed?: number;
+    qualitiesTotal?: number;
+    exceptionsTotal?: number;
+    unmappedHeaderCount?: number;
+    byDialect?: Record<
+      string,
+      { factories: number; ok: number; qualities: number; exceptions: number; unmapped: string[] }
+    >;
+    proposals?: {
+      header: string;
+      proposedField: string | null;
+      confidence: string;
+      rationale: string;
+      confirmed: boolean;
+      alreadyMapped: boolean;
+    }[];
+    confirmed?: { header: string; field: string }[];
+  };
+};
+
+function AgentsPanel() {
+  const [busy, setBusy] = useState<"harness" | "mapping" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [harness, setHarness] = useState<AgentRunView | null>(null);
+  const [mapping, setMapping] = useState<AgentRunView | null>(null);
+
+  async function runHarness() {
+    setBusy("harness");
+    setError(null);
+    try {
+      const res = await fetch("/api/test/agents/harness", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-Fruma-Version": "test" },
+      });
+      const json = (await res.json()) as { run?: AgentRunView; error?: string };
+      if (!res.ok) {
+        setError(json.error ?? `Harness failed (${res.status})`);
+        return;
+      }
+      setHarness(json.run ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Harness failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function runMapping() {
+    setBusy("mapping");
+    setError(null);
+    try {
+      const res = await fetch("/api/test/agents/mapping", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
+        body: JSON.stringify({ action: "run", autoConfirmHighConfidence: true }),
+      });
+      const json = (await res.json()) as { run?: AgentRunView; error?: string };
+      if (!res.ok) {
+        setError(json.error ?? `Mapping failed (${res.status})`);
+        return;
+      }
+      setMapping(json.run ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mapping failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function confirmHeader(header: string, field: string) {
+    setError(null);
+    const res = await fetch("/api/test/agents/mapping", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
+      body: JSON.stringify({ action: "confirm", header, field }),
+    });
+    if (!res.ok) {
+      const json = (await res.json()) as { error?: string };
+      setError(json.error ?? "Confirm failed");
+      return;
+    }
+    await runMapping();
+  }
+
+  return (
+    <section className="tc-panel">
+      <header className="tc-head">
+        <p className="tc-kicker">Agents · test only</p>
+        <h1>Corpus Harness and Mapping</h1>
+        <p>
+          These workers improve Test ingest without touching Demo. Memory is{" "}
+          <strong>in-process</strong> until we connect Postgres — runs reset when the server
+          restarts.
+        </p>
+      </header>
+
+      <div className="tc-lab">
+        <button
+          type="button"
+          className="tc-primary"
+          disabled={busy !== null}
+          onClick={() => void runHarness()}
+        >
+          {busy === "harness" ? "Harness running…" : "1. Run Corpus Harness"}
+        </button>
+        <button
+          type="button"
+          className="tc-primary"
+          disabled={busy !== null}
+          onClick={() => void runMapping()}
+        >
+          {busy === "mapping" ? "Mapping…" : "2. Run Mapping agent"}
+        </button>
+      </div>
+
+      {error ? <p className="tc-error" role="alert">{error}</p> : null}
+
+      {harness ? (
+        <div className="tc-lab-result">
+          <p className="tc-kicker">
+            Corpus Harness · {harness.status}
+          </p>
+          <p>{harness.summary}</p>
+          {harness.output?.byDialect ? (
+            <div className="tc-table-wrap" style={{ marginTop: 12 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Dialect</th>
+                    <th>Ok</th>
+                    <th>Qualities</th>
+                    <th>Exceptions</th>
+                    <th>Unmapped</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(harness.output.byDialect).map(([dialect, row]) => (
+                    <tr key={dialect}>
+                      <td>{dialect}</td>
+                      <td>
+                        {row.ok}/{row.factories}
+                      </td>
+                      <td>{row.qualities}</td>
+                      <td>{row.exceptions}</td>
+                      <td>{row.unmapped.join(", ") || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {harness.findings.length > 0 ? (
+            <div className="tc-lab-exceptions">
+              <p className="tc-kicker">Key findings</p>
+              <ul>
+                {harness.findings.slice(0, 10).map((f, i) => (
+                  <li key={`${f.code}-${i}`}>
+                    <code>{f.severity}</code> {f.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {mapping ? (
+        <div className="tc-lab-result" style={{ marginTop: 16 }}>
+          <p className="tc-kicker">Mapping agent · {mapping.status}</p>
+          <p>{mapping.summary}</p>
+          {mapping.output?.proposals?.length ? (
+            <div className="tc-table-wrap" style={{ marginTop: 12 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Header</th>
+                    <th>Proposed</th>
+                    <th>Confidence</th>
+                    <th>Status</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {mapping.output.proposals.map((p) => (
+                    <tr key={p.header}>
+                      <td>
+                        <code>{p.header}</code>
+                      </td>
+                      <td>{p.proposedField ?? "—"}</td>
+                      <td>{p.confidence}</td>
+                      <td>
+                        {p.confirmed || p.alreadyMapped ? "live" : "needs review"}
+                      </td>
+                      <td>
+                        {!p.confirmed && !p.alreadyMapped && p.proposedField ? (
+                          <button
+                            type="button"
+                            className="tc-link"
+                            onClick={() => void confirmHeader(p.header, p.proposedField!)}
+                          >
+                            Confirm
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          <p style={{ marginTop: 12, opacity: 0.8 }}>
+            After confirming, run Corpus Harness again — recovered dialects prove the agent improved
+            the system.
+          </p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 type LabResult = {
   surface: string;
   factoryId: string;
@@ -427,6 +659,7 @@ export function TestCorpusPlatform() {
               ["factories", "Factories"],
               ["hangers", "Hangers"],
               ["lab", "Lab"],
+              ["agents", "Agents"],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -449,6 +682,7 @@ export function TestCorpusPlatform() {
         ) : null}
         {tab === "hangers" ? <HangersPanel /> : null}
         {tab === "lab" ? <LabPanel factoryId={factoryId} setFactoryId={setFactoryId} /> : null}
+        {tab === "agents" ? <AgentsPanel /> : null}
       </main>
     </div>
   );

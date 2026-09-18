@@ -1,4 +1,5 @@
 import { DEMO_COOKIE, sessionFounder } from "@/lib/gate";
+import { confirmedHeaderOverlays } from "@/lib/fruma/agents/confirmed-headers";
 import { factoryById, hangerCsvFor } from "@/lib/fruma/test-corpus";
 import { millIngestEngineFor } from "@/lib/fruma/ingest/deposits-http";
 import { toMillDepositResponse } from "@/lib/fruma/mill-deposit";
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       supplierOrgId: surfaceMillOrgId(TEST_SURFACE),
       filename: factory.filename,
       bytes,
+      headerOverlays: confirmedHeaderOverlays(TEST_SURFACE),
     });
 
     return Response.json(

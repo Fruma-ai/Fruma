@@ -1,7 +1,7 @@
 import { IngestException } from "./exceptions";
 import { parseCsvBytes } from "./parse-csv";
 import { parseXlsxBytes } from "./parse-xlsx";
-import type { SourceCell } from "./types";
+import type { SourceCell, StandardField } from "./types";
 
 export type MillFormat = "csv" | "xlsx";
 
@@ -63,11 +63,18 @@ export function detectMillFormat(filename: string, bytes: Uint8Array): MillForma
   );
 }
 
-export function parseMillBytes(filename: string, bytes: Uint8Array): {
+export function parseMillBytes(
+  filename: string,
+  bytes: Uint8Array,
+  headerOverlays?: Record<string, StandardField>,
+): {
   format: MillFormat;
   cells: SourceCell[];
 } {
   const format = detectMillFormat(filename, bytes);
-  const cells = format === "xlsx" ? parseXlsxBytes(bytes) : parseCsvBytes(filename, bytes);
+  const cells =
+    format === "xlsx"
+      ? parseXlsxBytes(bytes)
+      : parseCsvBytes(filename, bytes, headerOverlays);
   return { format, cells };
 }
