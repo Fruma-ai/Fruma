@@ -423,6 +423,76 @@
   border-top: 1px solid #2a3037;
 }
 
+.tc-steward {
+  margin: 0 0 24px;
+  padding: 16px 18px;
+  border: 1px solid #2a3037;
+  border-radius: 12px;
+  background: #12151a;
+  display: grid;
+  gap: 10px;
+}
+
+.tc-steward > p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.tc-steward-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.tc-steward-task {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  line-height: 1.4;
+}
+
+.tc-steward-task code {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  min-width: 4.8rem;
+}
+
+.tc-steward-task.done {
+  opacity: 0.55;
+}
+
+.tc-steward-task.ready code {
+  color: #b8f0c8;
+}
+
+.tc-steward-task.blocked code {
+  color: #ffd59a;
+}
+
+.tc-steward-blocked {
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+.tc-steward-prompt summary {
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.tc-steward-prompt pre {
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #0a0c0f;
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 @media (max-width: 900px) {
   .tc-stats,
   .tc-grid.two,

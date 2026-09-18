@@ -92,6 +92,37 @@ describe("SPEC 6 ingest — parse csv and xlsx bytes", () => {
     assert.equal(width.header, "Width");
     assert.equal(width.standardField, "width");
   });
+
+  it("applies Mapping overlays to unknown csv and xlsx headers", () => {
+    const rows = [
+      ["Art.", "Knit type", "Mystery Col"],
+      ["Q75", "WARP MESH", "Navy"],
+    ];
+    const overlays = { "mystery col": "colour" as const };
+
+    const csv = new TextEncoder().encode(rows.map((r) => r.join(",")).join("\n"));
+    const csvResult = engine().deposit({
+      supplierOrgId: MILL,
+      filename: "overlay.csv",
+      bytes: csv,
+      headerOverlays: overlays,
+    });
+    const csvColour = csvResult.cells.find((c) => c.header === "Mystery Col");
+    assert.equal(csvColour?.standardField, "colour");
+    assert.equal(csvColour?.sourceValue, "Navy");
+
+    const xlsx = buildXlsx([{ name: "Hanger", rows }]);
+    const xlsxResult = engine().deposit({
+      supplierOrgId: MILL,
+      filename: "overlay.xlsx",
+      bytes: xlsx,
+      headerOverlays: overlays,
+    });
+    const xlsxColour = xlsxResult.cells.find((c) => c.header === "Mystery Col");
+    assert.equal(xlsxColour?.standardField, "colour");
+    assert.equal(xlsxColour?.sourceValue, "Navy");
+    assert.equal(xlsxColour?.pointer.sheet, "Hanger");
+  });
 });
 
 describe("SPEC 6 ingest — private store", () => {

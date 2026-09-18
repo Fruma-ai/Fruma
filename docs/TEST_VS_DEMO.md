@@ -16,8 +16,9 @@ Fruma keeps two surfaces so engineering work does not quietly rewrite the custom
 5. **Test APIs require login** — `/api/test/*` returns 401 without a founder session (same gate as `/app`).
 6. **Preview branches** — Vercel preview URLs for feature PRs are sandboxes. Production (`fruma.vercel.app`) only changes when merges land on `main`.
 7. **Promotion is manual** — when Test feels right, tell the agent to promote accepted behaviour into Demo. Until then Demo stays the customer story.
+8. **Unattended stewards stay on Test** — Cloud Agents pull `nextStewardPull()` (`lib/fruma/agents/steward-queue.ts`). Postgres and Demo promotion stay blocked until Owen says so.
 
-See also `docs/FOCUS_NOW.md` for the ordered engineering focus after the dummy corpus.
+See also `docs/FOCUS_NOW.md` and `docs/CURSOR_AUTOMATIONS.md`.
 
 ## Test corpus contents
 
@@ -39,6 +40,14 @@ Run a Test-only ingest from the Lab tab, or:
 POST /api/test/ingest
 Content-Type: application/json
 { "factoryId": "factory-001" }
+```
+
+Prove all fifty factory dialects land (immutable file → qualities) via the corpus harness:
+
+```
+POST /api/test/ingest
+Content-Type: application/json
+{ "all": true }
 ```
 
 ## Rule of promotion

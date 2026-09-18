@@ -1,6 +1,6 @@
 import { IngestException } from "./exceptions";
 import { cellsFromTable } from "./parse-csv";
-import type { SourceCell } from "./types";
+import type { SourceCell, StandardField } from "./types";
 import { parseCellRef } from "./columns";
 import { unzip, zip } from "./zip";
 
@@ -146,7 +146,10 @@ function joinXlPath(target: string): string {
   return `xl/${cleaned}`;
 }
 
-export function parseXlsxBytes(bytes: Uint8Array): SourceCell[] {
+export function parseXlsxBytes(
+  bytes: Uint8Array,
+  headerOverlays?: Record<string, StandardField>,
+): SourceCell[] {
   let entries;
   try {
     entries = unzip(bytes);
@@ -191,7 +194,7 @@ export function parseXlsxBytes(bytes: Uint8Array): SourceCell[] {
       );
     }
     const grid = parseSheetGrid(decodeXml(part), shared);
-    cells.push(...cellsFromTable(sheet.name, grid));
+    cells.push(...cellsFromTable(sheet.name, grid, headerOverlays));
   }
   return cells;
 }

@@ -1,5 +1,7 @@
 import { DEMO_COOKIE, sessionFounder } from "@/lib/gate";
+import { confirmedHeaderOverlays } from "@/lib/fruma/agents/confirmed-headers";
 import { factoryById, hangerCsvFor } from "@/lib/fruma/test-corpus";
+import { runCorpusHarness } from "@/lib/fruma/test-corpus/harness";
 import { millIngestEngineFor } from "@/lib/fruma/ingest/deposits-http";
 import { toMillDepositResponse } from "@/lib/fruma/mill-deposit";
 import { surfaceMillOrgId, TEST_SURFACE } from "@/lib/fruma/surfaces";
@@ -19,8 +21,11 @@ function cookieNamed(request: Request, name: string): string | undefined {
 }
 
 /**
- * Test-only ingest: run a corpus factory hanger through the Test ingest engine.
- * Never writes to the Demo engine.
+ * Test-only ingest: run one corpus factory hanger — or the full fifty-factory
+ * harness — through the Test ingest engine. Never writes to the Demo engine.
+ *
+ * Body: `{ factoryId }` or `{ all: true }` for the corpus harness.
+ * Mapping-agent confirmed overlays are applied on both paths.
  */
 export async function POST(request: Request) {
   const who = await sessionFounder(cookieNamed(request, DEMO_COOKIE));
@@ -28,16 +33,38 @@ export async function POST(request: Request) {
     return Response.json({ error: "Sign in to run test ingest." }, { status: 401 });
   }
 
-  let body: { factoryId?: string };
+  let body: { factoryId?: string; all?: boolean };
   try {
-    body = (await request.json()) as { factoryId?: string };
+    body = (await request.json()) as { factoryId?: string; all?: boolean };
   } catch {
-    return Response.json({ error: "Expected JSON body with factoryId." }, { status: 400 });
+    return Response.json(
+      { error: "Expected JSON body with factoryId or { all: true }." },
+      { status: 400 },
+    );
+  }
+
+  if (body.all === true) {
+    const harness = runCorpusHarness({
+      headerOverlays: confirmedHeaderOverlays(TEST_SURFACE),
+    });
+    return Response.json(
+      { surface: TEST_SURFACE, harness },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store",
+          "X-Fruma-Version": TEST_SURFACE,
+        },
+      },
+    );
   }
 
   const factoryId = body.factoryId?.trim();
   if (!factoryId) {
-    return Response.json({ error: "factoryId is required." }, { status: 400 });
+    return Response.json(
+      { error: "factoryId is required (or pass { all: true } for the corpus harness)." },
+      { status: 400 },
+    );
   }
 
   const factory = factoryById(factoryId);
@@ -53,6 +80,7 @@ export async function POST(request: Request) {
       supplierOrgId: surfaceMillOrgId(TEST_SURFACE),
       filename: factory.filename,
       bytes,
+      headerOverlays: confirmedHeaderOverlays(TEST_SURFACE),
     });
 
     return Response.json(

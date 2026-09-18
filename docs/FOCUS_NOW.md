@@ -1,6 +1,6 @@
 # What to focus on now
 
-Dummy brands/factories are on `/app/test`. Demo agents in `/app` are still **UI choreography**. The next work is the data + job spine — only on Test until you say promote.
+Dummy brands/factories are on `/app/test`. Demo agents in `/app` are still **UI choreography**. Test now has real product agents **and** a build steward that can continue when Owen is away.
 
 ## Protect production / demo
 
@@ -12,25 +12,22 @@ Dummy brands/factories are on `/app/test`. Demo agents in `/app` are still **UI 
 
 Use Test for all experiments. Preview deployments on feature branches are also safe sandboxes. Do not ask agents to “update the demo” until Test behaviour is right.
 
-## Focus order (do this next)
+## Focus order
 
-### 1. Harness the test corpus (now)
-Wire factory hanger CSVs through real ingest on **Test only**:
-immutable file → source rows → mapping exceptions → searchable qualities.
+### 1. Full Test agent loop (live)
+`/app/test?tab=agents` — Harness → Mapping → Retrieval → Continuity → Evidence → **All brands**.
 
-Prove that 50 factory dialects can land without touching `/app`.
+### 2. Unattended steward (live in repo; Automation is one Owen save)
+Queue: `lib/fruma/agents/steward-queue.ts`. Rules: `.cursor/rules/fruma-steward.mdc`. How to keep running overnight: `docs/CURSOR_AUTOMATIONS.md`.
 
-### 2. First bounded agent: Mapping
-Not a chatbot over the whole corpus. After deterministic normalisation, a **Mapping agent** proposes mappings for unknown mill vocabulary, cites source field IDs, and waits for human/mill confirm. Runs are auditable and resumable (`lib/fruma/agent-runtime.ts`).
+### 3. Next steward pull (no ask)
+Commercial freshness on Retrieval — hanger MOQ / lead stay historical until mill-confirmed. Then Brief as Agents step 0.
 
-### 3. Brand retrieval on Test data
-For one Test brand product brief: structured filters → candidate shortlist → bounded match/evidence. Relationship memory (preferred / proven / excluded) may reorder; it must never invent facts.
-
-### 4. Persist the spine (when local in-memory is not enough)
-Postgres + object storage + job queue for the same path above. One real mill workbook + one brand is enough for the first production vertical slice. See `docs/PLATFORM_REVIEW.md`.
+### 4. Persist the spine (when memory is not enough)
+Postgres when baselines must survive deploys. Owen says **Postgres**. See `docs/MEMORY_AND_DATABASE.md`.
 
 ### 5. Promote Test → Demo (only when happy)
-Copy accepted behaviour into `/app`. Leave the fifty-factory corpus on Test unless you intentionally want a marketplace demo story.
+Copy accepted behaviour into `/app`. Owen says **Promote**.
 
 ## Explicitly not the focus yet
 
@@ -42,5 +39,7 @@ Copy accepted behaviour into `/app`. Leave the fifty-factory corpus on Test unle
 
 ## Your job vs the agent’s job
 
-**You decide:** pilot brand/mill, what “done” looks like, when to promote, secrets/hosting.  
-**Agent implements:** branches, PRs, Test-only experiments, then Demo promotion on request.
+**You decide (rare):** merge PRs, promote Test→Demo, add Postgres, pilot mill, stop/go, save the weekday Automation once.  
+**Build steward does (continuous):** `nextStewardPull()` on Test, draft PRs, tests, findings with brand value.
+
+Low-touch operating model: `docs/STANDING_OPS.md`.
