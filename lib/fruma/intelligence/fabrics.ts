@@ -1,5 +1,6 @@
 import { parseCsvBytes } from "../ingest/parse-csv";
 import type { SourceCell, StandardField } from "../ingest/types";
+import { citationFromCell, type FieldCitation } from "../pilot/citations";
 import { PROPOSAL_LEXICON } from "./mapping-lexicon";
 import { resolveHeaderField } from "../ingest/header-map";
 import { hangerBytesFor } from "../test-corpus/hanger";
@@ -50,6 +51,8 @@ export type FabricQuality = {
   compositionMapped: boolean;
   /** Read from mill wording. Not a mill product SKU. */
   possibleEndProducts: EndProductFamily[];
+  /** Mill cells that justified each mapped field. Empty when nothing on file. */
+  citations?: FieldCitation[];
 };
 
 export type EndProductSupport = {
@@ -81,14 +84,14 @@ function valueFor(
   row: SourceCell[],
   field: StandardField,
   overlays?: Record<string, StandardField>,
-): { value: string; mapped: boolean } {
+): { value: string; mapped: boolean; cell?: SourceCell } {
   const mapped = row.find((c) => c.standardField === field);
-  if (mapped) return { value: mapped.sourceValue, mapped: true };
+  if (mapped) return { value: mapped.sourceValue, mapped: true, cell: mapped };
   const fallback = row.find((c) => {
     const resolved = resolveHeaderField(c.header, overlays) ?? PROPOSAL_LEXICON[c.header.trim().toLowerCase()];
     return resolved === field;
   });
-  return { value: fallback?.sourceValue ?? "", mapped: false };
+  return { value: fallback?.sourceValue ?? "", mapped: false, cell: fallback };
 }
 
 export function endProductsFromCloth(construction: string, composition: string): EndProductFamily[] {
@@ -131,6 +134,19 @@ export function fabricBookFor(
     const width = valueFor(row, "width", overlays);
     const colour = valueFor(row, "colour", overlays);
     const moq = valueFor(row, "moq", overlays);
+    const citations: FieldCitation[] = [];
+    const meta = { filename: factory.filename };
+    for (const [field, part] of [
+      ["article", article],
+      ["construction", construction],
+      ["composition", composition],
+      ["weight", weight],
+      ["width", width],
+      ["colour", colour],
+      ["moq", moq],
+    ] as const) {
+      if (part.cell) citations.push(citationFromCell(part.cell, field, meta));
+    }
     qualities.push({
       factoryId: factory.id,
       articleCode: article.value,
@@ -143,6 +159,7 @@ export function fabricBookFor(
       constructionMapped: construction.mapped,
       compositionMapped: composition.mapped,
       possibleEndProducts: endProductsFromCloth(construction.value, composition.value),
+      citations,
     });
   }
 

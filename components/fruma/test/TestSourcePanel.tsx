@@ -232,6 +232,16 @@ export function TestSourcePanel({
                         {fabric.colourAsWritten ? ` · ${fabric.colourAsWritten}` : ""}
                       </span>
                       <em>can become {fabric.possibleEndProducts.join(" · ")}</em>
+                      {fabric.citations && fabric.citations.length > 0 ? (
+                        <ul className="tc-cite">
+                          {fabric.citations.slice(0, 4).map((c) => (
+                            <li key={`${c.field}-${c.row}-${c.column}`}>
+                              {c.sheet}!{c.column}
+                              {c.row} · “{c.header}” = {c.sourceValue}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -239,7 +249,19 @@ export function TestSourcePanel({
                   {mill.answerability.map((row) => (
                     <li key={row.requirementId}>
                       <em>{row.result}</em>
-                      <span>{row.note}</span>
+                      <span>
+                        {row.note}
+                        {row.citations && row.citations.length > 0 ? (
+                          <ul className="tc-cite">
+                            {row.citations.slice(0, 3).map((c) => (
+                              <li key={`${row.requirementId}-${c.field}-${c.row}-${c.column}`}>
+                                {c.sheet}!{c.column}
+                                {c.row} · “{c.header}” = {c.sourceValue}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </span>
                     </li>
                   ))}
                 </ul>
