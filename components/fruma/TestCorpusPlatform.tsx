@@ -17,10 +17,11 @@ import type { HangerDialect } from "@/lib/fruma/test-corpus/types";
 import { TestOverviewPanel } from "@/components/fruma/test/TestOverviewPanel";
 import { TestSourcePanel } from "@/components/fruma/test/TestSourcePanel";
 import { TestClothPanel } from "@/components/fruma/test/TestClothPanel";
+import { TestPilotPanel } from "@/components/fruma/test/TestPilotPanel";
 
-type Tab = "overview" | "brands" | "factories" | "hangers" | "lab" | "source";
+type Tab = "overview" | "brands" | "factories" | "hangers" | "lab" | "source" | "pilot";
 
-const TABS: Tab[] = ["overview", "brands", "factories", "hangers", "lab", "source"];
+const TABS: Tab[] = ["overview", "brands", "factories", "hangers", "lab", "source", "pilot"];
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as string[]).includes(value);
@@ -462,6 +463,7 @@ export function TestCorpusPlatform() {
           {(
             [
               ["overview", "Overview"],
+              ["pilot", "Pilot"],
               ["source", "Source"],
               ["brands", "Brands"],
               ["factories", "Factories"],
@@ -493,6 +495,7 @@ export function TestCorpusPlatform() {
             onOpenLab={() => setTab("lab")}
           />
         ) : null}
+        {tab === "pilot" ? <TestPilotPanel /> : null}
         {tab === "source" ? <TestSourcePanel brandId={brandId} setBrandId={setBrandId} /> : null}
         {tab === "brands" ? (
           <BrandsPanel

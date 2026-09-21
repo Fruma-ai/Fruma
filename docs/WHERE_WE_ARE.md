@@ -4,7 +4,7 @@ Snapshot for Owen (CTO). Measured on `main` (`11e8425`) plus findings already ru
 
 ## Verdict
 
-Fruma is an **architecture-approved prototype** with a **real mill-file ingest engine** and a **choreographed customer demo**. It is **not enterprise ready**. Dummy brands and mill fabric books are performing their job: they exposed that “ingests without throwing” is not the same as “searchable mill cloth,” and that mill files are **fabrics and materials**, not product hangers. The mass of that cloth is what tells a brand which end products can actually be made.
+Fruma is an **architecture-approved prototype** with a **real mill-file ingest engine**, a **Test Pilot vertical slice** (XLSX → confirm map → cited shortlist), and a **choreographed customer demo**. It is **not enterprise ready**. Dummy brands and mill fabric books are performing their job: they exposed that “ingests without throwing” is not the same as “searchable mill cloth,” and that mill files are **fabrics and materials**, not product hangers. The mass of that cloth is what tells a brand which end products can actually be made.
 
 The product position gets stronger by **deepening that spine** (map → retrieve → evidence → confirm), not by adding rooms, dashboards, or more dummy factories.
 

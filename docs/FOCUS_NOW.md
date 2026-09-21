@@ -2,7 +2,7 @@
 
 Dummy brands/factories are on `/app/test`. Demo agents in `/app` are still **UI choreography**. Status, measured corpus results, and next decisions: **`docs/WHERE_WE_ARE.md`**.
 
-Test UI now has **Overview health**, **dialect playbooks**, **Cloth mill books**, and **Source matching fabrics that can become an end product**. Use those. The next work is still the data + job spine — only on Test until you say promote.
+Test UI now has **Pilot** (workbook → confirm map → cited shortlist), **Overview health**, **dialect playbooks**, **Cloth mill books**, and **Source** matching fabrics that can become an end product. Use those. The next work is still the data + job spine — only on Test until you say promote.
 
 ## Protect production / demo
 
@@ -16,14 +16,14 @@ Use Test for all experiments. Preview deployments on feature branches are also s
 
 ## Focus order (do this next)
 
-### 1. Harness the test corpus (Lab ingest is live; coverage is now visible)
+### 1. Walk the Pilot slice on Test
+`/app/test?tab=pilot` deposits a realistic mill XLSX, confirms dialect headers, and shortlists navy polo cloth **with cell citations**. This is the sellability path — not more agent chrome. Replace the fixture with a real mill workbook when you have one.
+
+### 2. Harness the test corpus (Lab ingest is live; coverage is now visible)
 Lab ingest on Test is real. Overview scores all 50 mill fabric books: **`pl-fleece` starts dark** because `Art.` is not an article alias. Confirm the Polish fleece playbook to recover those mills. Unmapped headers show as mapping work, not “no exceptions”. See `docs/WHERE_WE_ARE.md`.
 
-### 2. First bounded agent: Mapping
-On `main` this is still types only (`lib/fruma/agent-runtime.ts`). On PR #34 it is live: lexicon proposals for the 19 silent headers, confirm required, no invented fields. Merge #34 instead of rewriting.
-
-### 3. Brand retrieval on Test data
-On PR #34: structured shortlist (12 mills), private preferred/proven reorder, exclusions hidden, named colour = MUST. Next after merge: **commercial freshness** (fabric-book MOQ/lead historical until mill-confirmed), then Brief as step 0.
+### 3. Source shortlist with citations
+Source already ranks mill fabric books for an end product. Matched fabrics and answerability now cite mill cells (sheet / column / row / header / value). Keep commercials historical until mill-confirmed.
 
 ### 4. Persist the spine (when local in-memory is not enough)
 Postgres + object storage + job queue for the same path above. One real mill workbook + one brand is enough for the first production vertical slice. Owen says **Postgres**. See `docs/PLATFORM_REVIEW.md`.
@@ -41,5 +41,5 @@ Copy accepted behaviour into `/app`. Owen says **Promote**. Leave the fifty-fact
 
 ## Your job vs the agent’s job
 
-**You decide:** merge #34, pilot brand/mill, Postgres, Promote, secrets/hosting.  
+**You decide:** merge PRs, pilot brand/mill workbook, Postgres, Promote, secrets/hosting.  
 **Agent implements:** branches, PRs, Test-only experiments, then Demo promotion on request.
