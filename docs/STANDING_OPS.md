@@ -57,7 +57,7 @@ In order from `FOCUS_NOW.md` (skip if already done):
 5. Docs/findings updates after each agent run
 6. Stop and ask before: Postgres, Demo promotion, real mill file ingest, public API changes
 
-Default next pull if FOCUS is stale: **Continuity/Evidence polish**, else ask Owen before Postgres / Demo promote.
+Default next pull if FOCUS is stale: **ask Owen before Postgres / Demo promote** (Test agent loop is complete on PR #33).
 
 ## What “done” looks like for a steward turn
 

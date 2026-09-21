@@ -32,9 +32,15 @@ Standing ops: `docs/STANDING_OPS.md` · CTO brief: `docs/CTO_NORTH_STAR.md`
 
 ## Next steward pulls
 
-1. Continuity/Evidence polish from test failures (if any)
-2. Ask Owen before Postgres / Demo promote  
+1. ~~Continuity/Evidence polish~~ — 81 tests green on steward turn 2026-09-21; no failures to polish
+2. **Ask Owen:** merge draft PR #33 and/or **Promote** / **Postgres** (steward stops here per STANDING_OPS)
 
 ## How Owen uses this
 
 `/app/test?tab=agents` → pick brand for 3–5, or Continuity with **All brands**, or hit **6. All brands**. Merge draft PRs when ready.
+
+### Steward turn 2026-09-21
+- Confirmed FOCUS items 1–3 done (multi-brand, colour MUST, multi-brand Continuity)
+- `npm test`: **81 pass / 0 fail**
+- No Demo changes
+- Next gate is Owen-owned (merge / Promote / Postgres)
