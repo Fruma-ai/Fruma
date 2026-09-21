@@ -1,4 +1,5 @@
 import type { StandardField } from "../ingest/types";
+import type { FieldCitation } from "../pilot/citations";
 import { TEST_BRANDS } from "../test-corpus/brands";
 import { TEST_FACTORIES, factoryById } from "../test-corpus/factories";
 import { TEST_LINKS, TEST_PRODUCTS } from "../test-corpus/products";
@@ -53,7 +54,7 @@ export type SourceCandidate = {
   eligibility: "eligible" | "ineligible" | "unknown";
   retrievalScore: number;
   colourMatch: "match" | "mismatch" | "open";
-  answerability: { requirementId: string; result: Answerability; note: string }[];
+  answerability: { requirementId: string; result: Answerability; note: string; citations: FieldCitation[] }[];
   evidence: EvidenceFlag[];
   commercials: { moqM: number; leadWeeks: number; freshness: "historical" };
   excluded: false;
@@ -204,27 +205,59 @@ function answerFor(
   coverage: ReturnType<typeof scoreFactoryCoverage>,
   colour: string | null,
   overlays: Record<string, StandardField> | undefined,
-  matchingFabricCount: number,
-): { requirementId: string; result: Answerability; note: string } {
+  matchedFabrics: FabricQuality[],
+): { requirementId: string; result: Answerability; note: string; citations: FieldCitation[] } {
+  const cite = (fields: StandardField[]) =>
+    matchedFabrics.flatMap((f) => (f.citations ?? []).filter((c) => fields.includes(c.field))).slice(0, 6);
+
   if (req.field === "geography") {
     const ukEu = factory.markets.includes("UK") || factory.markets.includes("EU");
     return {
       requirementId: req.id,
       result: ukEu ? "on-file" : "missing",
       note: `${factory.country} · ${factory.markets.join("/")}`,
+      citations: [],
     };
   }
   if (req.field === "colour") {
     if (req.kind === "OPEN") {
-      return { requirementId: req.id, result: "needs-confirm", note: "Colour left OPEN — no default invented." };
+      return {
+        requirementId: req.id,
+        result: "needs-confirm",
+        note: "Colour left OPEN — no default invented.",
+        citations: [],
+      };
     }
     if (coverage.unmappedHeaders.some((h) => /colou?r/i.test(h))) {
-      return { requirementId: req.id, result: "unmapped", note: "Colour column is not on the Fruma standard yet." };
+      return {
+        requirementId: req.id,
+        result: "unmapped",
+        note: "Colour column is not on the Fruma standard yet.",
+        citations: [],
+      };
+    }
+    if (colour && matchedFabrics.some((f) => f.colourAsWritten.toLowerCase().includes(colour))) {
+      return {
+        requirementId: req.id,
+        result: "on-file",
+        note: `A mill colourway includes ${colour} as written.`,
+        citations: cite(["colour", "article"]),
+      };
     }
     if (colour && rowHasColour(factory, colour, overlays)) {
-      return { requirementId: req.id, result: "on-file", note: `A mill colourway includes ${colour} as written.` };
+      return {
+        requirementId: req.id,
+        result: "on-file",
+        note: `A mill colourway includes ${colour} as written.`,
+        citations: cite(["colour", "article"]),
+      };
     }
-    return { requirementId: req.id, result: "missing", note: `No ${colour} colourway on this fabric book.` };
+    return {
+      requirementId: req.id,
+      result: "missing",
+      note: `No ${colour} colourway on this fabric book.`,
+      citations: [],
+    };
   }
   if (req.field === "moq") {
     const mapped = !coverage.unmappedHeaders.some((h) => /moq|min order/i.test(h));
@@ -232,6 +265,7 @@ function answerFor(
       requirementId: req.id,
       result: mapped ? "needs-confirm" : "unmapped",
       note: "Fabric-book MOQ is historical until the mill reconfirms.",
+      citations: cite(["moq"]),
     };
   }
   if (req.field === "construction") {
@@ -240,29 +274,38 @@ function answerFor(
         requirementId: req.id,
         result: "unmapped",
         note: "Mill is dark until article identity is mapped.",
+        citations: [],
       };
     }
-    if (matchingFabricCount === 0) {
+    if (matchedFabrics.length === 0) {
       return {
         requirementId: req.id,
         result: "missing",
         note: "No mill fabric in this book can become that end product.",
+        citations: [],
       };
     }
     if (coverage.unmappedHeaders.some((h) => /weave|knit|structure/i.test(h))) {
       return {
         requirementId: req.id,
         result: "unmapped",
-        note: `${matchingFabricCount} fabrics match from mill wording; construction column is not on the standard yet.`,
+        note: `${matchedFabrics.length} fabrics match from mill wording; construction column is not on the standard yet.`,
+        citations: cite(["construction", "article"]),
       };
     }
     return {
       requirementId: req.id,
       result: "on-file",
-      note: `${matchingFabricCount} mill fabrics can become this end product.`,
+      note: `${matchedFabrics.length} mill fabrics can become this end product.`,
+      citations: cite(["construction", "article", "composition"]),
     };
   }
-  return { requirementId: req.id, result: "needs-confirm", note: "Needs mill confirmation." };
+  return {
+    requirementId: req.id,
+    result: "needs-confirm",
+    note: "Needs mill confirmation.",
+    citations: [],
+  };
 }
 
 function scoreCandidate(
@@ -316,7 +359,7 @@ function scoreCandidate(
     retrievalScore,
     colourMatch,
     answerability: brief.requirements.map((req) =>
-      answerFor(req, factory, coverage, colour, overlays, matchedFabrics.length),
+      answerFor(req, factory, coverage, colour, overlays, matchedFabrics),
     ),
     evidence: evidenceForFactory(factory, overlays),
     commercials: { moqM: factory.moqM, leadWeeks: factory.leadWeeks, freshness: "historical" },
