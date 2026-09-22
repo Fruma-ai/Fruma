@@ -44,3 +44,9 @@ Standing ops: `docs/STANDING_OPS.md` · CTO brief: `docs/CTO_NORTH_STAR.md`
 - `npm test`: **81 pass / 0 fail**
 - No Demo changes
 - Next gate is Owen-owned (merge / Promote / Postgres)
+
+### Steward turn 2026-09-22
+- Re-checked: PR #33 still **draft**, mergeable, CI + Vercel **green**
+- `npm test`: **81 pass / 0 fail** again
+- No unfinished steward-owned FOCUS items — still waiting on Owen gate
+- Demo untouched
