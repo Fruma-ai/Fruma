@@ -55,3 +55,8 @@ Standing ops: `docs/STANDING_OPS.md` · CTO brief: `docs/CTO_NORTH_STAR.md`
 - Third reconfirm: PR #33 draft + mergeable; CI/Vercel green; **81/81** tests pass
 - Steward-owned backlog still empty — blocked on Owen merge / Promote / Postgres
 - No Demo changes; weekday timer remains armed unless Owen says **Stop**
+
+### Steward turn 2026-09-24
+- Fourth reconfirm: unchanged gate — draft #33 mergeable, CI/Vercel green, **81/81** pass
+- No new steward-owned work; Demo untouched
+- Timer stays on until Owen says **Merge #33** / **Promote** / **Postgres** / **Stop**
