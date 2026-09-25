@@ -60,3 +60,8 @@ Standing ops: `docs/STANDING_OPS.md` · CTO brief: `docs/CTO_NORTH_STAR.md`
 - Fourth reconfirm: unchanged gate — draft #33 mergeable, CI/Vercel green, **81/81** pass
 - No new steward-owned work; Demo untouched
 - Timer stays on until Owen says **Merge #33** / **Promote** / **Postgres** / **Stop**
+
+### Steward turn 2026-09-25
+- Fifth reconfirm: PR #33 still draft/mergeable; CI + Vercel green; **81/81** pass
+- FOCUS_NOW steward items remain complete; Demo frozen
+- Still Owen-gated — same four options as prior turns
