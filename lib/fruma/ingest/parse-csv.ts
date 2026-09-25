@@ -1,7 +1,7 @@
 import { IngestException } from "./exceptions";
-import { resolveHeaderField } from "./header-map";
 import type { SourceCell, StandardField } from "./types";
 import { columnLetter } from "./columns";
+import { resolveHeaderField } from "./header-map";
 
 export function decodeUtf8(bytes: Uint8Array): string {
   if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
@@ -82,7 +82,7 @@ export function parseCsvRecords(text: string): string[][] {
 export function cellsFromTable(
   sheet: string,
   records: string[][],
-  overlays?: Record<string, StandardField>,
+  headerOverlays?: Record<string, StandardField>,
 ): SourceCell[] {
   if (records.length < 2) {
     throw new IngestException(
@@ -97,7 +97,7 @@ export function cellsFromTable(
     for (let c = 0; c < headers.length; c += 1) {
       const header = headers[c] ?? "";
       const sourceValue = record[c] ?? "";
-      const standardField = resolveHeaderField(header, overlays);
+      const standardField = resolveHeaderField(header, headerOverlays);
       cells.push({
         pointer: {
           sheet,
@@ -116,11 +116,11 @@ export function cellsFromTable(
 export function parseCsvBytes(
   filename: string,
   bytes: Uint8Array,
-  overlays?: Record<string, StandardField>,
+  headerOverlays?: Record<string, StandardField>,
 ): SourceCell[] {
   const text = decodeUtf8(bytes);
   if (text.includes("\u0000")) {
     throw new IngestException("uncertain_bytes", "CSV contains NUL bytes.");
   }
-  return cellsFromTable(filename, parseCsvRecords(text), overlays);
+  return cellsFromTable(filename, parseCsvRecords(text), headerOverlays);
 }

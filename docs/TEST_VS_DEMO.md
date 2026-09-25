@@ -41,6 +41,14 @@ Content-Type: application/json
 { "factoryId": "factory-001" }
 ```
 
+Prove all fifty factory dialects land (immutable file → qualities) via the corpus harness:
+
+```
+POST /api/test/ingest
+Content-Type: application/json
+{ "all": true }
+```
+
 ## Rule of promotion
 
 1. Build and verify on `/app/test`

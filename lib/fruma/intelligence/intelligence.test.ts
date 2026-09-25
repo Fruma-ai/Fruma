@@ -15,16 +15,15 @@ describe("test intelligence — coverage and mapping", () => {
     resetHeaderOverlaysForTests();
   });
 
-  it("marks Polish fleece mills dark because Art. is not an article alias", () => {
+  it("lands all six dialects via builtin header map (including Art. → article)", () => {
     const coverage = scoreCorpusCoverage();
     assert.equal(coverage.factoriesTotal, 50);
-    assert.ok(coverage.dark >= 8);
+    assert.equal(coverage.dark, 0);
     const pl = coverage.byDialect.find((d) => d.dialect === "pl-fleece");
     assert.ok(pl);
-    assert.equal(pl.dark, pl.factories);
-    assert.equal(pl.qualities, 0);
-    assert.ok(pl.unmappedHeaders.includes("Art."));
-    assert.ok(coverage.mappingQueue.some((p) => p.header === "Art." && p.proposedField === "article"));
+    assert.equal(pl.dark, 0);
+    assert.ok(pl.qualities > 0);
+    assert.ok(!pl.unmappedHeaders.includes("Art."));
   });
 
   it("keeps Portuguese mills searchable with builtin aliases", () => {
@@ -36,28 +35,26 @@ describe("test intelligence — coverage and mapping", () => {
     assert.deepEqual(pt.unmappedHeaders, []);
   });
 
-  it("does not treat unmapped Italian columns as an empty-article exception", () => {
+  it("maps Italian Weave/Comp. via dialect builtins so qualities are searchable", () => {
     const coverage = scoreCorpusCoverage();
     const it = coverage.byDialect.find((d) => d.dialect === "it-shirting");
     assert.ok(it);
     assert.ok(it.qualities > 0);
-    assert.ok(it.partial === it.factories);
-    assert.ok(it.unmappedHeaders.includes("Weave"));
+    assert.equal(it.dark, 0);
+    assert.ok(!it.unmappedHeaders.includes("Weave"));
   });
 
-  it("recovers Polish mills after the dialect playbook is confirmed", () => {
-    const before = scoreCorpusCoverage();
-    const headers = playbookHeaders(before, "pl-fleece");
-    const overlays = confirmLexiconForHeaders(headers);
-    const after = scoreCorpusCoverage(overlays);
-    const pl = after.byDialect.find((d) => d.dialect === "pl-fleece");
+  it("playbook headers are empty once dialect builtins already cover the mill", () => {
+    const coverage = scoreCorpusCoverage();
+    const headers = playbookHeaders(coverage, "pl-fleece");
+    assert.deepEqual(headers, []);
+    const pl = coverage.byDialect.find((d) => d.dialect === "pl-fleece");
     assert.ok(pl);
     assert.equal(pl.dark, 0);
     assert.ok(pl.qualities > 0);
-    assert.ok(after.dark < before.dark);
   });
 
-  it("applies confirmed overlays inside the ingest engine", () => {
+  it("applies confirmed overlays inside the ingest engine without wiping builtin dialect map", () => {
     const factory = TEST_FACTORIES.find((f) => f.dialect === "pl-fleece")!;
     const ing = new IngestEngine();
     const raw = ing.deposit({
@@ -65,7 +62,7 @@ describe("test intelligence — coverage and mapping", () => {
       filename: factory.filename,
       bytes: hangerBytesFor(factory),
     });
-    assert.equal(raw.qualities.length, 0);
+    assert.ok(raw.qualities.length > 0);
 
     const overlays = confirmLexiconForHeaders(["Art.", "Structure", "GSM", "Colourway", "Customer ref", "Certificate"]);
     const mapped = ing.deposit({

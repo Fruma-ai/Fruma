@@ -11,22 +11,22 @@ export const DIALECT_PLAYBOOKS: {
   {
     dialect: "pl-fleece",
     title: "Polish fleece playbook",
-    why: "Art. is not an article alias. Confirm once; all dark PL mills become searchable.",
+    why: "Dialect builtins already map Art. → article. Playbook is idle unless new silent headers appear.",
   },
   {
     dialect: "it-shirting",
     title: "Italian shirting playbook",
-    why: "Weave / Comp. / Wgt gsm / Min order stay silent. Rows exist; most fields never reach the standard.",
+    why: "Dialect builtins cover Weave / Comp. / Wgt gsm / Min order. Confirm only leftovers.",
   },
   {
     dialect: "tr-knit",
     title: "Turkish knit playbook",
-    why: "Knit type, Fibre, Width cm, MOQ M are mill vocabulary, not Fruma fields, until confirmed.",
+    why: "Dialect builtins cover Knit type, Fibre, Width cm, MOQ M. Confirm only leftovers.",
   },
   {
     dialect: "uk-imperial",
     title: "UK imperial playbook",
-    why: "Weight oz, Width \", MOQ yds need mapping. Units stay as written until a later confirm.",
+    why: "Dialect builtins cover Weight oz, Width \", MOQ yds. Units stay as written.",
   },
 ];
 
