@@ -8,7 +8,7 @@ import { isDestinationSafe } from "../product-truth";
 import { hydrateHeaderOverlaysFromStore, resetWedgeForTests, runWedgeSlice } from "./index";
 import { confirmedHeaderOverlays, resetHeaderOverlaysForTests } from "../intelligence/overlays";
 import { resetPilotEngineForTests } from "../pilot";
-import { TEST_SURFACE } from "../surfaces";
+import { DEMO_SURFACE, TEST_SURFACE } from "../surfaces";
 
 describe("full Test wedge — confirm → lock → persist", () => {
   beforeEach(async () => {
@@ -79,5 +79,17 @@ describe("full Test wedge — confirm → lock → persist", () => {
     const result = await runWedgeSlice();
     assert.ok(!result.locked.facts.some((f) => /GOTS/i.test(String(f.value ?? ""))));
     assert.ok(result.pilot.shortlist.evidence.some((e) => e.code === "organic-not-gots"));
+  });
+
+  it("runs the same wedge on the Demo surface without touching Test overlays", async () => {
+    const demo = await runWedgeSlice({ surface: DEMO_SURFACE, moqM: 310, leadWeeks: 4 });
+    assert.equal(demo.surface, DEMO_SURFACE);
+    assert.equal(demo.pilot.surface, DEMO_SURFACE);
+    assert.equal(demo.confirmation.moqM, 310);
+    assert.ok(demo.locked.lockedSourceId);
+
+    // Test overlays stay empty until a Test wedge runs.
+    assert.equal(Object.keys(confirmedHeaderOverlays(TEST_SURFACE)).length, 0);
+    assert.ok(Object.keys(confirmedHeaderOverlays(DEMO_SURFACE)).length > 0);
   });
 });

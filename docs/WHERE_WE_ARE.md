@@ -12,7 +12,7 @@ The product position gets stronger by **deepening that spine** (map → retrieve
 
 | Surface | Path | What it actually is |
 | --- | --- | --- |
-| **Demo** | `/app` | Customer story. Named agents are **UI timers**. Seeded mills, synthetic channel scores. Do not treat as live intelligence. |
+| **Demo** | `/app` | **Promoted spine** on Source / Confirm / Standardise + Factory Setup (real wedge). Intent / Concept / Development / Channel-ready remain story. Fake catalogue enhancer removed. |
 | **Test** | `/app/test` | 3 brands, 50 mill **fabric books**, 36 intended end products, 150 private links, ~1,400 mill quality rows. Lab ingest is **real**. |
 | **Production site** | `fruma.vercel.app` | Same repo. Founder gate. Apply emails `owen@fruma.ai`. |
 

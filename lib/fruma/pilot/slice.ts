@@ -16,6 +16,7 @@ import {
 } from "../intelligence/fabrics";
 import { TEST_PRODUCTS } from "../test-corpus/products";
 import { TEST_SURFACE } from "../surfaces";
+import type { FrumaVersion } from "../versions";
 import { citationFromCell, formatCitation, type FieldCitation } from "./citations";
 import { PILOT_HEADERS, PILOT_WORKBOOK, pilotWorkbookBytes } from "./workbook";
 
@@ -47,7 +48,7 @@ export type PilotShortlistHit = {
 };
 
 export type PilotSliceResult = {
-  surface: "test";
+  surface: "test" | "demo";
   honesty: string;
   workbook: {
     filename: string;
@@ -80,12 +81,11 @@ export type PilotSliceResult = {
 
 const engines = new Map<string, IngestEngine>();
 
-function engineForSurface(): IngestEngine {
-  const key = TEST_SURFACE;
-  let eng = engines.get(key);
+function engineForSurfaceKey(surface: FrumaVersion): IngestEngine {
+  let eng = engines.get(surface);
   if (!eng) {
     eng = new IngestEngine();
-    engines.set(key, eng);
+    engines.set(surface, eng);
   }
   return eng;
 }
@@ -189,7 +189,10 @@ function proposalsFromDeposit(
   });
 }
 
-function confirmPilotLexicon(headers: string[]): Record<string, StandardField> {
+function confirmPilotLexicon(
+  headers: string[],
+  surface: FrumaVersion,
+): Record<string, StandardField> {
   const batch: Record<string, string> = {};
   for (const header of headers) {
     const proposal = proposeFieldForHeader(header);
@@ -197,8 +200,8 @@ function confirmPilotLexicon(headers: string[]): Record<string, StandardField> {
       batch[header] = proposal.proposedField;
     }
   }
-  if (Object.keys(batch).length === 0) return confirmedHeaderOverlays(TEST_SURFACE);
-  return confirmHeaders(batch, TEST_SURFACE);
+  if (Object.keys(batch).length === 0) return confirmedHeaderOverlays(surface);
+  return confirmHeaders(batch, surface);
 }
 
 function pilotProduct() {
@@ -292,13 +295,17 @@ function citedAnswers(
 }
 
 /**
- * One-shot sellability slice on Test:
+ * One-shot sellability slice:
  * real XLSX → deposit → confirm maps → searchable qualities → evidence-first shortlist with citations.
- * Demo is never touched.
+ * Surface partitions overlays/engines (demo vs test).
  */
-export function runPilotSlice(options?: { skipConfirm?: boolean }): PilotSliceResult {
+export function runPilotSlice(options?: {
+  skipConfirm?: boolean;
+  surface?: FrumaVersion;
+}): PilotSliceResult {
+  const surface = options?.surface ?? TEST_SURFACE;
   const bytes = pilotWorkbookBytes();
-  const eng = engineForSurface();
+  const eng = engineForSurfaceKey(surface);
   const product = pilotProduct();
   const brief = briefFromProduct(product);
 
@@ -311,9 +318,9 @@ export function runPilotSlice(options?: { skipConfirm?: boolean }): PilotSliceRe
   const proposals = proposalsFromDeposit(before.cells);
   const needsConfirm = proposals.some((p) => p.proposedField && !p.alreadyMapped);
 
-  let overlays = confirmedHeaderOverlays(TEST_SURFACE);
+  let overlays = confirmedHeaderOverlays(surface);
   if (!options?.skipConfirm) {
-    overlays = confirmPilotLexicon([...PILOT_HEADERS]);
+    overlays = confirmPilotLexicon([...PILOT_HEADERS], surface);
   }
 
   const after: DepositResult = eng.deposit({
@@ -388,9 +395,11 @@ export function runPilotSlice(options?: { skipConfirm?: boolean }): PilotSliceRe
   });
 
   return {
-    surface: "test",
+    surface,
     honesty:
-      "Pilot fixture workbook — shaped like a real mill fabric book, not a live customer file. Demo stays frozen.",
+      surface === "demo"
+        ? "Promoted Demo wedge — pilot fixture workbook through the real ingest spine. Not a live customer file."
+        : "Pilot fixture workbook — shaped like a real mill fabric book, not a live customer file.",
     workbook: {
       filename: PILOT_WORKBOOK.filename,
       millName: PILOT_WORKBOOK.millName,

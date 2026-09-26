@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import type { FrumaVersion } from "../versions";
+import { TEST_SURFACE } from "../surfaces";
 import {
   getSpineStore,
   type AnonymousMillRequest,
@@ -11,6 +13,7 @@ export type CreateAnonymousRequestInput = {
   millOrgId: string;
   qualityArticle: string;
   millVisible: AnonymousMillRequest["millVisible"];
+  surface?: FrumaVersion;
 };
 
 /**
@@ -23,6 +26,7 @@ export async function createAnonymousMillRequest(
   if (!input.millVisible.category) {
     throw new Error("mill_visible_category_required");
   }
+  const surface = input.surface ?? TEST_SURFACE;
   const request: AnonymousMillRequest = {
     id: `req_${randomUUID()}`,
     brandId: input.brandId,
@@ -33,7 +37,7 @@ export async function createAnonymousMillRequest(
     status: "open",
     createdAt: new Date().toISOString(),
   };
-  await getSpineStore().saveRequest(request);
+  await getSpineStore(surface).saveRequest(request);
   return request;
 }
 
@@ -57,6 +61,7 @@ export type AnswerMillRequestInput = {
   leadWeeks: number;
   available: boolean;
   note?: string;
+  surface?: FrumaVersion;
 };
 
 /**
@@ -66,7 +71,8 @@ export type AnswerMillRequestInput = {
 export async function answerMillRequest(
   input: AnswerMillRequestInput,
 ): Promise<{ request: AnonymousMillRequest; confirmation: MillConfirmation }> {
-  const store = getSpineStore();
+  const surface = input.surface ?? TEST_SURFACE;
+  const store = getSpineStore(surface);
   const snap = await store.load();
   const request = snap.requests.find((r) => r.id === input.requestId);
   if (!request) throw new Error("unknown_request");
@@ -102,8 +108,9 @@ export async function answerMillRequest(
 export async function latestConfirmationFor(
   millOrgId: string,
   qualityArticle: string,
+  surface: FrumaVersion = TEST_SURFACE,
 ): Promise<MillConfirmation | null> {
-  const snap = await getSpineStore().load();
+  const snap = await getSpineStore(surface).load();
   const matches = snap.confirmations
     .filter((c) => c.millOrgId === millOrgId && c.qualityArticle === qualityArticle && c.available)
     .sort((a, b) => b.confirmedAt.localeCompare(a.confirmedAt));

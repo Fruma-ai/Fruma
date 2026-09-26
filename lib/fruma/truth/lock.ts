@@ -7,6 +7,8 @@ import {
   type EvidenceRecord,
 } from "../product-truth";
 import { getSpineStore } from "../persist";
+import type { FrumaVersion } from "../versions";
+import { TEST_SURFACE } from "../surfaces";
 
 export type LockSourceInput = {
   brief: BrandBrief;
@@ -21,6 +23,7 @@ export type LockSourceInput = {
   confirmation: MillConfirmation;
   /** Prior version if re-locking; defaults to 1. */
   priorVersion?: number;
+  surface?: FrumaVersion;
 };
 
 function fact(partial: Omit<ProductTruthFact, "id" | "version"> & { version: number }): ProductTruthFact {
@@ -169,7 +172,8 @@ export async function lockProductSource(input: LockSourceInput): Promise<Product
   if (!input.confirmation.available) {
     throw new Error("cannot_lock_unavailable_quality");
   }
-  const store = getSpineStore();
+  const surface = input.surface ?? TEST_SURFACE;
+  const store = getSpineStore(surface);
   const snap = await store.load();
   const prior = snap.productTruth
     .filter((r) => r.productId === input.brief.productId)

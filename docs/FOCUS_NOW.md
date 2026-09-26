@@ -1,42 +1,27 @@
 # What to focus on now
 
-Dummy brands/factories are on `/app/test`. Demo agents in `/app` are still **UI choreography**. Status: **`docs/WHERE_WE_ARE.md`**.
+**Demo `/app` has been promoted** with the Test vertical wedge (workbook → map → cited shortlist → anonymous mill confirm → locked product truth). The fifty-factory corpus and Lab dialect playbooks stay on `/app/test`. Fake catalogue scale (`FactoryCatalogueEnhancer`) is removed from Demo.
 
-Test UI has **Overview**, **dialect playbooks**, **Cloth**, **Source**, and **Pilot** (shortlist + full wedge). Build only on Test until you say **Promote**.
-
-## Protect production / demo
+## Surfaces
 
 | Surface | Path | Rule |
 | --- | --- | --- |
-| **Demo** | `/app` | Customer story. Frozen until you explicitly promote. |
-| **Test** | `/app/test` | Safe to break. Build the spine here. |
-| **Production site** | `fruma.vercel.app` | Same repo deploy — never merge experimental agent behaviour into Demo until Test is accepted. |
+| **Demo** | `/app` | Promoted spine on Source / Confirm / Standardise + Factory Setup. Intent / Concept / Development / Channel-ready stay story scaffolding. |
+| **Test** | `/app/test` | Corpus, Lab, Overview, dialect playbooks — safe to break. |
+| **Production site** | `fruma.vercel.app` | Same repo deploy. |
 
-## Focus order
+## Do this next
 
-### Done on the Test wedge branch
-1. Unknown-header ingest exceptions (silent columns are mapping work).
-2. Pilot workbook → confirmed map → cited shortlist.
-3. Anonymous mill request + timestamped commercial confirmation.
-4. Locked versioned product-truth record (`product-truth.ts` wired).
-5. Durable spine — file store by default; Postgres when `DATABASE_URL` is set. See `docs/MEMORY_AND_DATABASE.md`.
-
-### Do this next
-1. **Walk the Pilot tab** — Run full wedge on `/app/test?tab=pilot`. Confirm brand is absent from the mill view and commercials flip historical → confirmed.
-2. **One real mill workbook** — replace the pilot fixture with a genuine file; keep Demo frozen.
-3. **Postgres in staging** — set `DATABASE_URL` when maps/confirmations must survive multi-instance deploys.
-4. **Promote** — copy accepted Test behaviour into `/app` only when you say Promote.
+1. **Walk Demo** — `/app` → Source → Run promoted source wedge → Confirm → Standardise. Factory Setup should show real mapped qualities, not 412/1,842 theatre.
+2. **One real mill workbook** — replace the pilot fixture when you have a genuine file.
+3. **Postgres in staging** — set `DATABASE_URL` when maps/confirmations must survive multi-instance deploys (`docs/MEMORY_AND_DATABASE.md`).
+4. **Keep experiments on Test** — new agents, dialects, and corpus work stay under `/app/test` until the next Promote.
 
 ## Explicitly not the focus yet
 
-- MES / factory floor / proto / fit
+- MES / factory floor / proto / fit ownership
 - Live retailer publishing
 - Legal “one-click pass”
 - Broad marketplace dashboards
-- Putting the whole corpus into an LLM prompt
-- Unfreezing Demo without Promote
-
-## Your job vs the agent’s job
-
-**You decide:** real workbook, Postgres hosting, Promote.  
-**Agent implements:** Test-only spine, PRs, then Demo promotion on request.
+- Stuffing the fifty-factory corpus into an LLM prompt
+- Seeding Demo with all 50 Test factories

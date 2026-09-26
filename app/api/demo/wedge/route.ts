@@ -1,20 +1,20 @@
 import { requireTestFounder, testJson } from "@/lib/fruma/intelligence/http-auth";
-import { TEST_SURFACE } from "@/lib/fruma/surfaces";
+import { DEMO_SURFACE } from "@/lib/fruma/surfaces";
 import { getSpineStore, spineBackendKind } from "@/lib/fruma/persist";
 import { resetWedgeForTests, runWedgeSlice } from "@/lib/fruma/wedge";
 
 export const runtime = "nodejs";
 
 /**
- * Test full wedge:
- * workbook → map → shortlist → anonymous mill confirm → locked product truth → durable store.
+ * Promoted Demo wedge — same spine as Test, partitioned under DEMO_SURFACE.
+ * Does not touch the fifty-factory Test corpus.
  */
 export async function GET(request: Request) {
   const who = await requireTestFounder(request);
-  if (!who) return testJson({ error: "Sign in to view the wedge." }, 401);
-  const snap = await getSpineStore(TEST_SURFACE).load();
+  if (!who) return testJson({ error: "Sign in to view the Demo wedge." }, 401);
+  const snap = await getSpineStore(DEMO_SURFACE).load();
   return testJson({
-    surface: TEST_SURFACE,
+    surface: DEMO_SURFACE,
     persistence: { backend: spineBackendKind() },
     counts: {
       headerMaps: snap.headerMaps.length,
@@ -23,13 +23,13 @@ export async function GET(request: Request) {
       productTruth: snap.productTruth.length,
       deposits: snap.deposits.length,
     },
-    honesty: "Durable Test spine.",
+    honesty: "Promoted Demo spine. Fake catalogue enhancer removed.",
   });
 }
 
 export async function POST(request: Request) {
   const who = await requireTestFounder(request);
-  if (!who) return testJson({ error: "Sign in to run the wedge." }, 401);
+  if (!who) return testJson({ error: "Sign in to run the Demo wedge." }, 401);
 
   let body: { reset?: boolean; moqM?: number; leadWeeks?: number } = {};
   try {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     const result = await runWedgeSlice({
       moqM: body.moqM,
       leadWeeks: body.leadWeeks,
-      surface: TEST_SURFACE,
+      surface: DEMO_SURFACE,
     });
     return testJson(result);
   } catch (err) {

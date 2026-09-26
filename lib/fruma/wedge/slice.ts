@@ -12,7 +12,8 @@ import {
   type AnonymousMillRequest,
 } from "../persist";
 import { confirmedHeaderOverlays, confirmHeaders, resetHeaderOverlaysForTests } from "../intelligence/overlays";
-import { TEST_SURFACE } from "../surfaces";
+import { DEMO_SURFACE, TEST_SURFACE } from "../surfaces";
+import type { FrumaVersion } from "../versions";
 import {
   PILOT_WORKBOOK,
   pilotWorkbookBytes,
@@ -26,7 +27,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 export type WedgeSliceResult = {
-  surface: "test";
+  surface: FrumaVersion;
   honesty: string;
   persistence: { backend: "file" | "postgres" };
   pilot: PilotSliceResult;
@@ -45,11 +46,14 @@ export type WedgeSliceResult = {
   };
 };
 
-async function persistPilotArtifacts(pilot: PilotSliceResult): Promise<void> {
-  const store = getSpineStore();
-  const overlays = confirmedHeaderOverlays(TEST_SURFACE);
+async function persistPilotArtifacts(
+  pilot: PilotSliceResult,
+  surface: FrumaVersion,
+): Promise<void> {
+  const store = getSpineStore(surface);
+  const overlays = confirmedHeaderOverlays(surface);
   await store.saveHeaderMap({
-    surface: TEST_SURFACE,
+    surface,
     overlays,
     updatedAt: new Date().toISOString(),
   });
@@ -70,17 +74,18 @@ async function persistPilotArtifacts(pilot: PilotSliceResult): Promise<void> {
 }
 
 /**
- * Full Test wedge:
+ * Full vertical wedge on a surface (test or demo):
  * workbook → map → cited shortlist → anonymous mill request →
  * timestamped confirmation → locked product-truth record → durable spine.
- * Demo is never touched.
  */
 export async function runWedgeSlice(options?: {
   moqM?: number;
   leadWeeks?: number;
+  surface?: FrumaVersion;
 }): Promise<WedgeSliceResult> {
-  const pilot = runPilotSlice();
-  await persistPilotArtifacts(pilot);
+  const surface = options?.surface ?? TEST_SURFACE;
+  const pilot = runPilotSlice({ surface });
+  await persistPilotArtifacts(pilot, surface);
 
   const hit = pilot.shortlist.hits[0];
   if (!hit) throw new Error("wedge_no_shortlist_hit");
@@ -90,6 +95,7 @@ export async function runWedgeSlice(options?: {
     productId: pilot.brief.productId,
     millOrgId: PILOT_WORKBOOK.millOrgId,
     qualityArticle: hit.articleCode,
+    surface,
     millVisible: {
       category: "Polo",
       colour: hit.colourAsWritten || undefined,
@@ -99,7 +105,6 @@ export async function runWedgeSlice(options?: {
   });
 
   const millVisible = millViewOfRequest(brandRequest);
-  // Honesty: mill view must not carry brandId.
   if ("brandId" in (millVisible as object)) {
     throw new Error("brand_leaked_to_mill_view");
   }
@@ -112,7 +117,11 @@ export async function runWedgeSlice(options?: {
     moqM,
     leadWeeks,
     available: true,
-    note: "Pilot mill confirmation — current commercial terms.",
+    surface,
+    note:
+      surface === DEMO_SURFACE
+        ? "Demo mill confirmation — current commercial terms."
+        : "Pilot mill confirmation — current commercial terms.",
   });
 
   const locked = await lockProductSource({
@@ -126,9 +135,9 @@ export async function runWedgeSlice(options?: {
     weightAsWritten: hit.weightAsWritten,
     colourAsWritten: hit.colourAsWritten,
     confirmation,
+    surface,
   });
 
-  // Refresh answerability commercially on the returned pilot copy for UI.
   const refreshedPilot: PilotSliceResult = {
     ...pilot,
     shortlist: {
@@ -161,9 +170,11 @@ export async function runWedgeSlice(options?: {
   };
 
   return {
-    surface: "test",
+    surface,
     honesty:
-      "Full Test wedge with durable spine. Brand stays hidden from the mill view. Demo stays frozen.",
+      surface === DEMO_SURFACE
+        ? "Promoted Demo wedge with durable spine. Brand stays hidden from the mill view. Fake catalogue scale removed."
+        : "Full Test wedge with durable spine. Brand stays hidden from the mill view.",
     persistence: { backend: spineBackendKind() },
     pilot: refreshedPilot,
     request: { brandSide: brandRequest, millVisible },
@@ -180,13 +191,15 @@ export async function runWedgeSlice(options?: {
 }
 
 /** Restore overlays from durable store after a process restart. */
-export async function hydrateHeaderOverlaysFromStore(): Promise<Record<string, string>> {
-  const snap = await getSpineStore().load();
-  const map = snap.headerMaps.find((m) => m.surface === TEST_SURFACE);
+export async function hydrateHeaderOverlaysFromStore(
+  surface: FrumaVersion = TEST_SURFACE,
+): Promise<Record<string, string>> {
+  const snap = await getSpineStore(surface).load();
+  const map = snap.headerMaps.find((m) => m.surface === surface);
   if (!map) return {};
   return confirmHeaders(
     Object.fromEntries(Object.entries(map.overlays).map(([h, f]) => [h, f])),
-    TEST_SURFACE,
+    surface,
   );
 }
 

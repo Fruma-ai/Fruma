@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 
 async function persistOverlays() {
   const overlays = confirmedHeaderOverlays(TEST_SURFACE);
-  await getSpineStore().saveHeaderMap({
+  await getSpineStore(TEST_SURFACE).saveHeaderMap({
     surface: TEST_SURFACE,
     overlays,
     updatedAt: new Date().toISOString(),
@@ -39,7 +39,7 @@ function isDialect(value: string): value is HangerDialect {
 export async function GET(request: Request) {
   const who = await requireTestFounder(request);
   if (!who) return testJson({ error: "Sign in to view mapping overlays." }, 401);
-  await hydrateHeaderOverlaysFromStore();
+  await hydrateHeaderOverlaysFromStore(TEST_SURFACE);
   const overlays = confirmedHeaderOverlays(TEST_SURFACE);
   return testJson({
     surface: TEST_SURFACE,

@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   if (!who) return testJson({ error: "Sign in to view confirmations." }, 401);
   const url = new URL(request.url);
   const view = url.searchParams.get("view") ?? "brand";
-  const snap = await getSpineStore().load();
+  const snap = await getSpineStore(TEST_SURFACE).load();
   if (view === "mill") {
     return testJson({
       surface: TEST_SURFACE,

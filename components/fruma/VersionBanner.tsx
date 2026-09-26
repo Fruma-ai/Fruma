@@ -8,8 +8,8 @@ export function VersionBanner({ version }: { version: FrumaVersion }) {
   const other = FRUMA_VERSIONS[version === "demo" ? "test" : "demo"];
   const freeze =
     version === "demo"
-      ? "Frozen for customers. Do not experiment here — use Test."
-      : "Safe to break. Demo stays untouched until you promote.";
+      ? "Promoted spine live on Source / Confirm / Standardise + Factory Setup. Experiments still belong on Test."
+      : "Safe to break. Promote accepted behaviour into Demo when ready.";
 
   return (
     <div className={`fv-banner fv-${version}`} role="status">

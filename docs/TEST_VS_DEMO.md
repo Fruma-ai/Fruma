@@ -4,42 +4,33 @@ Fruma keeps two surfaces so engineering work does not quietly rewrite the custom
 
 | Version | Path | Purpose |
 | --- | --- | --- |
-| **Demo** | `/app` | Customer-facing story. Update only when the test corpus behaviour is accepted. |
+| **Demo** | `/app` | Customer-facing story **with promoted spine** (real wedge on Source / Confirm / Standardise + Factory Setup). |
 | **Test** | `/app/test` | Three dummy brands + fifty mills with private fabric/material CSVs. Safe to break. |
 
-## Environment protection (do not skip)
+## Environment protection
 
-1. **Build only on Test** — agents, ingest, mapping, retrieval experiments live under `/app/test` and `/api/test/*`.
-2. **Demo is frozen by policy** — do not change `CustomerDemoPlatformV3` or demo data until you explicitly ask to promote.
-3. **Separate server memory** — mill ingest engines are partitioned by `X-Fruma-Version` / surface (`demo` vs `test`). Test deposits never share the Demo engine.
+1. **Experiments stay on Test** — corpus, Lab, dialect playbooks, new agents under `/app/test` and `/api/test/*`.
+2. **Demo spine is promoted, not frozen** — Source / Confirm / Standardise call `/api/demo/wedge` on `DEMO_SURFACE`. Intent / Concept / Development / Channel-ready remain narrative scaffolding.
+3. **Separate server memory** — mill ingest engines and durable spine dirs are partitioned by surface (`demo` vs `test`).
 4. **Separate browser memory** — `localStorage` keys are namespaced `fruma:demo:*` / `fruma:test:*`.
-5. **Test APIs require login** — `/api/test/*` returns 401 without a founder session (same gate as `/app`).
+5. **APIs require login** — `/api/test/*` and `/api/demo/*` return 401 without a founder session.
 6. **Preview branches** — Vercel preview URLs for feature PRs are sandboxes. Production (`fruma.vercel.app`) only changes when merges land on `main`.
-7. **Promotion is manual** — when Test feels right, tell the agent to promote accepted behaviour into Demo. Until then Demo stays the customer story.
+7. **Further promotion is still manual** — when the next Test behaviour is accepted, say **Promote** again.
 
-See also `docs/FOCUS_NOW.md` for the ordered engineering focus after the dummy corpus, and `docs/WHERE_WE_ARE.md` for measured ingest results and enterprise-readiness status.
+## What was promoted (and what was not)
 
-## Test corpus contents
+**Promoted into Demo**
+- Pilot workbook deposit + header map confirm
+- Cited fabric shortlist (mills file cloth, not garment SKUs)
+- Anonymous mill confirmation with timestamped commercials
+- Locked versioned product-truth record
+- Durable spine (file / optional Postgres)
+- Removal of `FactoryCatalogueEnhancer` fake 12,480-quality catalogue
 
-- **Brands:** Northline Studio, Harbour Standard, Field & Form
-- **Factories:** 50 mills across PT / IT / TR / PL / UK with distinct dialects
-- **Products:** 12 intended end products per brand (36 total)
-- **Links:** 150 brand↔factory relationship rows (tenant-private)
-- **Mill files:** deterministic fabric/material CSV per mill (`lib/fruma/test-corpus/hanger.ts`) — not product SKUs
-
-Download a mill file from the Factories / Cloth / Lab tabs, or (signed-in):
-
-```
-GET /api/test/factories/factory-001/hanger
-```
-
-Run a Test-only ingest from the Lab tab, or:
-
-```
-POST /api/test/ingest
-Content-Type: application/json
-{ "factoryId": "factory-001" }
-```
+**Not promoted**
+- Fifty-factory Test corpus / dialect Lab UI
+- Intent agent choreography (still timers)
+- Channel-ready destination scores (still synthetic)
 
 ## Rule of promotion
 
