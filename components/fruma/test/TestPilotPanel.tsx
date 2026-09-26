@@ -57,7 +57,8 @@ export function TestPilotPanel() {
         <p>
           One realistic mill XLSX through the real ingest engine, then an anonymous mill
           confirmation and a versioned product-truth lock. Maps and deposits persist on the Test
-          spine. Demo stays frozen.
+          spine. The same wedge is promoted on Demo <code>/app</code> (Source → Confirm →
+          Standardise).
         </p>
       </header>
 
