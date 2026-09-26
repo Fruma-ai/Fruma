@@ -6,10 +6,22 @@ import {
   confirmedHeaderOverlays,
 } from "@/lib/fruma/intelligence/overlays";
 import { playbookHeaders } from "@/lib/fruma/intelligence/playbooks";
+import { getSpineStore } from "@/lib/fruma/persist";
+import { hydrateHeaderOverlaysFromStore } from "@/lib/fruma/wedge";
 import { TEST_SURFACE } from "@/lib/fruma/surfaces";
 import type { HangerDialect } from "@/lib/fruma/test-corpus/types";
 
 export const runtime = "nodejs";
+
+async function persistOverlays() {
+  const overlays = confirmedHeaderOverlays(TEST_SURFACE);
+  await getSpineStore(TEST_SURFACE).saveHeaderMap({
+    surface: TEST_SURFACE,
+    overlays,
+    updatedAt: new Date().toISOString(),
+  });
+  return overlays;
+}
 
 const DIALECTS: HangerDialect[] = [
   "pt-standard",
@@ -27,11 +39,13 @@ function isDialect(value: string): value is HangerDialect {
 export async function GET(request: Request) {
   const who = await requireTestFounder(request);
   if (!who) return testJson({ error: "Sign in to view mapping overlays." }, 401);
+  await hydrateHeaderOverlaysFromStore(TEST_SURFACE);
   const overlays = confirmedHeaderOverlays(TEST_SURFACE);
   return testJson({
     surface: TEST_SURFACE,
     overlays,
     coverage: scoreCorpusCoverage(overlays),
+    persistence: { backend: process.env.DATABASE_URL?.trim() ? "postgres" : "file" },
   });
 }
 
@@ -66,10 +80,11 @@ export async function POST(request: Request) {
     return testJson({ error: message }, 400);
   }
 
-  const overlays = confirmedHeaderOverlays(TEST_SURFACE);
+  const overlays = await persistOverlays();
   return testJson({
     surface: TEST_SURFACE,
     overlays,
     coverage: scoreCorpusCoverage(overlays),
+    persistence: { backend: process.env.DATABASE_URL?.trim() ? "postgres" : "file" },
   });
 }

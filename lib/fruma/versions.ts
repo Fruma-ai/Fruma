@@ -11,7 +11,7 @@ export const FRUMA_VERSIONS = {
     label: "Demo",
     path: "/app",
     description:
-      "Customer demo. Frozen until you promote accepted Test behaviour.",
+      "Customer demo with promoted spine — real workbook map, cited shortlist, mill confirm, locked product truth.",
   },
   test: {
     id: "test" as const,

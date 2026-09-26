@@ -153,6 +153,7 @@ describe("SPEC 6 ingest — identity D1", () => {
     assert.ok(!result.qualities.some((q) => /VDA-24/i.test(q.millArticleCode)));
     assert.ok(!result.qualities.some((q) => q.id.startsWith("vda-")));
     assert.ok(!result.qualities.some((q) => q.millArticleCode === ""));
+    assert.equal(result.exceptions.filter((e) => e.code === "unknown_header").length, 0);
   });
 
   it("colourway is a child and width is an attribute — not BaseQuality", () => {
@@ -417,5 +418,55 @@ describe("SPEC 6 ingest — no template fake-success", () => {
     );
     assert.deepEqual(ing.millQualities(MILL), []);
     assert.deepEqual(ing.brandVisibleRows(BRAND), []);
+  });
+});
+
+describe("unknown_header mapping exceptions", () => {
+  it("emits one unknown_header per silent mill column and does not call them empty_article", () => {
+    const csv = [
+      "Art.,Structure,Composition,GSM,Width",
+      "PL-100,BRUSHED FLEECE,100% CO,320,180cm",
+      "PL-200,FRENCH TERRY,CO 95 / EA 5,340,170cm",
+    ].join("\n");
+    const result = engine().deposit({
+      supplierOrgId: MILL,
+      filename: "pl-fleece.csv",
+      bytes: new TextEncoder().encode(csv),
+    });
+    const unknown = result.exceptions.filter((e) => e.code === "unknown_header");
+    const empty = result.exceptions.filter((e) => e.code === "empty_article");
+    assert.equal(result.qualities.length, 0);
+    assert.equal(empty.length, 0);
+    assert.deepEqual(
+      unknown.map((e) => e.message.match(/“([^”]+)”/)?.[1]).sort(),
+      ["Art.", "GSM", "Structure"],
+    );
+    assert.ok(unknown.every((e) => e.message.includes("Mapping work")));
+    assert.ok(unknown.every((e) => e.pointer?.sheet === "pl-fleece.csv"));
+  });
+
+  it("keeps mapped articles as qualities while unmapped columns stay unknown_header", () => {
+    const csv = [
+      "Fabric No,Weave,Comp.,Color,Min order",
+      "IT-100,POPLIN,100% CO,Navy,200",
+      "IT-200,OXFORD,LINEN 55 / CO 45,White,250",
+    ].join("\n");
+    const result = engine().deposit({
+      supplierOrgId: MILL,
+      filename: "it-shirting.csv",
+      bytes: new TextEncoder().encode(csv),
+    });
+    const unknown = result.exceptions.filter((e) => e.code === "unknown_header");
+    const empty = result.exceptions.filter((e) => e.code === "empty_article");
+    assert.equal(result.qualities.length, 2);
+    assert.deepEqual(
+      result.qualities.map((q) => q.millArticleCode).sort(),
+      ["IT-100", "IT-200"],
+    );
+    assert.equal(empty.length, 0);
+    assert.deepEqual(
+      unknown.map((e) => e.message.match(/“([^”]+)”/)?.[1]).sort(),
+      ["Comp.", "Min order", "Weave"],
+    );
   });
 });

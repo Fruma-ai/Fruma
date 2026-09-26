@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next / tooling
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env*.local
+
+# durable Test spine (file backend)
+.data/
+
+# OS / editor
+.DS_Store
+*.log
+.vercel

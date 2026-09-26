@@ -25,6 +25,7 @@ describe("test intelligence — coverage and mapping", () => {
     assert.equal(pl.qualities, 0);
     assert.ok(pl.unmappedHeaders.includes("Art."));
     assert.ok(coverage.mappingQueue.some((p) => p.header === "Art." && p.proposedField === "article"));
+    assert.equal(coverage.emptyArticleRows, 8);
   });
 
   it("keeps Portuguese mills searchable with builtin aliases", () => {
@@ -43,6 +44,14 @@ describe("test intelligence — coverage and mapping", () => {
     assert.ok(it.qualities > 0);
     assert.ok(it.partial === it.factories);
     assert.ok(it.unmappedHeaders.includes("Weave"));
+    const factory = TEST_FACTORIES.find((f) => f.dialect === "it-shirting")!;
+    const result = new IngestEngine().deposit({
+      supplierOrgId: factory.id,
+      filename: factory.filename,
+      bytes: hangerBytesFor(factory),
+    });
+    assert.equal(result.exceptions.filter((e) => e.code === "empty_article").length, 0);
+    assert.ok(result.exceptions.some((e) => e.code === "unknown_header" && e.message.includes("Weave")));
   });
 
   it("recovers Polish mills after the dialect playbook is confirmed", () => {

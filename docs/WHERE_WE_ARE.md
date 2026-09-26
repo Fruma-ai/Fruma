@@ -1,10 +1,10 @@
 # Where Fruma is — before enterprise ready
 
-Snapshot for Owen (CTO). Measured on `main` (`11e8425`) plus findings already running on draft [PR #34](https://github.com/Fruma-ai/Fruma/pull/34). Demo `/app` is frozen; this is about the Test corpus and the product spine.
+Snapshot for Owen (CTO). Measured on `main` plus the Test full-wedge branch (unknown headers, pilot workbook, mill confirmation, product-truth lock, durable spine). Demo `/app` is frozen; this is about the Test corpus and the product spine.
 
 ## Verdict
 
-Fruma is an **architecture-approved prototype** with a **real mill-file ingest engine** and a **choreographed customer demo**. It is **not enterprise ready**. Dummy brands and mill fabric books are performing their job: they exposed that “ingests without throwing” is not the same as “searchable mill cloth,” and that mill files are **fabrics and materials**, not product hangers. The mass of that cloth is what tells a brand which end products can actually be made.
+Fruma is an **architecture-approved prototype** with a **real mill-file ingest engine**, a **Test Pilot vertical slice** (XLSX → confirm map → cited shortlist), and a **choreographed customer demo**. It is **not enterprise ready**. Dummy brands and mill fabric books are performing their job: they exposed that “ingests without throwing” is not the same as “searchable mill cloth,” and that mill files are **fabrics and materials**, not product hangers. The mass of that cloth is what tells a brand which end products can actually be made.
 
 The product position gets stronger by **deepening that spine** (map → retrieve → evidence → confirm), not by adding rooms, dashboards, or more dummy factories.
 
@@ -12,7 +12,7 @@ The product position gets stronger by **deepening that spine** (map → retrieve
 
 | Surface | Path | What it actually is |
 | --- | --- | --- |
-| **Demo** | `/app` | Customer story. Named agents are **UI timers**. Seeded mills, synthetic channel scores. Do not treat as live intelligence. |
+| **Demo** | `/app` | **Promoted spine** on Source / Confirm / Standardise + Factory Setup (real wedge). Intent / Concept / Development / Channel-ready remain story. Fake catalogue enhancer removed. |
 | **Test** | `/app/test` | 3 brands, 50 mill **fabric books**, 36 intended end products, 150 private links, ~1,400 mill quality rows. Lab ingest is **real**. |
 | **Production site** | `fruma.vercel.app` | Same repo. Founder gate. Apply emails `owen@fruma.ai`. |
 
