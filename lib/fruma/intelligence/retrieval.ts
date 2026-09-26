@@ -56,7 +56,7 @@ export type SourceCandidate = {
   colourMatch: "match" | "mismatch" | "open";
   answerability: { requirementId: string; result: Answerability; note: string; citations: FieldCitation[] }[];
   evidence: EvidenceFlag[];
-  commercials: { moqM: number; leadWeeks: number; freshness: "historical" };
+  commercials: { moqM: number; leadWeeks: number; freshness: "historical" | "confirmed" };
   excluded: false;
   /** Cloth that can become the intended end product. Not mill product SKUs. */
   matchedFabrics: FabricQuality[];

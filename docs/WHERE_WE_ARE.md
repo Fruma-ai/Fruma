@@ -1,6 +1,6 @@
 # Where Fruma is — before enterprise ready
 
-Snapshot for Owen (CTO). Measured on `main` (`11e8425`) plus findings already running on draft [PR #34](https://github.com/Fruma-ai/Fruma/pull/34). Demo `/app` is frozen; this is about the Test corpus and the product spine.
+Snapshot for Owen (CTO). Measured on `main` plus the Test full-wedge branch (unknown headers, pilot workbook, mill confirmation, product-truth lock, durable spine). Demo `/app` is frozen; this is about the Test corpus and the product spine.
 
 ## Verdict
 

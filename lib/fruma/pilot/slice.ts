@@ -70,7 +70,11 @@ export type PilotSliceResult = {
     hits: PilotShortlistHit[];
     answerability: CitedAnswer[];
     evidence: EvidenceFlag[];
-    commercials: { moqAsWritten: string; freshness: "historical"; citations: FieldCitation[] };
+    commercials: {
+      moqAsWritten: string;
+      freshness: "historical" | "confirmed";
+      citations: FieldCitation[];
+    };
   };
 };
 

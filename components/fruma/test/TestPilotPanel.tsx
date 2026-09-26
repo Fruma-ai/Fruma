@@ -2,52 +2,71 @@
 
 import { useState } from "react";
 import type { PilotSliceResult } from "@/lib/fruma/pilot";
+import type { WedgeSliceResult } from "@/lib/fruma/wedge";
+
+type Mode = "pilot" | "wedge";
 
 export function TestPilotPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<PilotSliceResult | null>(null);
+  const [pilot, setPilot] = useState<PilotSliceResult | null>(null);
+  const [wedge, setWedge] = useState<WedgeSliceResult | null>(null);
 
-  async function runSlice(reset = true) {
+  async function run(mode: Mode) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/test/pilot", {
+      const path = mode === "wedge" ? "/api/test/wedge" : "/api/test/pilot";
+      const res = await fetch(path, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-Fruma-Version": "test" },
-        body: JSON.stringify({ reset }),
+        body: JSON.stringify({ reset: true }),
       });
-      const json = (await res.json()) as PilotSliceResult & { error?: string };
+      const json = (await res.json()) as (PilotSliceResult | WedgeSliceResult) & { error?: string };
       if (!res.ok || json.error) {
-        setResult(null);
-        setError(json.error ?? `Pilot failed (${res.status})`);
+        setPilot(null);
+        setWedge(null);
+        setError(json.error ?? `Run failed (${res.status})`);
         return;
       }
-      setResult(json);
+      if (mode === "wedge") {
+        const full = json as WedgeSliceResult;
+        setWedge(full);
+        setPilot(full.pilot);
+      } else {
+        setWedge(null);
+        setPilot(json as PilotSliceResult);
+      }
     } catch (err) {
-      setResult(null);
-      setError(err instanceof Error ? err.message : "Pilot failed");
+      setPilot(null);
+      setWedge(null);
+      setError(err instanceof Error ? err.message : "Run failed");
     } finally {
       setBusy(false);
     }
   }
 
+  const result = pilot;
+
   return (
     <section className="tc-panel">
       <header className="tc-head">
-        <p className="tc-kicker">Pilot · sellability slice · test only</p>
-        <h1>Workbook → confirmed map → cited shortlist.</h1>
+        <p className="tc-kicker">Pilot · full wedge · test only</p>
+        <h1>Workbook → map → confirm → locked truth.</h1>
         <p>
-          One realistic mill XLSX through the real ingest engine. Headers stay unmapped until
-          confirmed. Matching fabrics cite the mill cell — sheet, column, row, header, value as
-          written. Demo stays frozen.
+          One realistic mill XLSX through the real ingest engine, then an anonymous mill
+          confirmation and a versioned product-truth lock. Maps and deposits persist on the Test
+          spine. Demo stays frozen.
         </p>
       </header>
 
-      <div className="tc-lab">
-        <button type="button" className="tc-primary" disabled={busy} onClick={() => void runSlice(true)}>
-          {busy ? "Running slice…" : "Run pilot slice"}
+      <div className="tc-lab" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <button type="button" className="tc-primary" disabled={busy} onClick={() => void run("pilot")}>
+          {busy ? "Running…" : "Run pilot shortlist"}
+        </button>
+        <button type="button" className="tc-primary" disabled={busy} onClick={() => void run("wedge")}>
+          {busy ? "Running…" : "Run full wedge"}
         </button>
       </div>
 
@@ -59,32 +78,32 @@ export function TestPilotPanel() {
 
       {result ? (
         <>
-          <p className="tc-continuity">{result.honesty}</p>
+          <p className="tc-continuity">{wedge?.honesty ?? result.honesty}</p>
 
           <div className="tc-stats tc-stats-six">
             <div>
-              <b>{result.workbook.qualitiesBeforeConfirm}</b>
-              <span>qualities before map</span>
-            </div>
-            <div>
               <b>{result.workbook.qualitiesAfterConfirm}</b>
-              <span>qualities after confirm</span>
+              <span>qualities after map</span>
             </div>
             <div>
               <b>{result.shortlist.matchingFabricCount}</b>
               <span>navy polo fabrics</span>
             </div>
             <div>
-              <b>{result.mapping.proposals.filter((p) => p.proposedField && !p.alreadyMapped).length}</b>
-              <span>headers confirmed</span>
-            </div>
-            <div>
-              <b>{result.shortlist.evidence.filter((e) => e.severity === "block").length}</b>
-              <span>evidence blocks</span>
-            </div>
-            <div>
               <b>{result.shortlist.commercials.freshness}</b>
               <span>commercial freshness</span>
+            </div>
+            <div>
+              <b>{wedge ? "confirmed" : "—"}</b>
+              <span>mill response</span>
+            </div>
+            <div>
+              <b>{wedge?.locked.lockedSourceId ? "locked" : "—"}</b>
+              <span>product truth</span>
+            </div>
+            <div>
+              <b>{wedge?.persistence.backend ?? "—"}</b>
+              <span>spine backend</span>
             </div>
           </div>
 
@@ -97,8 +116,9 @@ export function TestPilotPanel() {
               <code>{result.workbook.sha256.slice(0, 12)}</code>
             </p>
             <p className="tc-muted">
-              Before confirm the article header <code>Art.</code> is unknown — {result.workbook.qualitiesBeforeConfirm}{" "}
-              searchable qualities. After confirm: {result.workbook.qualitiesAfterConfirm}.
+              Before confirm the article header <code>Art.</code> is unknown —{" "}
+              {result.workbook.qualitiesBeforeConfirm} searchable qualities. After confirm:{" "}
+              {result.workbook.qualitiesAfterConfirm}.
             </p>
           </article>
 
@@ -136,8 +156,10 @@ export function TestPilotPanel() {
               <p className="tc-kicker">Cited shortlist · {result.workbook.millName}</p>
               <h2>{result.shortlist.matchingFabricCount} fabrics can become this polo</h2>
               <p className="tc-muted">
-                MOQ {result.shortlist.commercials.moqAsWritten} · {result.shortlist.commercials.freshness} — not
-                current supply terms.
+                MOQ {result.shortlist.commercials.moqAsWritten} · {result.shortlist.commercials.freshness}
+                {result.shortlist.commercials.freshness === "historical"
+                  ? " — not current supply terms."
+                  : " — mill-timestamped."}
               </p>
               <ul className="tc-fabric">
                 {result.shortlist.hits.map((hit) => (
@@ -188,11 +210,61 @@ export function TestPilotPanel() {
               </ul>
             </article>
           </div>
+
+          {wedge ? (
+            <>
+              <article className="tc-card">
+                <p className="tc-kicker">4 · Anonymous mill confirmation</p>
+                <h2>Brand stays off the mill view.</h2>
+                <p className="tc-muted">
+                  Mill sees request <code>{wedge.request.millVisible.id.slice(0, 12)}</code> for{" "}
+                  {wedge.request.millVisible.millVisible.category}
+                  {wedge.request.millVisible.millVisible.colour
+                    ? ` · ${wedge.request.millVisible.millVisible.colour}`
+                    : ""}{" "}
+                  — no brand name.
+                </p>
+                <p>
+                  Confirmed MOQ <b>{wedge.commercials.moqM}m</b> · lead{" "}
+                  <b>{wedge.commercials.leadWeeks}w</b> at{" "}
+                  <code>{wedge.commercials.confirmedAt}</code>. Freshness moved{" "}
+                  {wedge.commercials.before} → {wedge.commercials.after}.
+                </p>
+              </article>
+
+              <article className="tc-card">
+                <p className="tc-kicker">5 · Locked product truth · v{wedge.locked.version}</p>
+                <h2>
+                  Source locked · <code>{wedge.locked.lockedSourceId}</code>
+                </h2>
+                <p className="tc-muted">
+                  {wedge.locked.facts.length} facts on the versioned record. Commercials are{" "}
+                  <code>mill-response</code> / confirmed — not fabric-book history. Spine backend:{" "}
+                  <code>{wedge.persistence.backend}</code>.
+                </p>
+                <ul className="tc-req">
+                  {wedge.locked.facts
+                    .filter((f) =>
+                      ["mill_article", "composition", "moq_m", "lead_weeks", "colour"].includes(f.field),
+                    )
+                    .map((f) => (
+                      <li key={f.id}>
+                        <em>{f.status}</em>
+                        <b>{f.field}</b>
+                        <span>
+                          {String(f.value)} · {f.sourceType}
+                        </span>
+                      </li>
+                    ))}
+                </ul>
+              </article>
+            </>
+          ) : null}
         </>
       ) : (
         <p className="tc-muted">
-          Run the slice to deposit the pilot XLSX, confirm dialect headers, and shortlist navy polo cloth with
-          citations.
+          Run the shortlist or the full wedge to deposit the pilot XLSX, confirm dialect headers,
+          shortlist navy polo cloth with citations, then optionally confirm and lock.
         </p>
       )}
     </section>
