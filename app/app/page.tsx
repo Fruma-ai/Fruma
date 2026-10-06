@@ -13,10 +13,10 @@ export const metadata = {
 };
 
 /**
- * DEMO SURFACE — promoted spine from Test.
- * Source / Confirm / Standardise + Factory Setup run the real wedge
- * (workbook → map → cited shortlist → anon confirm → locked truth).
- * Fake FactoryCatalogueEnhancer removed. Fifty-factory corpus stays on Test.
+ * DEMO SURFACE — one product case.
+ * Brief → cloth from the mill file → anonymous ask → mill answer → lock.
+ * Searching does not confirm commercials or lock product truth.
+ * Fifty-factory corpus stays on Test.
  */
 export default function AppPage() {
   return (

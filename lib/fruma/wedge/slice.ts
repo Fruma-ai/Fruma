@@ -46,7 +46,7 @@ export type WedgeSliceResult = {
   };
 };
 
-async function persistPilotArtifacts(
+export async function persistPilotArtifacts(
   pilot: PilotSliceResult,
   surface: FrumaVersion,
 ): Promise<void> {

@@ -1,21 +1,25 @@
 # What to focus on now
 
-**Demo `/app` has been promoted** with the Test vertical wedge (workbook → map → cited shortlist → anonymous mill confirm → locked product truth). The fifty-factory corpus and Lab dialect playbooks stay on `/app/test`. Fake catalogue scale (`FactoryCatalogueEnhancer`) is removed from Demo.
+Demo `/app` is one product case: **Brief → Cloth → Ask mill → Lock**. The factory side is **Book → Request**. Searching cites cloth from the mill file. It does not answer as the mill or lock product truth. The mill confirms current MOQ and lead. Lock happens only after that, and only if the cloth is available.
+
+The fifty-factory corpus and Lab stay on `/app/test`.
 
 ## Surfaces
 
 | Surface | Path | Rule |
 | --- | --- | --- |
-| **Demo** | `/app` | Promoted spine on Source / Confirm / Standardise + Factory Setup. Intent / Concept / Development / Channel-ready stay story scaffolding. |
-| **Test** | `/app/test` | Corpus, Lab, Overview, dialect playbooks — safe to break. |
+| **Demo** | `/app` | The case above. Sign in, then walk it as the brand and as the mill. |
+| **Test** | `/app/test` | Corpus, Lab, dialect playbooks — safe to break. |
 | **Production site** | `fruma.vercel.app` | Same repo deploy. |
 
 ## Do this next
 
-1. **Walk Demo** — `/app` → Source → Run promoted source wedge → Confirm → Standardise. Factory Setup should show real mapped qualities, not 412/1,842 theatre.
-2. **One real mill workbook** — replace the pilot fixture when you have a genuine file.
-3. **Postgres in staging** — set `DATABASE_URL` when maps/confirmations must survive multi-instance deploys (`docs/MEMORY_AND_DATABASE.md`).
-4. **Keep experiments on Test** — new agents, dialects, and corpus work stay under `/app/test` until the next Promote.
+The next build is the ready item in `docs/agents/QUEUE.json`. A weekday Cursor Automation can pull it; the prompt is `docs/agents/STEWARD.md`.
+
+1. **Mill's own file** — Factory → Book should take a real xlsx/csv, not only the built-in pilot workbook.
+2. **Case survives restart** — after that file works. An open ask should still be there when the process restarts.
+3. **One real mill workbook** — replace the pilot fixture when you have a genuine file.
+4. **Postgres in staging** — set `DATABASE_URL` when maps and confirmations must survive multi-instance deploys (`docs/MEMORY_AND_DATABASE.md`).
 
 ## Explicitly not the focus yet
 
