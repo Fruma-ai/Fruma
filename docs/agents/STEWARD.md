@@ -26,6 +26,7 @@ Implement only that item on the demo case (/app) unless the item says Test. Keep
 - Do not lock product truth before the mill answers, or when the mill marks the cloth unavailable.
 - Organic fibre is not GOTS. Do not invent certificates.
 - Do not add marketplace dashboards, live retailer publishing, MES, or a one-click legal pass.
+- Apparel stage gates live in `lib/fruma/gates.ts` and `docs/STAGE_GATES.md`. A physical gate must not become a ready status or a new room.
 - Experiments that are not part of the item stay on /app/test.
 
 When the item's acceptance checks pass, set that item's status to "done" in QUEUE.json. Leave the next item blocked until a later run. Open a pull request that names the queue id, what changed, and how you verified it.

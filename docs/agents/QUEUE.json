@@ -35,6 +35,17 @@
         "Brand identity still does not appear on the mill request"
       ],
       "blockedBy": ["mill-own-file"]
+    },
+    {
+      "id": "tech-pack-from-record",
+      "status": "open",
+      "title": "Tech pack starts from the locked record: cited cloth facts, measurements left blank",
+      "acceptance": [
+        "A locked case lists fibre, construction, weight, and colour as tech-pack fields with their source",
+        "Measurements, grade, and sew sequence stay empty and marked physical",
+        "Care copy is not invented from fibre"
+      ],
+      "blockedBy": ["mill-own-file"]
     }
   ]
 }

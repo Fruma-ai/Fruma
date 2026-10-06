@@ -2,6 +2,8 @@
 
 Demo `/app` is one product case: **Brief → Cloth → Ask mill → Lock**. The factory side is **Book → Request**. Searching cites cloth from the mill file. It does not answer as the mill or lock product truth. The mill confirms current MOQ and lead. Lock happens only after that, and only if the cloth is available.
 
+Under that case, nine apparel stages stay visible (`docs/STAGE_GATES.md`). Concept, materials, and the content label can clear from factory data. Pattern, sample, cutting, sewing, inspection, and shipping stay on the floor. Do not turn those into rooms.
+
 The fifty-factory corpus and Lab stay on `/app/test`.
 
 ## Surfaces

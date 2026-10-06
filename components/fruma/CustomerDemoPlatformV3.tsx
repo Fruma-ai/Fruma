@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { ArrowRight, Check, CircleAlert, LoaderCircle } from "lucide-react";
+import type { CaseSignals } from "@/lib/fruma/gates";
 import type { DemoCaseView } from "@/lib/fruma/wedge/case";
+import { ProductionGates } from "@/components/fruma/ProductionGates";
 
 type Mode = "brand" | "factory";
 type BrandStep = "brief" | "cloth" | "ask" | "lock";
@@ -34,6 +36,36 @@ async function postCase(body: Record<string, unknown>): Promise<{ case: DemoCase
     throw new Error(json.error ?? `Request failed (${res.status})`);
   }
   return { case: json.case };
+}
+
+function caseSignals(
+  intent: string,
+  colour: (typeof COLOURS)[number],
+  caseView: DemoCaseView | null,
+  selectedArticle: string | null,
+): CaseSignals {
+  const article = caseView?.locked
+    ? caseView.selectedArticle
+    : (selectedArticle ?? caseView?.selectedArticle ?? null);
+  const hit = caseView?.pilot?.shortlist.hits.find((row) => row.articleCode === article);
+  const lockedValue = (field: string) => caseView?.locked?.facts.find((fact) => fact.field === field)?.value ?? "";
+  const cited = (field: string) => Boolean(hit?.citations.some((citation) => citation.field === field && citation.sourceValue));
+  const composition = lockedValue("composition") || hit?.compositionAsWritten || "";
+  const phase = caseView?.phase ?? "empty";
+  return {
+    hasBrief: intent.trim().length > 0,
+    colour: colour === "open" ? "open" : "named",
+    clothCited: phase !== "empty",
+    millAsked: phase === "asked" || phase === "answered" || phase === "locked",
+    millAnswered: phase === "answered" || phase === "locked",
+    clothAvailable: caseView?.confirmation ? caseView.confirmation.available : null,
+    sourceLocked: phase === "locked",
+    compositionOnFile: composition.trim().length > 0,
+    constructionOnFile: Boolean(lockedValue("construction") || hit?.constructionAsWritten),
+    weightOnFile: Boolean(lockedValue("weight") || hit?.weightAsWritten || cited("weight")),
+    widthOnFile: cited("width"),
+    claimGap: /organic/i.test(composition) ? "Organic fibre on the file is not a GOTS claim." : null,
+  };
 }
 
 function fileMoq(caseView: DemoCaseView, article: string | undefined): string {
@@ -125,6 +157,7 @@ export function CustomerDemoPlatformV3() {
   }
 
   const onFile = fileMoq(caseView ?? ({ phase: "empty" } as DemoCaseView), askedArticle ?? undefined);
+  const signals = caseSignals(intent, colour, caseView, selectedArticle);
 
   return (
     <div className={`cd-shell ${mode === "factory" ? "mill" : ""}`}>
@@ -299,6 +332,12 @@ export function CustomerDemoPlatformV3() {
             )
           }
         />
+      ) : null}
+
+      {mode === "brand" ? (
+        <div className="cd-main cd-gates-wrap">
+          <ProductionGates signals={signals} />
+        </div>
       ) : null}
 
       {mode === "factory" && factoryStep === "request" ? (
