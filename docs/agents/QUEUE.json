@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "rule": "Take the single ready item. One item per run. Mark it done only when its acceptance checks pass. Do not open the next item in the same run. Do not add rooms, marketplace dashboards, live retailer publish, MES, or a one-click legal pass.",
+  "items": [
+    {
+      "id": "staged-case-flow",
+      "status": "done",
+      "title": "Brand and mill share one case: brief, cloth, ask, answer, lock",
+      "acceptance": [
+        "Source cites cloth and does not create a mill request, confirmation, or lock",
+        "Named colour is MUST; open colour does not invent navy",
+        "Mill view of the request has no brand id",
+        "Lock is refused until the mill answers, and refused when the mill marks the cloth unavailable"
+      ]
+    },
+    {
+      "id": "mill-own-file",
+      "status": "open",
+      "title": "Factory Book accepts the mill's own xlsx or csv, not only the built-in pilot workbook",
+      "acceptance": [
+        "A mill can drop a file on Factory → Book and see mapped columns plus searchable quality count",
+        "Unknown headers stay exceptions until someone confirms them",
+        "Brand → Find cloth searches that deposit",
+        "MOQ written in the file stays historical until the mill answers a request"
+      ],
+      "blockedBy": []
+    },
+    {
+      "id": "case-survives-restart",
+      "status": "open",
+      "title": "An open demo case reloads after the server process restarts",
+      "acceptance": [
+        "After source → ask, a fresh process still shows the open anonymous request",
+        "Lock still requires the stored mill confirmation",
+        "Brand identity still does not appear on the mill request"
+      ],
+      "blockedBy": ["mill-own-file"]
+    },
+    {
+      "id": "tech-pack-from-record",
+      "status": "open",
+      "title": "Tech pack starts from the locked record: cited cloth facts, measurements left blank",
+      "acceptance": [
+        "A locked case lists fibre, construction, weight, and colour as tech-pack fields with their source",
+        "Measurements, grade, and sew sequence stay empty and marked physical",
+        "Care copy is not invented from fibre"
+      ],
+      "blockedBy": ["mill-own-file"]
+    }
+  ]
+}

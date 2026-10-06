@@ -294,20 +294,54 @@ function citedAnswers(
   });
 }
 
+function withCaseBrief(
+  brief: BrandBrief,
+  options?: { colour?: string | null; intent?: string; productName?: string },
+): BrandBrief {
+  if (!options || (options.colour === undefined && !options.intent && !options.productName)) {
+    return brief;
+  }
+  const requirements =
+    options.colour === undefined
+      ? brief.requirements
+      : brief.requirements.map((req) => {
+          if (req.field !== "colour") return req;
+          const named = options.colour?.trim();
+          if (!named) {
+            return {
+              ...req,
+              kind: "OPEN" as const,
+              value: "unnamed — will not invent a default shade",
+            };
+          }
+          return { ...req, kind: "MUST" as const, label: "Colourway", value: named };
+        });
+  return {
+    ...brief,
+    intent: options.intent?.trim() || brief.intent,
+    productName: options.productName?.trim() || brief.productName,
+    requirements,
+  };
+}
+
 /**
  * One-shot sellability slice:
  * real XLSX → deposit → confirm maps → searchable qualities → evidence-first shortlist with citations.
  * Surface partitions overlays/engines (demo vs test).
+ * Pass `colour: null` to leave colour open. A named colour is MUST and drops non-matching cloth.
  */
 export function runPilotSlice(options?: {
   skipConfirm?: boolean;
   surface?: FrumaVersion;
+  colour?: string | null;
+  intent?: string;
+  productName?: string;
 }): PilotSliceResult {
   const surface = options?.surface ?? TEST_SURFACE;
   const bytes = pilotWorkbookBytes();
   const eng = engineForSurfaceKey(surface);
   const product = pilotProduct();
-  const brief = briefFromProduct(product);
+  const brief = withCaseBrief(briefFromProduct(product), options);
 
   const before: DepositResult = eng.deposit({
     supplierOrgId: PILOT_WORKBOOK.millOrgId,

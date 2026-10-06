@@ -11,7 +11,7 @@ export const FRUMA_VERSIONS = {
     label: "Demo",
     path: "/app",
     description:
-      "Customer demo with promoted spine — real workbook map, cited shortlist, mill confirm, locked product truth.",
+      "One product case: brief, cloth from the mill file, an anonymous ask, then lock only what the mill confirmed.",
   },
   test: {
     id: "test" as const,
