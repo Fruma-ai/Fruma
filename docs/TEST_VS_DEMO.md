@@ -4,13 +4,13 @@ Fruma keeps two surfaces so engineering work does not quietly rewrite the custom
 
 | Version | Path | Purpose |
 | --- | --- | --- |
-| **Demo** | `/app` | Customer-facing story **with promoted spine** (real wedge on Source / Confirm / Standardise + Factory Setup). |
+| **Demo** | `/app` | One case: Brief → Cloth → Ask mill → Lock. Factory side is Book → Request. |
 | **Test** | `/app/test` | Three dummy brands + fifty mills with private fabric/material CSVs. Safe to break. |
 
 ## Environment protection
 
 1. **Experiments stay on Test** — corpus, Lab, dialect playbooks, new agents under `/app/test` and `/api/test/*`.
-2. **Demo spine is promoted, not frozen** — Source / Confirm / Standardise call `/api/demo/wedge` on `DEMO_SURFACE`. Intent / Concept / Development / Channel-ready remain narrative scaffolding.
+2. **Demo is the case, not a storyboard** — Brief, Cloth, Ask, and Lock call `/api/demo/wedge` on `DEMO_SURFACE`. Searching does not answer as the mill or lock the record.
 3. **Separate server memory** — mill ingest engines and durable spine dirs are partitioned by surface (`demo` vs `test`).
 4. **Separate browser memory** — `localStorage` keys are namespaced `fruma:demo:*` / `fruma:test:*`.
 5. **APIs require login** — `/api/test/*` and `/api/demo/*` return 401 without a founder session.
@@ -19,11 +19,10 @@ Fruma keeps two surfaces so engineering work does not quietly rewrite the custom
 
 ## What was promoted (and what was not)
 
-**Promoted into Demo**
-- Pilot workbook deposit + header map confirm
-- Cited fabric shortlist (mills file cloth, not garment SKUs)
-- Anonymous mill confirmation with timestamped commercials
-- Locked versioned product-truth record
+**On Demo**
+- Brief → cited cloth from the pilot workbook (mills file cloth, not garment SKUs)
+- Anonymous mill request, answered by the factory with timestamped commercials
+- Lock only after that answer, and only if the cloth is available
 - Durable spine (file / optional Postgres)
 - Removal of `FactoryCatalogueEnhancer` fake 12,480-quality catalogue
 

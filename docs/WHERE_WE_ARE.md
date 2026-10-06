@@ -1,5 +1,7 @@
 # Where Fruma is — before enterprise ready
 
+Demo `/app` has since become one case: Brief → Cloth → Ask mill → Lock. See `docs/FOCUS_NOW.md`. The notes below are the snapshot from before that.
+
 Snapshot for Owen (CTO). Measured on `main` plus the Test full-wedge branch (unknown headers, pilot workbook, mill confirmation, product-truth lock, durable spine). Demo `/app` is frozen; this is about the Test corpus and the product spine.
 
 ## Verdict
