@@ -1,2 +1,5 @@
-node scripts/architectural-integrity.js
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+node scripts/guard-ledger-architecture.js
 npm test
