@@ -7,9 +7,12 @@ import {
 } from "./idempotency";
 import {
   isSurfaceEnvironment,
+  ledgerSchemaName,
   legacyLedgerMessage,
-  POSTGRES_LEDGER_SCHEMA,
+  postgresLedgerSchema,
+  type LedgerSchemaName,
   type SurfaceEnvironment,
+  LEDGER_TABLES,
 } from "./postgres-schema";
 import type {
   AnonymousMillRequest,
@@ -24,23 +27,31 @@ import type {
 } from "./types";
 
 type Sql = ReturnType<typeof import("postgres")>;
+type LedgerTable = (typeof LEDGER_TABLES)[number];
 
 /**
  * Postgres-backed spine. Requires DATABASE_URL and the `postgres` package.
+ * Each environment is a schema: fruma_demo, fruma_test, or fruma_production.
  * Deposit bytes, source cells, and named grants are insert-only.
  * A repeated deposit_id or byte_hash throws IdempotencyException.
  */
 export class PostgresSpineStore implements SpineStore {
   readonly kind = "postgres" as const;
   readonly surface: SurfaceEnvironment;
+  readonly schemaName: LedgerSchemaName;
   private sql: Sql | null = null;
   private ready: Promise<void> | null = null;
 
   constructor(surface: SurfaceEnvironment) {
     if (!isSurfaceEnvironment(surface)) {
-      throw new Error("surface_environment must be demo, test, or production");
+      throw new Error("surface must be demo, test, or production");
     }
     this.surface = surface;
+    this.schemaName = ledgerSchemaName(surface);
+  }
+
+  private table(sql: Sql, name: LedgerTable) {
+    return sql.unsafe(`"${this.schemaName}"."${name}"`);
   }
 
   private async client(): Promise<Sql> {
@@ -58,11 +69,11 @@ export class PostgresSpineStore implements SpineStore {
   }
 
   private async prepare(sql: Sql): Promise<void> {
-    await sql.unsafe(POSTGRES_LEDGER_SCHEMA);
+    await sql.unsafe(postgresLedgerSchema(this.schemaName));
     const rows = await sql`
       SELECT table_name, column_name
       FROM information_schema.columns
-      WHERE table_schema = 'public'
+      WHERE table_schema = ${this.schemaName}
         AND table_name IN (
           'fruma_header_maps',
           'fruma_mill_requests',
@@ -88,36 +99,30 @@ export class PostgresSpineStore implements SpineStore {
 
   async load(): Promise<SpineSnapshot> {
     const sql = await this.client();
-    const surface = this.surface;
     const [maps, requests, confirmations, truth, deposits, cells, grants, mutations] = await Promise.all([
       sql`
         SELECT surface, overlays, updated_at
-        FROM fruma_header_maps
-        WHERE surface_environment = ${surface}
+        FROM ${this.table(sql, "fruma_header_maps")}
       `,
-      sql`SELECT payload FROM fruma_mill_requests WHERE surface_environment = ${surface}`,
-      sql`SELECT payload FROM fruma_mill_confirmations WHERE surface_environment = ${surface}`,
-      sql`SELECT payload FROM fruma_product_truth WHERE surface_environment = ${surface}`,
+      sql`SELECT payload FROM ${this.table(sql, "fruma_mill_requests")}`,
+      sql`SELECT payload FROM ${this.table(sql, "fruma_mill_confirmations")}`,
+      sql`SELECT payload FROM ${this.table(sql, "fruma_product_truth")}`,
       sql`
         SELECT id, byte_hash, filename, received_at, supplier_org_id, octet_length(bytes) AS byte_length
-        FROM fruma_deposits
-        WHERE surface_environment = ${surface}
+        FROM ${this.table(sql, "fruma_deposits")}
       `,
       sql`
         SELECT id, deposit_id, sheet_name, row_index, col_index, raw_header, source_value, normalized_value
-        FROM fruma_source_cells
-        WHERE surface_environment = ${surface}
+        FROM ${this.table(sql, "fruma_source_cells")}
       `,
       sql`
         SELECT id, mill_org_id, brand_org_id, scope_class, created_at
-        FROM fruma_named_grants
-        WHERE surface_environment = ${surface}
+        FROM ${this.table(sql, "fruma_named_grants")}
       `,
       sql`
         SELECT event_id, source_cell_id, operator_cookie, action_type,
                old_standard_value, new_standard_value, standard_field, occurred_at
-        FROM fruma_cell_mutation_events
-        WHERE surface_environment = ${surface}
+        FROM ${this.table(sql, "fruma_cell_mutation_events")}
         ORDER BY occurred_at, event_id
       `,
     ]);
@@ -141,9 +146,9 @@ export class PostgresSpineStore implements SpineStore {
     this.assertSameSurface(map.surface);
     const sql = await this.client();
     await sql`
-      INSERT INTO fruma_header_maps (surface_environment, surface, overlays, updated_at)
-      VALUES (${this.surface}, ${map.surface}, ${sql.json(map.overlays)}, ${map.updatedAt})
-      ON CONFLICT (surface_environment, surface) DO UPDATE
+      INSERT INTO ${this.table(sql, "fruma_header_maps")} (surface, overlays, updated_at)
+      VALUES (${map.surface}, ${sql.json(map.overlays)}, ${map.updatedAt})
+      ON CONFLICT (surface) DO UPDATE
       SET overlays = EXCLUDED.overlays, updated_at = EXCLUDED.updated_at
     `;
   }
@@ -151,18 +156,18 @@ export class PostgresSpineStore implements SpineStore {
   async saveRequest(request: AnonymousMillRequest): Promise<void> {
     const sql = await this.client();
     await sql`
-      INSERT INTO fruma_mill_requests (surface_environment, id, payload)
-      VALUES (${this.surface}, ${request.id}, ${sql.json(request)})
-      ON CONFLICT (surface_environment, id) DO UPDATE SET payload = EXCLUDED.payload
+      INSERT INTO ${this.table(sql, "fruma_mill_requests")} (id, payload)
+      VALUES (${request.id}, ${sql.json(request)})
+      ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload
     `;
   }
 
   async saveConfirmation(confirmation: MillConfirmation): Promise<void> {
     const sql = await this.client();
     await sql`
-      INSERT INTO fruma_mill_confirmations (surface_environment, id, payload)
-      VALUES (${this.surface}, ${confirmation.id}, ${sql.json(confirmation)})
-      ON CONFLICT (surface_environment, id) DO UPDATE SET payload = EXCLUDED.payload
+      INSERT INTO ${this.table(sql, "fruma_mill_confirmations")} (id, payload)
+      VALUES (${confirmation.id}, ${sql.json(confirmation)})
+      ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload
     `;
   }
 
@@ -171,14 +176,13 @@ export class PostgresSpineStore implements SpineStore {
     try {
       await sql.begin(async (tx) => {
         await tx`
-          INSERT INTO fruma_product_truth (surface_environment, product_id, version, payload)
-          VALUES (${this.surface}, ${record.productId}, ${record.version}, ${tx.json(record)})
-          ON CONFLICT (surface_environment, product_id, version) DO UPDATE SET payload = EXCLUDED.payload
+          INSERT INTO ${this.table(tx, "fruma_product_truth")} (product_id, version, payload)
+          VALUES (${record.productId}, ${record.version}, ${tx.json(record)})
+          ON CONFLICT (product_id, version) DO UPDATE SET payload = EXCLUDED.payload
         `;
         const existing = await tx`
-          SELECT id FROM fruma_product_truth_facts
-          WHERE surface_environment = ${this.surface}
-            AND product_id = ${record.productId}
+          SELECT id FROM ${this.table(tx, "fruma_product_truth_facts")}
+          WHERE product_id = ${record.productId}
             AND version = ${record.version}
         `;
         if (existing.length) {
@@ -195,9 +199,9 @@ export class PostgresSpineStore implements SpineStore {
           }
           if (fact.sourceType === "mill-file" && fact.status === "missing") continue;
           await tx`
-            INSERT INTO fruma_product_truth_facts (
+            INSERT INTO ${this.table(tx, "fruma_product_truth_facts")} (
               id, product_id, version, field, value, source_type,
-              source_cell_id, deposit_id, surface_environment
+              source_cell_id, deposit_id
             )
             VALUES (
               ${fact.id},
@@ -207,8 +211,7 @@ export class PostgresSpineStore implements SpineStore {
               ${fact.value == null ? null : String(fact.value)},
               ${fact.sourceType},
               ${fact.sourceCellId ?? null},
-              ${fact.depositId ?? null},
-              ${this.surface}
+              ${fact.depositId ?? null}
             )
           `;
         }
@@ -228,7 +231,7 @@ export class PostgresSpineStore implements SpineStore {
       await sql.begin(async (tx) => {
         const existing = await tx`
           SELECT id, byte_hash
-          FROM fruma_deposits
+          FROM ${this.table(tx, "fruma_deposits")}
           WHERE id = ${pointer.depositId} OR byte_hash = ${pointer.sha256}
         `;
         const conflict = conflictingDeposit(
@@ -237,15 +240,14 @@ export class PostgresSpineStore implements SpineStore {
         );
         if (conflict) throw depositIdempotencyException(conflict, incoming);
         await tx`
-          INSERT INTO fruma_deposits (
-            id, byte_hash, filename, received_at, surface_environment, supplier_org_id, bytes
+          INSERT INTO ${this.table(tx, "fruma_deposits")} (
+            id, byte_hash, filename, received_at, supplier_org_id, bytes
           )
           VALUES (
             ${pointer.depositId},
             ${pointer.sha256},
             ${pointer.filename},
             ${pointer.receivedAt},
-            ${this.surface},
             ${pointer.supplierOrgId},
             ${Buffer.from(bytes)}
           )
@@ -267,14 +269,14 @@ export class PostgresSpineStore implements SpineStore {
       await sql.begin(async (tx) => {
         for (const cell of cells) {
           const deposit = await tx`
-            SELECT id FROM fruma_deposits
-            WHERE id = ${cell.depositId} AND surface_environment = ${this.surface}
+            SELECT id FROM ${this.table(tx, "fruma_deposits")}
+            WHERE id = ${cell.depositId}
           `;
           if (!deposit.length) {
-            throw new Error(`Deposit ${cell.depositId} is not in surface ${this.surface}.`);
+            throw new Error(`Deposit ${cell.depositId} is not in schema ${this.schemaName}.`);
           }
           const clash = await tx`
-            SELECT id FROM fruma_source_cells
+            SELECT id FROM ${this.table(tx, "fruma_source_cells")}
             WHERE id = ${cell.id}
                OR (
                  deposit_id = ${cell.depositId}
@@ -291,8 +293,8 @@ export class PostgresSpineStore implements SpineStore {
             );
           }
           await tx`
-            INSERT INTO fruma_source_cells (
-              id, deposit_id, sheet_name, row_index, col_index, raw_header, source_value, normalized_value, surface_environment
+            INSERT INTO ${this.table(tx, "fruma_source_cells")} (
+              id, deposit_id, sheet_name, row_index, col_index, raw_header, source_value, normalized_value
             )
             VALUES (
               ${cell.id},
@@ -302,8 +304,7 @@ export class PostgresSpineStore implements SpineStore {
               ${cell.colIndex},
               ${cell.rawHeader},
               ${cell.sourceValue},
-              ${cell.normalizedValue},
-              ${this.surface}
+              ${cell.normalizedValue}
             )
           `;
         }
@@ -320,7 +321,7 @@ export class PostgresSpineStore implements SpineStore {
     const sql = await this.client();
     try {
       await sql.begin(async (tx) => {
-        const existing = await tx`SELECT id FROM fruma_named_grants WHERE id = ${grant.id}`;
+        const existing = await tx`SELECT id FROM ${this.table(tx, "fruma_named_grants")} WHERE id = ${grant.id}`;
         if (existing.length) {
           throw new IdempotencyException(
             "named_grant",
@@ -329,16 +330,15 @@ export class PostgresSpineStore implements SpineStore {
           );
         }
         await tx`
-          INSERT INTO fruma_named_grants (
-            id, mill_org_id, brand_org_id, scope_class, created_at, surface_environment
+          INSERT INTO ${this.table(tx, "fruma_named_grants")} (
+            id, mill_org_id, brand_org_id, scope_class, created_at
           )
           VALUES (
             ${grant.id},
             ${grant.millOrgId},
             ${grant.brandOrgId},
             ${grant.scopeClass},
-            ${grant.createdAt},
-            ${this.surface}
+            ${grant.createdAt}
           )
         `;
       });
@@ -358,16 +358,16 @@ export class PostgresSpineStore implements SpineStore {
     try {
       await sql.begin(async (tx) => {
         const cell = await tx`
-          SELECT id FROM fruma_source_cells
-          WHERE id = ${event.sourceCellId} AND surface_environment = ${this.surface}
+          SELECT id FROM ${this.table(tx, "fruma_source_cells")}
+          WHERE id = ${event.sourceCellId}
         `;
         if (!cell.length) {
           throw new Error(
-            `Source cell ${event.sourceCellId} is not in surface ${this.surface}.`,
+            `Source cell ${event.sourceCellId} is not in schema ${this.schemaName}.`,
           );
         }
         const existing = await tx`
-          SELECT event_id FROM fruma_cell_mutation_events WHERE event_id = ${event.eventId}
+          SELECT event_id FROM ${this.table(tx, "fruma_cell_mutation_events")} WHERE event_id = ${event.eventId}
         `;
         if (existing.length) {
           throw new IdempotencyException(
@@ -377,9 +377,9 @@ export class PostgresSpineStore implements SpineStore {
           );
         }
         await tx`
-          INSERT INTO fruma_cell_mutation_events (
+          INSERT INTO ${this.table(tx, "fruma_cell_mutation_events")} (
             event_id, source_cell_id, operator_cookie, action_type,
-            old_standard_value, new_standard_value, standard_field, occurred_at, surface_environment
+            old_standard_value, new_standard_value, standard_field, occurred_at
           )
           VALUES (
             ${event.eventId},
@@ -389,8 +389,7 @@ export class PostgresSpineStore implements SpineStore {
             ${event.oldStandardValue},
             ${event.newStandardValue},
             ${event.standardField},
-            ${event.occurredAt},
-            ${this.surface}
+            ${event.occurredAt}
           )
         `;
       });
@@ -405,8 +404,8 @@ export class PostgresSpineStore implements SpineStore {
   async getDepositBytes(depositId: string): Promise<Uint8Array | null> {
     const sql = await this.client();
     const rows = await sql`
-      SELECT bytes FROM fruma_deposits
-      WHERE id = ${depositId} AND surface_environment = ${this.surface}
+      SELECT bytes FROM ${this.table(sql, "fruma_deposits")}
+      WHERE id = ${depositId}
     `;
     if (!rows[0]) return null;
     const buf = rows[0].bytes as Buffer;
@@ -415,16 +414,16 @@ export class PostgresSpineStore implements SpineStore {
 
   async reset(): Promise<void> {
     const sql = await this.client();
-    const surface = this.surface;
     await sql.begin(async (tx) => {
-      await tx`DELETE FROM fruma_cell_mutation_events WHERE surface_environment = ${surface}`;
-      await tx`DELETE FROM fruma_source_cells WHERE surface_environment = ${surface}`;
-      await tx`DELETE FROM fruma_named_grants WHERE surface_environment = ${surface}`;
-      await tx`DELETE FROM fruma_deposits WHERE surface_environment = ${surface}`;
-      await tx`DELETE FROM fruma_header_maps WHERE surface_environment = ${surface}`;
-      await tx`DELETE FROM fruma_mill_requests WHERE surface_environment = ${surface}`;
-      await tx`DELETE FROM fruma_mill_confirmations WHERE surface_environment = ${surface}`;
-      await tx`DELETE FROM fruma_product_truth WHERE surface_environment = ${surface}`;
+      await tx`DELETE FROM ${this.table(tx, "fruma_product_truth_facts")}`;
+      await tx`DELETE FROM ${this.table(tx, "fruma_cell_mutation_events")}`;
+      await tx`DELETE FROM ${this.table(tx, "fruma_source_cells")}`;
+      await tx`DELETE FROM ${this.table(tx, "fruma_named_grants")}`;
+      await tx`DELETE FROM ${this.table(tx, "fruma_deposits")}`;
+      await tx`DELETE FROM ${this.table(tx, "fruma_header_maps")}`;
+      await tx`DELETE FROM ${this.table(tx, "fruma_mill_requests")}`;
+      await tx`DELETE FROM ${this.table(tx, "fruma_mill_confirmations")}`;
+      await tx`DELETE FROM ${this.table(tx, "fruma_product_truth")}`;
     });
   }
 

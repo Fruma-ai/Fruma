@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import { resolveActiveCell } from "../ingest/cell-mutations";
 import { FileSpineStore } from "./file-store";
 import { IdempotencyException, conflictingDeposit } from "./idempotency";
-import { legacyLedgerMessage, POSTGRES_LEDGER_SCHEMA } from "./postgres-schema";
+import { legacyLedgerMessage, postgresLedgerSchema } from "./postgres-schema";
 
 const storeSrc = readFileSync(join(import.meta.dirname, "postgres-store.ts"), "utf8");
 
@@ -19,58 +19,73 @@ function methodBody(name: string, next: string): string {
 
 describe("immutable postgres ledger schema", () => {
   it("defines relational deposits, source cells, and named grants", () => {
-    assert.match(storeSrc, /POSTGRES_LEDGER_SCHEMA/);
+    const ddl = postgresLedgerSchema("fruma_test");
+    assert.match(storeSrc, /postgresLedgerSchema/);
     for (const table of [
       "fruma_deposits",
       "fruma_source_cells",
       "fruma_named_grants",
       "fruma_cell_mutation_events",
     ]) {
-      assert.match(POSTGRES_LEDGER_SCHEMA, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+      assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS fruma_test\\.${table}`));
     }
-    assert.match(POSTGRES_LEDGER_SCHEMA, /byte_hash TEXT NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /CONSTRAINT fruma_deposits_byte_hash_key UNIQUE \(byte_hash\)/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /sheet_name TEXT NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /row_index INTEGER NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /col_index INTEGER NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /raw_header TEXT NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /source_value TEXT NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /normalized_value TEXT/);
-    assert.equal(/normalized_value TEXT NOT NULL/.test(POSTGRES_LEDGER_SCHEMA), false);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /mill_org_id TEXT NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /brand_org_id TEXT NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /scope_class TEXT NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /event_id TEXT PRIMARY KEY/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /source_cell_id TEXT NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /operator_cookie TEXT NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /action_type TEXT NOT NULL CHECK \(action_type IN \('map', 'confirm'\)\)/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /old_standard_value TEXT/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /new_standard_value TEXT/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /occurred_at TIMESTAMPTZ NOT NULL/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /CREATE TABLE IF NOT EXISTS fruma_product_truth_facts/);
+    assert.match(ddl, /byte_hash TEXT NOT NULL/);
+    assert.match(ddl, /CONSTRAINT fruma_deposits_byte_hash_key UNIQUE \(byte_hash\)/);
+    assert.match(ddl, /sheet_name TEXT NOT NULL/);
+    assert.match(ddl, /row_index INTEGER NOT NULL/);
+    assert.match(ddl, /col_index INTEGER NOT NULL/);
+    assert.match(ddl, /raw_header TEXT NOT NULL/);
+    assert.match(ddl, /source_value TEXT NOT NULL/);
+    assert.match(ddl, /normalized_value TEXT/);
+    assert.equal(/normalized_value TEXT NOT NULL/.test(ddl), false);
+    assert.match(ddl, /mill_org_id TEXT NOT NULL/);
+    assert.match(ddl, /brand_org_id TEXT NOT NULL/);
+    assert.match(ddl, /scope_class TEXT NOT NULL/);
+    assert.match(ddl, /event_id TEXT PRIMARY KEY/);
+    assert.match(ddl, /source_cell_id TEXT NOT NULL/);
+    assert.match(ddl, /operator_cookie TEXT NOT NULL/);
+    assert.match(ddl, /action_type TEXT NOT NULL CHECK \(action_type IN \('map', 'confirm'\)\)/);
+    assert.match(ddl, /old_standard_value TEXT/);
+    assert.match(ddl, /new_standard_value TEXT/);
+    assert.match(ddl, /occurred_at TIMESTAMPTZ NOT NULL/);
+    assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_product_truth_facts/);
     assert.match(
-      POSTGRES_LEDGER_SCHEMA,
-      /FOREIGN KEY \(source_cell_id, deposit_id\)\s+REFERENCES fruma_source_cells \(id, deposit_id\)/,
+      ddl,
+      /FOREIGN KEY \(source_cell_id, deposit_id\)\s+REFERENCES fruma_test\.fruma_source_cells \(id, deposit_id\)/,
     );
     assert.match(
-      POSTGRES_LEDGER_SCHEMA,
-      /FOREIGN KEY \(deposit_id\) REFERENCES fruma_deposits \(id\)/,
+      ddl,
+      /FOREIGN KEY \(deposit_id\) REFERENCES fruma_test\.fruma_deposits \(id\)/,
     );
-    assert.match(POSTGRES_LEDGER_SCHEMA, /CREATE OR REPLACE VIEW fruma_product_truth_provenance AS/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /INNER JOIN fruma_source_cells c/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /c\.sheet_name/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /c\.row_index/);
-    assert.match(POSTGRES_LEDGER_SCHEMA, /c\.col_index/);
-    assert.equal(POSTGRES_LEDGER_SCHEMA.includes("ON CONFLICT"), false);
-    assert.equal(POSTGRES_LEDGER_SCHEMA.includes("pointer JSONB"), false);
+    assert.match(ddl, /CREATE OR REPLACE VIEW fruma_test\.fruma_product_truth_provenance AS/);
+    assert.match(ddl, /INNER JOIN fruma_test\.fruma_source_cells c/);
+    assert.match(ddl, /INNER JOIN fruma_test\.fruma_deposits d/);
+    assert.match(ddl, /FROM fruma_test\.fruma_product_truth_facts f/);
+    assert.match(ddl, /c\.sheet_name/);
+    assert.match(ddl, /c\.row_index/);
+    assert.match(ddl, /c\.col_index/);
+    assert.equal(ddl.includes("ON CONFLICT"), false);
+    assert.equal(ddl.includes("pointer JSONB"), false);
+    assert.equal(ddl.includes("surface_environment"), false);
   });
 
-  it("requires surface_environment on every table", () => {
-    const tables = POSTGRES_LEDGER_SCHEMA.split("CREATE TABLE IF NOT EXISTS ").slice(1);
-    assert.equal(tables.length, 9);
-    for (const table of tables) {
-      assert.match(table, /surface_environment TEXT NOT NULL CHECK \(surface_environment IN \('demo', 'test', 'production'\)\)/);
+  it("creates each environment schema and keeps the provenance view inside it", () => {
+    for (const schema of ["fruma_demo", "fruma_test", "fruma_production"] as const) {
+      const ddl = postgresLedgerSchema(schema);
+      assert.match(ddl, new RegExp(`CREATE SCHEMA IF NOT EXISTS ${schema}`));
+      assert.match(ddl, new RegExp(`SET search_path TO ${schema}`));
+      const tables = ddl.split("CREATE TABLE IF NOT EXISTS ").slice(1);
+      assert.equal(tables.length, 9);
+      for (const table of tables) {
+        assert.match(table, new RegExp(`^${schema}\\.fruma_`));
+        assert.equal(table.includes("surface_environment"), false);
+      }
+      assert.match(ddl, new RegExp(`CREATE OR REPLACE VIEW ${schema}\\.fruma_product_truth_provenance AS`));
+      for (const other of ["fruma_demo", "fruma_test", "fruma_production"]) {
+        if (other !== schema) assert.equal(ddl.includes(other), false, schema);
+      }
     }
+    assert.throws(() => postgresLedgerSchema("public"), /targetSchema/);
   });
 
   it("inserts deposits, cells, and grants with no ON CONFLICT DO UPDATE", () => {
@@ -93,10 +108,17 @@ describe("immutable postgres ledger schema", () => {
     ]);
     assert.match(legacyLedgerMessage(legacy) ?? "", /mutable JSONB/);
 
-    const current = new Map<string, Set<string>>([
+    const columnGated = new Map<string, Set<string>>([
       ["fruma_deposits", new Set(["id", "byte_hash", "filename", "received_at", "surface_environment", "bytes"])],
       ["fruma_header_maps", new Set(["surface_environment", "surface"])],
       ["fruma_source_cells", new Set(["surface_environment", "id"])],
+    ]);
+    assert.match(legacyLedgerMessage(columnGated) ?? "", /surface_environment/);
+
+    const current = new Map<string, Set<string>>([
+      ["fruma_deposits", new Set(["id", "byte_hash", "filename", "received_at", "bytes"])],
+      ["fruma_header_maps", new Set(["surface", "overlays"])],
+      ["fruma_source_cells", new Set(["id", "source_value"])],
     ]);
     assert.equal(legacyLedgerMessage(current), null);
   });

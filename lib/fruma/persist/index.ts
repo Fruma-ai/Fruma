@@ -32,8 +32,8 @@ function fileRootFor(surface: FrumaVersion): string {
 
 /**
  * File store by default (`.data/fruma-{surface}` or `FRUMA_DATA_DIR/{surface}`).
- * Set DATABASE_URL to use Postgres. Every table is filtered by surface_environment
- * (demo, test, or production). Deposit bytes are insert-only.
+ * Set DATABASE_URL to use Postgres. Demo, test, and production each get a schema
+ * (`fruma_demo`, `fruma_test`, `fruma_production`). Deposit bytes are insert-only.
  */
 export function getSpineStore(surface: FrumaVersion = TEST_SURFACE): SpineStore {
   if (testOverride) return testOverride;
