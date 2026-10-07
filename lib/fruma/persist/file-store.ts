@@ -11,6 +11,7 @@ import type {
   AnonymousMillRequest,
   MillConfirmation,
   PersistedCellMutation,
+  DepositAuditRow,
   PersistedDepositPointer,
   PersistedHeaderMap,
   JoinedSourceCell,
@@ -290,6 +291,19 @@ export class FileSpineStore implements SpineStore {
           a.rowIndex - b.rowIndex ||
           a.colIndex - b.colIndex,
       );
+  }
+
+  async listDepositAudit(): Promise<DepositAuditRow[]> {
+    const snap = await this.readAll();
+    return snap.deposits
+      .map((row) => ({
+        id: row.depositId,
+        filename: row.filename,
+        byte_hash: row.sha256,
+        supplier_org_id: row.supplierOrgId,
+        received_at: row.receivedAt,
+      }))
+      .sort((a, b) => a.received_at.localeCompare(b.received_at) || a.id.localeCompare(b.id));
   }
 
   async reset(): Promise<void> {

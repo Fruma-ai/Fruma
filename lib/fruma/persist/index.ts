@@ -7,6 +7,7 @@ import type { SpineStore } from "./types";
 
 export type {
   AnonymousMillRequest,
+  DepositAuditRow,
   MillConfirmation,
   PersistedCellMutation,
   PersistedDepositPointer,

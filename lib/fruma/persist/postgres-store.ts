@@ -21,6 +21,7 @@ import { reloadEnginesFromDatabase } from "./reload-engines";
 import type {
   AnonymousMillRequest,
   MillConfirmation,
+  DepositAuditRow,
   PersistedDepositPointer,
   PersistedHeaderMap,
   PersistedCellMutation,
@@ -601,6 +602,22 @@ export class PostgresSpineStore implements SpineStore {
       ORDER BY sheet_name ASC, row_index ASC, col_index ASC
     `;
     return rows.map((row) => cellFromRow(row));
+  }
+
+  async listDepositAudit(): Promise<DepositAuditRow[]> {
+    const sql = await this.client();
+    const rows = await sql`
+      SELECT id, filename, byte_hash, supplier_org_id, received_at
+      FROM ${this.table(sql, "fruma_deposits")}
+      ORDER BY received_at ASC, id ASC
+    `;
+    return rows.map((row) => ({
+      id: String(row.id),
+      filename: String(row.filename),
+      byte_hash: String(row.byte_hash),
+      supplier_org_id: String(row.supplier_org_id),
+      received_at: new Date(row.received_at as string | Date).toISOString(),
+    }));
   }
 
   async reset(): Promise<void> {

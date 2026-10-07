@@ -88,6 +88,15 @@ export type SpineSnapshot = {
   cellMutations: PersistedCellMutation[];
 };
 
+/** Deposit audit row. Tracking columns only — the stored file payload is not part of this shape. */
+export type DepositAuditRow = {
+  id: string;
+  filename: string;
+  byte_hash: string;
+  supplier_org_id: string;
+  received_at: string;
+};
+
 /** One immutable source cell plus its append-only mutations, in occurred_at order. */
 export type JoinedSourceCell = {
   cell: PersistedSourceCell;
@@ -119,5 +128,7 @@ export type SpineStore = {
   latestActiveHeaderMap(surface: string): Promise<PersistedHeaderMap | null>;
   /** Source cells for one deposit. Deposit bytes are not read. */
   listDepositSourceCells(depositId: string): Promise<PersistedSourceCell[]>;
+  /** Every deposit in the active schema, tracking columns only. */
+  listDepositAudit(): Promise<DepositAuditRow[]>;
   reset(): Promise<void>;
 };

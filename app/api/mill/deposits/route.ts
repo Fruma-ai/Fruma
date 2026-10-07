@@ -1,11 +1,16 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
-import { handleMillDepositRequest } from "@/lib/fruma/ingest";
+import { handleMillDepositRequest, handleMillDepositsAuditRequest } from "@/lib/fruma/ingest";
 import { depositPointerFrom, sourceCellsFrom } from "@/lib/fruma/ingest/persist-deposit";
 import { getSpineStore, isIdempotencyException } from "@/lib/fruma/persist";
 
 export const runtime = "nodejs";
+
+export async function GET(request: Request) {
+  const outcome = await handleMillDepositsAuditRequest(request);
+  return NextResponse.json(outcome.body, { status: outcome.status });
+}
 
 export async function POST(request: Request) {
   try {

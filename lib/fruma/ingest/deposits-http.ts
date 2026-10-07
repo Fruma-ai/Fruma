@@ -1,5 +1,7 @@
 import { DEMO_COOKIE, sessionFounder } from "../../gate";
 import { toMillDepositResponse, type MillDepositResponse } from "../mill-deposit";
+import type { DepositAuditRow } from "../persist";
+import { getSpineStore } from "../persist";
 import { DEMO_SURFACE, surfaceFromRequest, surfaceMillOrgId } from "../surfaces";
 import type { FrumaVersion } from "../versions";
 import { IngestEngine } from "./engine";
@@ -47,6 +49,45 @@ export type MillDepositHttpResult =
     }
   | { status: 401; body: { error: string } }
   | { status: 400; body: { code: string; message: string } | { error: string } };
+
+export type MillDepositsAuditHttpResult =
+  | { status: 200; surface: FrumaVersion; body: DepositAuditRow[] }
+  | { status: 401; surface: FrumaVersion; body: { error: string } };
+
+const AUDIT_COLUMNS = ["id", "filename", "byte_hash", "supplier_org_id", "received_at"] as const;
+
+function auditPayload(rows: readonly DepositAuditRow[]): DepositAuditRow[] {
+  return rows.map((row) => {
+    if ("bytes" in row || row instanceof Uint8Array) {
+      throw new Error("Mill deposit audit included file bytes.");
+    }
+    const clean: DepositAuditRow = {
+      id: row.id,
+      filename: row.filename,
+      byte_hash: row.byte_hash,
+      supplier_org_id: row.supplier_org_id,
+      received_at: row.received_at,
+    };
+    const keys = Object.keys(clean);
+    if (keys.length !== AUDIT_COLUMNS.length || AUDIT_COLUMNS.some((column) => !keys.includes(column))) {
+      throw new Error("Mill deposit audit included a column outside the tracking set.");
+    }
+    return clean;
+  });
+}
+
+/** Audit trail of factory catalogs on the active schema search path. */
+export async function handleMillDepositsAuditRequest(
+  request: Request,
+): Promise<MillDepositsAuditHttpResult> {
+  const surface = surfaceFromRequest(request);
+  const who = await sessionFounder(cookieNamed(request, DEMO_COOKIE));
+  if (!who) {
+    return { status: 401, surface, body: { error: "Sign in to read mill deposits." } };
+  }
+  const rows = await getSpineStore(surface).listDepositAudit();
+  return { status: 200, surface, body: auditPayload(rows) };
+}
 
 export async function handleMillDepositRequest(request: Request): Promise<MillDepositHttpResult> {
   const who = await sessionFounder(cookieNamed(request, DEMO_COOKIE));
