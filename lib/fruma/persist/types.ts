@@ -143,7 +143,7 @@ export type ActiveProductTruthEvidence = {
 };
 
 export type SpineStore = {
-  kind: "file" | "postgres";
+  kind: "file" | "memory" | "postgres";
   load(): Promise<SpineSnapshot>;
   saveHeaderMap(map: PersistedHeaderMap): Promise<void>;
   saveRequest(request: AnonymousMillRequest): Promise<void>;

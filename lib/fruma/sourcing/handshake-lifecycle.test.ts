@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { DEMO_COOKIE, sessionToken } from "../../gate";
 import { sourceCellId } from "../ingest/cell-mutations";
 import { sha256Hex } from "../ingest/hash";
 import { handleMillQualitiesRequest } from "../ingest/qualities-http";
 import { getSpineStore, setSpineStoreForTests } from "../persist";
+import { assertWorkspaceDataDirUntouched, installDiskFreeSchemas } from "../persist/disk-free";
 import type { Client } from "../persist/reload-engines";
 import { ledgerSchemaName, searchPathStatement } from "../persist/postgres-schema";
 import { surfaceFromRequest, surfaceMillOrgId } from "../surfaces";
@@ -45,34 +43,22 @@ function headerRequest(version: FrumaVersion): Request {
   });
 }
 
-function requestsPath(schemaName: string): string {
-  const version = schemaName.startsWith("fruma_") ? schemaName.slice("fruma_".length) : "";
-  if (!isFrumaVersion(version)) {
-    throw new Error(`mill request ledger is not in schema ${schemaName || "(none)"}`);
-  }
-  const base = process.env.FRUMA_DATA_DIR?.trim();
-  if (!base) throw new Error("FRUMA_DATA_DIR is required for the file handshake ledger");
-  return join(base, version, "fruma_mill_requests.json");
+/** Mill-request rows for one schema. Reset clears the map with the schema store. */
+const millRequests = new Map<string, MillRequestRow[]>();
+
+function readRequestRows(schemaName: string): MillRequestRow[] {
+  return millRequests.get(schemaName) ?? [];
 }
 
-function readRequestFile(schemaName: string): MillRequestRow[] {
-  const path = requestsPath(schemaName);
-  if (!existsSync(path)) return [];
-  return JSON.parse(readFileSync(path, "utf8")) as MillRequestRow[];
-}
-
-function writeRequestFile(schemaName: string, rows: MillRequestRow[]): void {
-  const path = requestsPath(schemaName);
-  mkdirSync(join(path, ".."), { recursive: true });
-  writeFileSync(path, JSON.stringify(rows, null, 2));
+function writeRequestRows(schemaName: string, rows: MillRequestRow[]): void {
+  millRequests.set(schemaName, rows.map((row) => ({ ...row })));
 }
 
 /**
- * File stand-in for a pooled connection whose search_path is one ledger schema.
- * Cells are the spine seeded through reset() and saveSourceCells. Mill requests
- * live in that schema's directory, which reset() deletes.
+ * In-memory stand-in for a pooled connection whose search_path is one ledger schema.
+ * Cells come from that schema's store. Mill requests stay in the schema map.
  */
-function fileSession(surface: FrumaVersion): HandshakeSession {
+function memorySession(surface: FrumaVersion): HandshakeSession {
   let schemaName: string = ledgerSchemaName(surface);
   return {
     async unsafe(query: string, parameters?: readonly unknown[]) {
@@ -106,14 +92,14 @@ function fileSession(surface: FrumaVersion): HandshakeSession {
       }
       if (query.includes("MAX(version)") && query.includes("fruma_mill_requests")) {
         const requestId = String(parameters?.[0] ?? "");
-        const versions = readRequestFile(schemaName)
+        const versions = readRequestRows(schemaName)
           .filter((row) => row.request_id === requestId)
           .map((row) => row.version);
         return [{ version: versions.reduce((max, version) => Math.max(max, version), 0) }];
       }
       if (query.includes("INSERT INTO fruma_mill_requests")) {
         const [documentType, requestId, millOrgId, version, payload] = parameters ?? [];
-        const rows = readRequestFile(schemaName);
+        const rows = readRequestRows(schemaName);
         rows.push({
           document_type: String(documentType),
           request_id: String(requestId),
@@ -121,11 +107,11 @@ function fileSession(surface: FrumaVersion): HandshakeSession {
           version: Number(version),
           payload: typeof payload === "string" ? JSON.parse(payload) : payload,
         });
-        writeRequestFile(schemaName, rows);
+        writeRequestRows(schemaName, rows);
         return [];
       }
       if (query.includes("FROM fruma_mill_requests")) {
-        return readRequestFile(schemaName).sort((a, b) => a.version - b.version);
+        return readRequestRows(schemaName).sort((a, b) => a.version - b.version);
       }
       throw new Error(`Unexpected handshake lifecycle query: ${query}`);
     },
@@ -135,7 +121,7 @@ function fileSession(surface: FrumaVersion): HandshakeSession {
 
 async function openSession(surface: FrumaVersion): Promise<HandshakeSession> {
   const databaseUrl = process.env.DATABASE_URL?.trim();
-  if (!databaseUrl) return fileSession(surface);
+  if (!databaseUrl) return memorySession(surface);
   const postgres = (await import("postgres")).default;
   const schema = ledgerSchemaName(surface);
   const sql = postgres(databaseUrl, {
@@ -239,7 +225,9 @@ function assertAnonymousPayload(row: MillRequestRow, millOrgId: string): void {
 
 describe("anonymous sourcing handshake lifecycle", { concurrency: 1 }, () => {
   afterEach(() => {
+    millRequests.clear();
     setSpineStoreForTests(null);
+    assertWorkspaceDataDirUntouched();
   });
 
   it("writes a pending anonymous request into the schema named by the version header", async () => {
@@ -250,20 +238,18 @@ describe("anonymous sourcing handshake lifecycle", { concurrency: 1 }, () => {
     assert.equal(searchPathStatement("test"), "SET search_path TO fruma_test;");
     assert.equal(searchPathStatement("demo"), "SET search_path TO fruma_demo;");
 
-    const previousDataDir = process.env.FRUMA_DATA_DIR;
-    const isolationDir = mkdtempSync(join(tmpdir(), "fruma-handshake-lifecycle-"));
-    setSpineStoreForTests(null);
-    if (!process.env.DATABASE_URL?.trim()) process.env.FRUMA_DATA_DIR = isolationDir;
+    millRequests.clear();
+    const schemas = installDiskFreeSchemas();
 
     const sessions: HandshakeSession[] = [];
     try {
-      const testLedger = getSpineStore("test");
-      const demo = getSpineStore("demo");
-      assert.notEqual(demo, testLedger);
+      const testLedger = schemas.test;
+      const demo = schemas.demo;
 
       // 1. Clean fruma_test. Demo is cleared so a later empty read is the other schema.
       await demo.reset();
       await testLedger.reset();
+      assertWorkspaceDataDirUntouched();
       const emptied = await testLedger.load();
       assert.equal(emptied.deposits.length, 0);
       assert.equal(emptied.sourceCells.length, 0);
@@ -284,6 +270,7 @@ describe("anonymous sourcing handshake lifecycle", { concurrency: 1 }, () => {
       assert.equal(demoQualities.body[0]?.id, `bq:${surfaceMillOrgId("demo")}:${ARTICLE}`);
       assert.equal(testQualities.body.length, 1);
       assert.equal(demoQualities.body.length, 1);
+      assertWorkspaceDataDirUntouched();
 
       const testSurface = surfaceFromRequest(headerRequest("test"));
       const demoSurface = surfaceFromRequest(headerRequest("demo"));
@@ -306,6 +293,7 @@ describe("anonymous sourcing handshake lifecycle", { concurrency: 1 }, () => {
       assertAnonymousPayload(testRows[0], surfaceMillOrgId("test"));
       const testPayload = JSON.parse(payloadBlob(testRows[0].payload)) as { implementedAt: string };
       assert.equal(testPayload.implementedAt, testHandshake.implementedAt);
+      assertWorkspaceDataDirUntouched();
 
       const demoBefore = await readMillRequests(demoSession);
       assert.deepEqual(demoBefore, []);
@@ -334,11 +322,12 @@ describe("anonymous sourcing handshake lifecycle", { concurrency: 1 }, () => {
         demoRows.some((row) => row.mill_org_id === surfaceMillOrgId("test")),
         false,
       );
+      assertWorkspaceDataDirUntouched();
     } finally {
       for (const session of sessions) await session.close();
-      if (previousDataDir === undefined) delete process.env.FRUMA_DATA_DIR;
-      else process.env.FRUMA_DATA_DIR = previousDataDir;
-      setSpineStoreForTests(null);
+      schemas.close();
+      millRequests.clear();
+      assertWorkspaceDataDirUntouched();
     }
   });
 });

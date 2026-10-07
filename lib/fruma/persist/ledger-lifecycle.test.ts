@@ -1,7 +1,4 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { DEMO_COOKIE, sessionToken } from "../../gate";
 import { handleDesignRefusalsRequest } from "../design/refusals-http";
@@ -12,6 +9,7 @@ import { handleMillQualitiesRequest } from "../ingest/qualities-http";
 import { STANDARD_FIELDS } from "../ingest/types";
 import { confirmedHeaderOverlays, resetHeaderOverlaysForTests } from "../intelligence/overlays";
 import type { ProductTruthRecord } from "../product-truth";
+import { assertWorkspaceDataDirUntouched, installDiskFreeSchemas } from "./disk-free";
 import { IdempotencyException } from "./idempotency";
 import { FileSpineStore, getSpineStore, PostgresSpineStore, setSpineStoreForTests } from "./index";
 import type { SpineStore } from "./types";
@@ -34,16 +32,6 @@ const articleCellId = sourceCellId(DEPOSIT_ID, { sheet: SHEET, row: 2, column: "
 const compositionCellId = sourceCellId(DEPOSIT_ID, { sheet: SHEET, row: 2, column: "B" });
 const weaveCellId = sourceCellId(DEPOSIT_ID, { sheet: SHEET, row: 2, column: "C" });
 
-type HistoryFile = {
-  headerMaps: Array<{
-    surface: string;
-    overlays: Record<string, string>;
-    updatedAt: string;
-    version: number;
-  }>;
-  productTruth: ProductTruthRecord[];
-};
-
 function sessionRequest(path: string, depositId?: string, version = "test"): Request {
   const url = new URL(path, "http://localhost");
   if (depositId) url.searchParams.set("depositId", depositId);
@@ -56,15 +44,15 @@ function sessionRequest(path: string, depositId?: string, version = "test"): Req
   });
 }
 
-/** Answers the reload queries from the file spine as schema fruma_test. */
-function fileSchemaClient(dir: string): Client {
+/** Answers the reload queries from the in-memory fruma_test schema. */
+function memorySchemaClient(store: FileSpineStore): Client {
   return {
     async unsafe(query: string) {
       if (query.includes("current_schema")) return [{ schema_name: "fruma_test" }];
-      const snap = JSON.parse(readFileSync(join(dir, "spine.json"), "utf8")) as HistoryFile;
+      const snap = store.documentRevisions();
       if (query.includes("fruma_header_maps")) {
-        const best = new Map<string, HistoryFile["headerMaps"][number]>();
-        for (const row of snap.headerMaps ?? []) {
+        const best = new Map<string, (typeof snap.headerMaps)[number]>();
+        for (const row of snap.headerMaps) {
           const prev = best.get(row.surface);
           if (!prev || row.version > prev.version) best.set(row.surface, row);
         }
@@ -76,8 +64,8 @@ function fileSchemaClient(dir: string): Client {
         }));
       }
       if (query.includes("fruma_product_truth")) {
-        const best = new Map<string, ProductTruthRecord>();
-        for (const row of snap.productTruth ?? []) {
+        const best = new Map<string, (typeof snap.productTruth)[number]>();
+        for (const row of snap.productTruth) {
           const prev = best.get(row.productId);
           if (!prev || row.version > prev.version) best.set(row.productId, row);
         }
@@ -92,12 +80,15 @@ function fileSchemaClient(dir: string): Client {
   };
 }
 
-async function productTruthHistory(store: SpineStore, dir: string): Promise<ProductTruthRecord[]> {
-  if (store.kind === "file") {
-    const snap = JSON.parse(readFileSync(join(dir, "spine.json"), "utf8")) as HistoryFile;
-    return (snap.productTruth ?? [])
+async function productTruthHistory(store: SpineStore): Promise<ProductTruthRecord[]> {
+  if (store.kind === "memory") {
+    const snap = (store as FileSpineStore).documentRevisions();
+    return snap.productTruth
       .filter((row) => row.productId === PRODUCT_ID)
       .sort((a, b) => a.version - b.version);
+  }
+  if (store.kind !== "postgres") {
+    throw new Error("the lifecycle suite reads product truth from a schema store");
   }
   const postgres = (await import("postgres")).default;
   const sql = postgres(process.env.DATABASE_URL ?? "", {
@@ -122,7 +113,7 @@ async function productTruthHistory(store: SpineStore, dir: string): Promise<Prod
   }
 }
 
-async function reloadTestSchema(store: SpineStore, dir: string) {
+async function reloadTestSchema(store: SpineStore) {
   resetHeaderOverlaysForTests();
   resetEngineCacheForTests();
   if (store.kind === "postgres") {
@@ -139,16 +130,18 @@ async function reloadTestSchema(store: SpineStore, dir: string) {
       await sql.end({ timeout: 5 });
     }
   }
-  return reloadEnginesFromDatabase(fileSchemaClient(dir));
+  if (store.kind !== "memory") {
+    throw new Error("the lifecycle suite reloads from a schema store");
+  }
+  return reloadEnginesFromDatabase(memorySchemaClient(store as FileSpineStore));
 }
 
 describe("schema-isolated append-only ledger lifecycle", { concurrency: 1 }, () => {
-  const dir = mkdtempSync(join(tmpdir(), "fruma-ledger-lifecycle-"));
-
   afterEach(() => {
     setSpineStoreForTests(null);
     resetHeaderOverlaysForTests();
     resetEngineCacheForTests();
+    assertWorkspaceDataDirUntouched();
   });
 
   it("deposits, mutates, versions product truth, reloads, and reads qualities and refusals", async () => {
@@ -158,14 +151,18 @@ describe("schema-isolated append-only ledger lifecycle", { concurrency: 1 }, () 
     assert.equal(ledgerSchemaName("test"), "fruma_test");
     assert.equal(dropSchemaStatement("test"), "DROP SCHEMA IF EXISTS fruma_test CASCADE;");
 
+    assertWorkspaceDataDirUntouched();
     const databaseUrl = process.env.DATABASE_URL?.trim();
     const store: SpineStore = databaseUrl
       ? new PostgresSpineStore("test")
-      : new FileSpineStore(dir);
+      : FileSpineStore.memory();
     setSpineStoreForTests(store);
+    assert.equal(store.kind, databaseUrl ? "postgres" : "memory");
+    assertWorkspaceDataDirUntouched();
 
-    // 1. Clean fruma_test. Postgres reset drops that schema. The file spine resets the test directory.
+    // 1. Clean fruma_test. Postgres reset drops that schema. The memory schema drops its rows.
     await store.reset();
+    assertWorkspaceDataDirUntouched();
     const emptied = await store.load();
     assert.equal(emptied.deposits.length, 0);
     assert.equal(emptied.sourceCells.length, 0);
@@ -220,6 +217,7 @@ describe("schema-isolated append-only ledger lifecycle", { concurrency: 1 }, () 
     const deposited = await store.load();
     assert.equal(deposited.deposits[0]?.sha256, byteHash);
     assert.equal(deposited.sourceCells.length, 3);
+    assertWorkspaceDataDirUntouched();
 
     // 3. The same bytes under a new deposit id are rejected.
     await assert.rejects(
@@ -264,6 +262,7 @@ describe("schema-isolated append-only ledger lifecycle", { concurrency: 1 }, () 
     const mapped = await store.load();
     assert.equal(mapped.sourceCells.find((cell) => cell.id === compositionCellId)?.sourceValue, "100% cotton");
     assert.equal(mapped.cellMutations.length, 2);
+    assertWorkspaceDataDirUntouched();
 
     await store.saveHeaderMap({
       surface: "test",
@@ -312,7 +311,8 @@ describe("schema-isolated append-only ledger lifecycle", { concurrency: 1 }, () 
         },
       ],
     });
-    const history = await productTruthHistory(store, dir);
+    const history = await productTruthHistory(store);
+    assertWorkspaceDataDirUntouched();
     assert.deepEqual(
       history.map((row) => row.version),
       [1, 2],
@@ -328,7 +328,8 @@ describe("schema-isolated append-only ledger lifecycle", { concurrency: 1 }, () 
     assert.equal(current?.facts[0]?.value, "cotton");
 
     // 7. Cold reboot: empty the in-memory caches, then reload from the test schema.
-    const restored = await reloadTestSchema(store, dir);
+    const restored = await reloadTestSchema(store);
+    assertWorkspaceDataDirUntouched();
     assert.equal(restored.productTruth[0]?.version, 2);
     assert.equal(restored.productTruth[0]?.facts[0]?.sourceCellId, compositionCellId);
     assert.equal(confirmedHeaderOverlays("test")["comp."], "composition");
@@ -373,27 +374,27 @@ describe("schema-isolated append-only ledger lifecycle", { concurrency: 1 }, () 
     );
     assert.equal(refusals.body.ignored_mill_headers[0]?.sourceValue, "Twill");
     assert.equal(refusals.body.ignored_mill_headers[0]?.cellId, weaveCellId);
+    assertWorkspaceDataDirUntouched();
   });
 
   it("Enforce Hard Schema Isolation Boundaries", async () => {
     process.env.FRUMA_DEMO_PASSWORD = TEST_PASS;
     process.env.FRUMA_LIFECYCLE_COOKIE = await sessionToken("owen");
 
-    const previousDataDir = process.env.FRUMA_DATA_DIR;
-    const isolationDir = mkdtempSync(join(tmpdir(), "fruma-schema-isolation-"));
-    setSpineStoreForTests(null);
-    if (!process.env.DATABASE_URL?.trim()) process.env.FRUMA_DATA_DIR = isolationDir;
+    const schemas = installDiskFreeSchemas();
 
     try {
       assert.equal(ledgerSchemaName("demo"), "fruma_demo");
       assert.equal(searchPathStatement("demo"), "SET search_path TO fruma_demo;");
       assert.equal(searchPathStatement("test"), "SET search_path TO fruma_test;");
 
-      const demo = getSpineStore("demo");
-      const testLedger = getSpineStore("test");
-      assert.notEqual(demo, testLedger);
+      const demo = schemas.demo;
+      const testLedger = schemas.test;
+      assert.equal(demo, getSpineStore("demo"));
+      assert.equal(testLedger, getSpineStore("test"));
       await demo.reset();
       await testLedger.reset();
+      assertWorkspaceDataDirUntouched();
 
       const bytes = Uint8Array.from([68, 101, 109, 111, 45, 99, 97, 116, 97, 108, 111, 103]);
       const depositId = "dep-demo-catalog";
@@ -464,10 +465,10 @@ describe("schema-isolated append-only ledger lifecycle", { concurrency: 1 }, () 
         demoQualities.body.map((row) => row.millArticleCode),
         ["DEMO-1"],
       );
+      assertWorkspaceDataDirUntouched();
     } finally {
-      if (previousDataDir === undefined) delete process.env.FRUMA_DATA_DIR;
-      else process.env.FRUMA_DATA_DIR = previousDataDir;
-      setSpineStoreForTests(null);
+      schemas.close();
+      assertWorkspaceDataDirUntouched();
     }
   });
 });

@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { DEMO_COOKIE, sessionToken } from "../../gate";
 import { handleDesignSearchRequest } from "../design/search-http";
 import { sourceCellId } from "../ingest/cell-mutations";
 import { sha256Hex } from "../ingest/hash";
-import { getSpineStore, setSpineStoreForTests } from "./index";
+import { assertWorkspaceDataDirUntouched, installDiskFreeSchemas } from "./disk-free";
+import { setSpineStoreForTests } from "./index";
 import { dropSchemaStatement, ledgerSchemaName, searchPathStatement } from "./postgres-schema";
 
 const TEST_PASS = "vector-search-test-password";
@@ -39,6 +37,7 @@ function searchRequest(version: "test" | "demo", cookie: string): Request {
 describe("multi-modal vector search", { concurrency: 1 }, () => {
   afterEach(() => {
     setSpineStoreForTests(null);
+    assertWorkspaceDataDirUntouched();
   });
 
   it("matches a cell inside fruma_test and returns nothing from fruma_demo", async () => {
@@ -51,19 +50,16 @@ describe("multi-modal vector search", { concurrency: 1 }, () => {
     assert.equal(searchPathStatement("demo"), "SET search_path TO fruma_demo;");
     assert.equal(MOCK_EMBEDDING.length, 1536);
 
-    const previousDataDir = process.env.FRUMA_DATA_DIR;
-    const isolationDir = mkdtempSync(join(tmpdir(), "fruma-vector-search-"));
-    setSpineStoreForTests(null);
-    if (!process.env.DATABASE_URL?.trim()) process.env.FRUMA_DATA_DIR = isolationDir;
+    const schemas = installDiskFreeSchemas();
 
     try {
-      const testLedger = getSpineStore("test");
-      const demo = getSpineStore("demo");
-      assert.notEqual(demo, testLedger);
+      const testLedger = schemas.test;
+      const demo = schemas.demo;
 
       // 1. Wipe fruma_test. Demo is cleared first so a later empty read is the isolation boundary.
       await demo.reset();
       await testLedger.reset();
+      assertWorkspaceDataDirUntouched();
       const emptied = await testLedger.load();
       assert.equal(emptied.deposits.length, 0);
       assert.equal(emptied.sourceCells.length, 0);
@@ -109,6 +105,7 @@ describe("multi-modal vector search", { concurrency: 1 }, () => {
         embedding: MOCK_EMBEDDING,
         updatedAt: "2026-10-07T14:02:00.000Z",
       });
+      assertWorkspaceDataDirUntouched();
 
       // 3–4. The same vector on the test header resolves that cell.
       const matched = await handleDesignSearchRequest(searchRequest("test", cookie));
@@ -143,10 +140,10 @@ describe("multi-modal vector search", { concurrency: 1 }, () => {
       assert.equal(hidden.surface, "demo");
       if (hidden.status !== 200) return;
       assert.deepEqual(hidden.body, []);
+      assertWorkspaceDataDirUntouched();
     } finally {
-      if (previousDataDir === undefined) delete process.env.FRUMA_DATA_DIR;
-      else process.env.FRUMA_DATA_DIR = previousDataDir;
-      setSpineStoreForTests(null);
+      schemas.close();
+      assertWorkspaceDataDirUntouched();
     }
   });
 });

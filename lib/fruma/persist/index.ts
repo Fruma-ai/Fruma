@@ -30,6 +30,7 @@ export { IdempotencyException, isIdempotencyException } from "./idempotency";
 export type { SurfaceEnvironment } from "./postgres-schema";
 
 const stores = new Map<string, SpineStore>();
+const schemaStores = new Map<FrumaVersion, SpineStore>();
 let testOverride: SpineStore | null = null;
 
 function fileRootFor(surface: FrumaVersion): string {
@@ -43,7 +44,16 @@ function fileRootFor(surface: FrumaVersion): string {
  * Demo and test can use a file spine while that variable is unset.
  * Production requires DATABASE_URL and does not create a local folder.
  */
+/** Pin one in-memory or Postgres store per environment. Pass null to clear. */
+export function setSchemaStoresForTests(next: ReadonlyMap<FrumaVersion, SpineStore> | null): void {
+  schemaStores.clear();
+  if (!next) return;
+  for (const [surface, store] of next) schemaStores.set(surface, store);
+}
+
 export function getSpineStore(surface: FrumaVersion = TEST_SURFACE): SpineStore {
+  const pinned = schemaStores.get(surface);
+  if (pinned) return pinned;
   if (testOverride) return testOverride;
   const databaseUrl = process.env.DATABASE_URL?.trim();
   const key = databaseUrl ? `pg:${surface}` : `file:${surface}`;
@@ -67,6 +77,7 @@ export function setSpineStoreForTests(store: SpineStore | null) {
   testOverride = store;
   if (!store) {
     stores.clear();
+    schemaStores.clear();
     clearPostgresSpineStoresForTests();
   }
 }

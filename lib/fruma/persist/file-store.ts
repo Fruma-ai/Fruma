@@ -82,17 +82,42 @@ function defaultDataDir(): string {
 }
 
 export class FileSpineStore implements SpineStore {
-  readonly kind = "file" as const;
+  readonly kind: "file" | "memory";
   private readonly root: string;
   private readonly objectsDir: string;
   private readonly metaPath: string;
+  private memorySnap: SpineFile | null = null;
+  private memoryObjects: Map<string, Uint8Array> | null = null;
 
-  constructor(root = defaultDataDir()) {
+  /** Schema rows kept in the process. Nothing is written under `.data/`. */
+  static memory(): FileSpineStore {
+    return new FileSpineStore("", true);
+  }
+
+  constructor(root = defaultDataDir(), memory = false) {
+    if (memory) {
+      this.kind = "memory";
+      this.root = "";
+      this.objectsDir = "";
+      this.metaPath = "";
+      this.memorySnap = structuredClone(EMPTY);
+      this.memoryObjects = new Map();
+      return;
+    }
+    this.kind = "file";
     assertFileSpineRootAllowed(root);
     this.root = root;
     this.objectsDir = join(root, "objects");
     this.metaPath = join(root, "spine.json");
     mkdirSync(this.objectsDir, { recursive: true });
+  }
+
+  /** Every stored revision. Used by tests that read a schema without opening a directory. */
+  documentRevisions(): SpineFile {
+    if (this.kind !== "memory" || !this.memorySnap) {
+      throw new Error("document revisions are available on the in-memory schema store");
+    }
+    return structuredClone(this.memorySnap);
   }
 
   async load(): Promise<SpineSnapshot> {
@@ -110,6 +135,7 @@ export class FileSpineStore implements SpineStore {
   }
 
   private async readAll(): Promise<SpineFile> {
+    if (this.kind === "memory") return structuredClone(this.memorySnap ?? EMPTY);
     if (!existsSync(this.metaPath)) return structuredClone(EMPTY);
     const raw = readFileSync(this.metaPath, "utf8");
     const parsed = JSON.parse(raw) as Partial<SpineFile>;
@@ -133,6 +159,10 @@ export class FileSpineStore implements SpineStore {
   }
 
   private async write(next: SpineFile): Promise<void> {
+    if (this.kind === "memory") {
+      this.memorySnap = structuredClone(next);
+      return;
+    }
     mkdirSync(this.root, { recursive: true });
     writeFileSync(this.metaPath, JSON.stringify(next, null, 2));
   }
@@ -189,9 +219,13 @@ export class FileSpineStore implements SpineStore {
       incoming,
     );
     if (conflict) throw depositIdempotencyException(conflict, incoming);
-    const objectPath = join(this.objectsDir, pointer.objectKey);
-    mkdirSync(join(objectPath, ".."), { recursive: true });
-    writeFileSync(objectPath, bytes);
+    if (this.kind === "memory") {
+      this.memoryObjects?.set(pointer.objectKey, new Uint8Array(bytes));
+    } else {
+      const objectPath = join(this.objectsDir, pointer.objectKey);
+      mkdirSync(join(objectPath, ".."), { recursive: true });
+      writeFileSync(objectPath, bytes);
+    }
     snap.deposits.push(pointer);
     await this.write(snap);
   }
@@ -255,6 +289,10 @@ export class FileSpineStore implements SpineStore {
     const snap = await this.load();
     const pointer = snap.deposits.find((d) => d.depositId === depositId);
     if (!pointer) return null;
+    if (this.kind === "memory") {
+      const stored = this.memoryObjects?.get(pointer.objectKey);
+      return stored ? new Uint8Array(stored) : null;
+    }
     const objectPath = join(this.objectsDir, pointer.objectKey);
     if (!existsSync(objectPath)) return null;
     return new Uint8Array(readFileSync(objectPath));
@@ -415,6 +453,11 @@ export class FileSpineStore implements SpineStore {
   }
 
   async reset(): Promise<void> {
+    if (this.kind === "memory") {
+      this.memorySnap = structuredClone(EMPTY);
+      this.memoryObjects?.clear();
+      return;
+    }
     await this.write(structuredClone(EMPTY));
   }
 }
