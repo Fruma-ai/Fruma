@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@config "../tailwind.config.ts";
 
 :root {
   --ink: #12141a;
@@ -98,9 +99,9 @@
   --color-panel2: var(--panel2);
   --color-raw: var(--raw);
   --color-mute: var(--mute);
-  --font-sans: var(--font-archivo), system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-serif: var(--font-fraunces), Georgia, serif;
-  --font-mono: var(--font-plex), ui-monospace, monospace;
+  --font-mono: var(--font-jetbrains-mono), monospace;
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 8px;
@@ -118,9 +119,9 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-archivo), system-ui, sans-serif;
+  background-color: #0b0b0c;
+  color: #f5f5f7;
+  font-family: var(--font-inter), system-ui, sans-serif;
   font-variation-settings: "wdth" 100;
   font-size: 14px;
   line-height: 1.45;
@@ -148,7 +149,25 @@ button {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--foreground) 16%, transparent);
+  background: rgb(59 130 246 / 0.3);
+  color: #fff;
+}
+
+/* Structural 24px grid alignment pattern for design dropzones and dashboards */
+.fruma-grid-canvas {
+  background-image: linear-gradient(to right, #1f1f23 1px, transparent 1px),
+    linear-gradient(to bottom, #1f1f23 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+@layer utilities {
+  /* High-density tracking utility specifically optimized for raw mill metrics */
+  .cell-text-mono {
+    font-family: var(--font-jetbrains-mono), monospace;
+    font-size: 11px;
+    letter-spacing: -0.025em;
+    @apply tracking-tight text-[#6E7E91];
+  }
 }
 
 .brand-lockup,
