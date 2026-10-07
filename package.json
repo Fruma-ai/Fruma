@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 43147 --hostname 0.0.0.0",
-    "build": "next build",
+    "build": "npx tsx scripts/initialize-cloud-database.ts && next build",
     "start": "next start --port 43147 --hostname 0.0.0.0",
     "lint": "eslint",
     "db:init": "npx tsx scripts/initialize-cloud-database.ts",
