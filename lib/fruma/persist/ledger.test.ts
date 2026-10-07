@@ -7,7 +7,12 @@ import { resolveActiveCell } from "../ingest/cell-mutations";
 import { FileSpineStore } from "./file-store";
 import { IdempotencyException, conflictingDeposit } from "./idempotency";
 import { defaultSurfaceForPersist } from "./index";
-import { legacyLedgerMessage, postgresLedgerSchema, searchPathStatement } from "./postgres-schema";
+import {
+  dropSchemaStatement,
+  legacyLedgerMessage,
+  postgresLedgerSchema,
+  searchPathStatement,
+} from "./postgres-schema";
 
 const storeSrc = readFileSync(join(import.meta.dirname, "postgres-store.ts"), "utf8");
 
@@ -110,6 +115,22 @@ describe("immutable postgres ledger schema", () => {
       if (previous === undefined) delete process.env.FRUMA_PERSIST_SURFACE;
       else process.env.FRUMA_PERSIST_SURFACE = previous;
     }
+  });
+
+  it("resets by dropping the environment schema and recreating it", () => {
+    assert.equal(dropSchemaStatement("demo"), "DROP SCHEMA IF EXISTS fruma_demo CASCADE;");
+    assert.equal(dropSchemaStatement("test"), "DROP SCHEMA IF EXISTS fruma_test CASCADE;");
+    assert.equal(dropSchemaStatement("production"), "DROP SCHEMA IF EXISTS fruma_production CASCADE;");
+    assert.throws(() => dropSchemaStatement("public"), /version/);
+    assert.throws(() => dropSchemaStatement("demo;drop schema public"), /version/);
+    const start = storeSrc.indexOf("async reset()");
+    const end = storeSrc.indexOf("private assertSameSurface");
+    assert.ok(start >= 0 && end > start);
+    const body = storeSrc.slice(start, end);
+    assert.match(body, /dropSchemaStatement\(this\.surface\)/);
+    assert.match(body, /postgresLedgerSchema\(this\.schemaName\)/);
+    assert.equal(body.includes("DELETE FROM"), false);
+    assert.equal(body.includes("surface_environment"), false);
   });
 
   it("inserts deposits, cells, and grants with no ON CONFLICT DO UPDATE", () => {

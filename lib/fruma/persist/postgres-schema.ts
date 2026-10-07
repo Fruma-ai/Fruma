@@ -31,6 +31,18 @@ export function searchPathStatement(version: string): string {
   return `SET search_path TO ${LEDGER_SCHEMAS[version]};`;
 }
 
+/**
+ * Drop one environment schema and everything inside it.
+ * The name is `fruma_` plus a closed FrumaVersion, taken from {@link LEDGER_SCHEMAS}.
+ */
+export function dropSchemaStatement(version: string): string {
+  if (!isFrumaVersion(version)) {
+    throw new Error("version must be demo, test, or production");
+  }
+  const schema = LEDGER_SCHEMAS[version];
+  return `DROP SCHEMA IF EXISTS ${schema} CASCADE;`;
+}
+
 export function assertLedgerSchema(targetSchema: string): LedgerSchemaName {
   const allowed = Object.values(LEDGER_SCHEMAS) as readonly string[];
   if (!allowed.includes(targetSchema)) {

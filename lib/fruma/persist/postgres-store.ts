@@ -6,6 +6,7 @@ import {
   idempotencyFromUniqueViolation,
 } from "./idempotency";
 import {
+  dropSchemaStatement,
   isSurfaceEnvironment,
   ledgerSchemaName,
   legacyLedgerMessage,
@@ -443,17 +444,9 @@ export class PostgresSpineStore implements SpineStore {
 
   async reset(): Promise<void> {
     const sql = await this.client();
-    await sql.begin(async (tx) => {
-      await tx`DELETE FROM ${this.table(tx, "fruma_product_truth_facts")}`;
-      await tx`DELETE FROM ${this.table(tx, "fruma_cell_mutation_events")}`;
-      await tx`DELETE FROM ${this.table(tx, "fruma_source_cells")}`;
-      await tx`DELETE FROM ${this.table(tx, "fruma_named_grants")}`;
-      await tx`DELETE FROM ${this.table(tx, "fruma_deposits")}`;
-      await tx`DELETE FROM ${this.table(tx, "fruma_header_maps")}`;
-      await tx`DELETE FROM ${this.table(tx, "fruma_mill_requests")}`;
-      await tx`DELETE FROM ${this.table(tx, "fruma_mill_confirmations")}`;
-      await tx`DELETE FROM ${this.table(tx, "fruma_product_truth")}`;
-    });
+    await sql.unsafe(dropSchemaStatement(this.surface));
+    await sql.unsafe(postgresLedgerSchema(this.schemaName));
+    await this.applySearchPath(sql, searchPathStatement(this.surface));
   }
 
   private assertSameSurface(surface: string): void {
