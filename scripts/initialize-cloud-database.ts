@@ -88,6 +88,8 @@ export function toDirectComputeUrl(rawUrl: string): string {
   const wasPooler = url.hostname.includes("-pooler");
   url.hostname = url.hostname.replace(/-pooler(?=\.)/, "");
   if (url.port === "6543" || wasPooler) url.port = "5432";
+  // Node's Postgres client reports a channel-binding mismatch as a password failure.
+  url.searchParams.delete("channel_binding");
   return url.href;
 }
 

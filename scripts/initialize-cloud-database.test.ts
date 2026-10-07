@@ -70,7 +70,7 @@ describe("initialize cloud database", () => {
     assert.equal(parsed.password, "secret-pass");
     assert.equal(parsed.pathname, "/neondb");
     assert.equal(parsed.searchParams.get("sslmode"), "require");
-    assert.equal(parsed.searchParams.get("channel_binding"), "require");
+    assert.equal(parsed.searchParams.get("channel_binding"), null);
     assert.equal(direct.includes("-pooler"), false);
     assert.equal(direct.includes(":6543"), false);
     assert.equal(direct.includes("secret-pass"), true);
