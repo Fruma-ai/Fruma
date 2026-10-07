@@ -125,6 +125,10 @@ export type LinkedProductTruthFact = {
   sourceCellId: string | null;
   depositId: string | null;
   evidenceId: string | null;
+  /** Truth status from the product-truth document. Relational fact rows leave this null. */
+  status: string | null;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
 };
 
 /**

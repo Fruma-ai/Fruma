@@ -92,6 +92,54 @@ export function euDppComplianceWarning(
   };
 }
 
+export type CertificateReading = {
+  claim: string;
+  status: string | null;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  documentId: string | null;
+  evidenceStatus: EvidenceRecord["status"] | null;
+  validUntil: string | null;
+};
+
+/** Certificate readings for one quality, taken from Evidence already loaded in the active schema. */
+export function certificatesForQuality(
+  quality: ComplianceQuality,
+  records: readonly ActiveProductTruthEvidence[],
+  hits: readonly MaterialSearchHit[],
+): CertificateReading[] {
+  const subjects = new Set([quality.id, `${quality.supplierOrgId}:${quality.millArticleCode}`]);
+  const cellIds = cellIdsForQuality(quality, hits);
+  const readings: CertificateReading[] = [];
+  for (const record of records) {
+    const linked = new Set(
+      record.facts
+        .filter((fact) => fact.evidenceId && fact.sourceCellId && cellIds.has(fact.sourceCellId))
+        .map((fact) => fact.evidenceId as string),
+    );
+    for (const evidence of record.evidence) {
+      if (!subjects.has(evidence.subjectId) && !linked.has(evidence.id)) continue;
+      const fact =
+        record.facts.find((row) => row.evidenceId === evidence.id) ??
+        record.facts.find(
+          (row) =>
+            row.field.trim().toLowerCase() === evidence.claim.trim().toLowerCase() &&
+            (!row.sourceCellId || cellIds.has(row.sourceCellId)),
+        );
+      readings.push({
+        claim: evidence.claim,
+        status: fact?.status ?? null,
+        confirmedBy: fact?.confirmedBy ?? null,
+        confirmedAt: fact?.confirmedAt ?? null,
+        documentId: evidence.documentId ?? null,
+        evidenceStatus: evidence.status,
+        validUntil: evidence.validUntil ?? null,
+      });
+    }
+  }
+  return readings;
+}
+
 export function applyEuDppCompliance<T extends ComplianceQuality>(
   qualities: readonly T[],
   records: readonly ActiveProductTruthEvidence[],

@@ -915,6 +915,9 @@ function factsFromPayload(value: unknown): LinkedProductTruthFact[] {
       sourceCellId: typeof row.sourceCellId === "string" ? row.sourceCellId : null,
       depositId: typeof row.depositId === "string" ? row.depositId : null,
       evidenceId: typeof row.evidenceId === "string" ? row.evidenceId : null,
+      status: typeof row.status === "string" ? row.status : null,
+      confirmedBy: typeof row.confirmedBy === "string" ? row.confirmedBy : null,
+      confirmedAt: typeof row.confirmedAt === "string" ? row.confirmedAt : null,
     });
   }
   return facts;
@@ -944,6 +947,9 @@ function groupProductTruthEvidence(rows: readonly Record<string, unknown>[]): Ac
       sourceCellId: row.source_cell_id == null ? null : String(row.source_cell_id),
       depositId: row.deposit_id == null ? null : String(row.deposit_id),
       evidenceId: null,
+      status: null,
+      confirmedBy: null,
+      confirmedAt: null,
     });
   }
   return [...byProduct.values()];

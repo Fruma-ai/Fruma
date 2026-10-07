@@ -404,6 +404,9 @@ export class FileSpineStore implements SpineStore {
         sourceCellId: fact.sourceCellId ?? null,
         depositId: fact.depositId ?? null,
         evidenceId: fact.evidenceId ?? null,
+        status: fact.status ?? null,
+        confirmedBy: fact.confirmedBy ?? null,
+        confirmedAt: fact.confirmedAt ?? null,
       })),
       evidence: record.evidence ?? [],
     }));

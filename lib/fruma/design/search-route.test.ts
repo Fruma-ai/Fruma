@@ -7,6 +7,7 @@ import { DEMO_COOKIE, sessionToken } from "../../gate";
 import { FileSpineStore, getSpineStore, setSpineStoreForTests } from "../persist";
 import type { PersistedCellMutation, PersistedSourceCell } from "../persist";
 import { cosineDistance } from "../persist/embeddings";
+import { COMPLIANCE_READY_COEFFICIENT, rerankByComplianceReadiness, type SearchResult } from "./rerank";
 import { handleDesignSearchRequest } from "./search-http";
 
 const TEST_PASS = "spec8-test-password";
@@ -195,8 +196,12 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     assert.match(handler, /getSpineStore\(surface\)/);
     assert.match(handler, /searchMaterialEmbeddings\(embedding\)/);
     assert.match(handler, /listActiveProductTruthEvidence\(\)/);
+    assert.match(handler, /rerankByComplianceReadiness\(/);
     assert.match(handler, /complianceTarget/);
     assert.match(handler, /search_path/);
+    const rerank = readFileSync(join(process.cwd(), "lib/fruma/design/rerank.ts"), "utf8");
+    assert.match(rerank, /export function rerankByComplianceReadiness/);
+    assert.equal(rerank.includes("getSpineStore"), false);
     assert.equal(handler.includes("getDepositBytes"), false);
     const start = store.indexOf("async searchMaterialEmbeddings");
     const end = store.indexOf("async reset()");
@@ -335,6 +340,195 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     assert.equal(uk.body[0]?.compliance_warning, undefined);
     assert.equal(absent.body[0]?.compliance_warning, undefined);
     assert.equal(uk.body.length, 2);
+  });
+
+  it("reranks the ten closest matches when certificates are evidenced and human-confirmed", async () => {
+    const confirmed = {
+      status: "evidenced" as const,
+      confirmedBy: "owen",
+      confirmedAt: "2026-10-07T15:00:00.000Z",
+      documentId: "doc-1",
+      evidenceStatus: "current" as const,
+      validUntil: "2099-01-01T00:00:00.000Z",
+    };
+    function row(id: string, cosineDistance: number, certificates: SearchResult["certificates"]): SearchResult {
+      return { id, cosineDistance, rank: 0, certificates };
+    }
+    const ready = row("ready", 0.2, [
+      { claim: "traceability", confirmedBy: confirmed.confirmedBy, confirmedAt: confirmed.confirmedAt, status: confirmed.status, documentId: "doc-trace", evidenceStatus: "current", validUntil: confirmed.validUntil },
+      { claim: "circularity", confirmedBy: confirmed.confirmedBy, confirmedAt: confirmed.confirmedAt, status: confirmed.status, documentId: "doc-circ", evidenceStatus: "current", validUntil: confirmed.validUntil },
+    ]);
+    const closer = row("closer", 0.05, []);
+    const partial = row("partial", 0.2, [ready.certificates![0]!]);
+    const unconfirmed = row("unconfirmed", 0.2, [
+      { ...ready.certificates![0]!, confirmedBy: null },
+      ready.certificates![1]!,
+    ]);
+    const ranked = rerankByComplianceReadiness([closer, ready, partial, unconfirmed], "EU_DPP");
+    assert.equal(ranked[0]?.id, "ready");
+    assert.equal(ranked[0]?.rank, 1);
+    assert.equal(ranked[1]?.id, "closer");
+    assert.equal(ranked[0]?.score, (1 - 0.2) * COMPLIANCE_READY_COEFFICIENT);
+    assert.equal(ranked[1]?.score, 1 - 0.05);
+    assert.equal("certificates" in (ranked[0] ?? {}), false);
+
+    const uk = rerankByComplianceReadiness(
+      [
+        row("plain", 0.1, []),
+        row("certified", 0.2, [
+          { claim: "cert", status: "evidenced", confirmedBy: "owen", confirmedAt: confirmed.confirmedAt, documentId: "doc-cert", evidenceStatus: "current", validUntil: null },
+        ]),
+      ],
+      "UK_STANDARDS",
+    );
+    assert.equal(uk[0]?.id, "certified");
+
+    const untouched = rerankByComplianceReadiness([closer, ready], "");
+    assert.deepEqual(untouched.map((item) => item.id), ["closer", "ready"]);
+
+    const overflow = Array.from({ length: 11 }, (_, index) =>
+      row(`q${index}`, index / 100, index === 10 ? ready.certificates : []),
+    );
+    const ten = rerankByComplianceReadiness(overflow, "EU_DPP");
+    assert.equal(ten.length, 10);
+    assert.equal(ten.some((item) => item.id === "q10"), false);
+  });
+
+  it("bubbles a fully certified quality above a closer uncertified match inside the active schema", async () => {
+    const store = getSpineStore("demo");
+    const bytes = Uint8Array.from([1, 2, 3]);
+    await store.saveDepositPointer(
+      {
+        depositId: "dep-rank",
+        supplierOrgId: "org_mill_synthetic",
+        filename: "rank.csv",
+        sha256: "a".repeat(64),
+        byteLength: bytes.byteLength,
+        receivedAt: "2026-10-07T16:00:00.000Z",
+        objectKey: "dep-rank.bin",
+      },
+      bytes,
+    );
+    await store.saveSourceCells([
+      {
+        id: "cell-near-rank",
+        depositId: "dep-rank",
+        sheetName: "Sheet1",
+        rowIndex: 2,
+        colIndex: 1,
+        rawHeader: "Art. No",
+        sourceValue: "Q-NEAR",
+        normalizedValue: null,
+      },
+      {
+        id: "cell-ready-rank",
+        depositId: "dep-rank",
+        sheetName: "Sheet1",
+        rowIndex: 3,
+        colIndex: 1,
+        rawHeader: "Art. No",
+        sourceValue: "Q-READY",
+        normalizedValue: null,
+      },
+    ]);
+    for (const [eventId, sourceCellId] of [
+      ["evt-near-rank", "cell-near-rank"],
+      ["evt-ready-rank", "cell-ready-rank"],
+    ] as const) {
+      await store.appendCellMutation({
+        eventId,
+        sourceCellId,
+        operatorCookie: "secret-operator-cookie",
+        actionType: "map",
+        oldStandardValue: null,
+        newStandardValue: "STD",
+        standardField: "article",
+        occurredAt: "2026-10-07T16:01:00.000Z",
+      });
+    }
+    const readyVector = axis(0);
+    readyVector[1] = 0.05;
+    await store.saveMaterialEmbedding({
+      id: embeddingId(40),
+      sourceCellId: "cell-near-rank",
+      embedding: axis(0),
+      updatedAt: "2026-10-07T16:02:00.000Z",
+    });
+    await store.saveMaterialEmbedding({
+      id: embeddingId(41),
+      sourceCellId: "cell-ready-rank",
+      embedding: readyVector,
+      updatedAt: "2026-10-07T16:02:00.000Z",
+    });
+    const confirmedAt = "2026-10-07T16:03:00.000Z";
+    await store.saveProductTruth({
+      productId: "prod-ready",
+      version: 1,
+      facts: [
+        {
+          id: "fact-trace-ready",
+          productId: "prod-ready",
+          field: "traceability",
+          value: "lot-ready",
+          sourceType: "evidence-document",
+          scope: "quality",
+          status: "evidenced",
+          evidenceId: "ev-trace-ready",
+          confirmedBy: "owen",
+          confirmedAt,
+          version: 1,
+        },
+        {
+          id: "fact-circ-ready",
+          productId: "prod-ready",
+          field: "circularity",
+          value: "closed-loop",
+          sourceType: "evidence-document",
+          scope: "quality",
+          status: "evidenced",
+          evidenceId: "ev-circ-ready",
+          confirmedBy: "owen",
+          confirmedAt,
+          version: 1,
+        },
+      ],
+      evidence: [
+        {
+          id: "ev-trace-ready",
+          claim: "traceability",
+          scope: "quality",
+          subjectId: "bq:org_mill_synthetic:Q-READY",
+          documentId: "doc-trace-ready",
+          status: "current",
+          validUntil: "2099-01-01T00:00:00.000Z",
+        },
+        {
+          id: "ev-circ-ready",
+          claim: "circularity",
+          scope: "quality",
+          subjectId: "bq:org_mill_synthetic:Q-READY",
+          documentId: "doc-circ-ready",
+          status: "current",
+          validUntil: "2099-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    const cookie = await signedCookie();
+    const result = await handleDesignSearchRequest(
+      searchRequest({ cookie, body: { embedding: axis(0), complianceTarget: "EU_DPP" } }),
+    );
+    assert.equal(result.status, 200);
+    if (result.status !== 200) return;
+    assert.deepEqual(
+      result.body.map((row) => row.millArticleCode),
+      ["Q-READY", "Q-NEAR"],
+    );
+    assert.equal(result.body[0]?.rank, 1);
+    assert.ok((result.body[0]?.score ?? 0) > (result.body[1]?.score ?? 0));
+    assert.equal(result.body[0]?.compliance_warning, undefined);
+    assert.equal(result.body[1]?.compliance_warning?.status, "compliance_warning");
+    assert.equal(collectKeys(result.body).has("certificates"), false);
   });
 
   it("defaults a missing version header to demo and accepts test", async () => {

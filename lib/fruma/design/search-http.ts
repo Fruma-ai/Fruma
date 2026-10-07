@@ -1,4 +1,10 @@
-import { applyEuDppCompliance, readComplianceTarget, type ComplianceWarning } from "./compliance";
+import {
+  applyEuDppCompliance,
+  certificatesForQuality,
+  readComplianceTarget,
+  type ComplianceWarning,
+} from "./compliance";
+import { DESIGN_SEARCH_RESULT_LIMIT, rerankByComplianceReadiness } from "./rerank";
 import { replayActiveCell, type ActiveMaterialQuality } from "../ingest/qualities-http";
 import { qualitiesFromCells } from "../ingest/identity";
 import type { SourceCell } from "../ingest/types";
@@ -9,11 +15,12 @@ import { MATERIAL_EMBEDDING_DIMENSIONS } from "../persist/embeddings";
 import { surfaceFromRequest } from "../surfaces";
 import type { FrumaVersion } from "../versions";
 
-export const DESIGN_SEARCH_RESULT_LIMIT = 10;
+export { DESIGN_SEARCH_RESULT_LIMIT } from "./rerank";
 
 export type RankedMaterialQuality = ActiveMaterialQuality & {
   rank: number;
   cosineDistance: number;
+  score?: number;
   compliance_warning?: ComplianceWarning;
 };
 
@@ -168,10 +175,17 @@ export async function handleDesignSearchRequest(request: Request): Promise<Desig
   const store = getSpineStore(surface);
   const hits = await store.searchMaterialEmbeddings(embedding);
   const ranked = rankDesignSearchHits(hits);
-  const body =
-    complianceTarget === "EU_DPP"
-      ? applyEuDppCompliance(ranked, await store.listActiveProductTruthEvidence(), hits)
-      : ranked;
+  const records =
+    complianceTarget === "EU_DPP" || complianceTarget === "UK_STANDARDS"
+      ? await store.listActiveProductTruthEvidence()
+      : [];
+  const marked =
+    complianceTarget === "EU_DPP" ? applyEuDppCompliance(ranked, records, hits) : ranked;
+  const withCertificates = marked.map((quality) => ({
+    ...quality,
+    certificates: certificatesForQuality(quality, records, hits),
+  }));
+  const body = rerankByComplianceReadiness(withCertificates, complianceTarget ?? "");
   assertNoFileBytes(body);
   return { status: 200, surface, body };
 }
