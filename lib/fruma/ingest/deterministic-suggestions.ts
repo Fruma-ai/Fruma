@@ -202,3 +202,62 @@ export async function generateDeterministicSuggestions(
 
   return staged;
 }
+
+const LIST_STAGED_SQL = `
+  SELECT
+    s.source_cell_id,
+    s.target_field,
+    s.suggested_value,
+    s.confidence,
+    s.created_at,
+    c.source_value
+  FROM fruma_staged_suggestions s
+  INNER JOIN fruma_source_cells c
+    ON c.id = s.source_cell_id
+   AND c.deposit_id = s.deposit_id
+  WHERE s.deposit_id = $1
+  ORDER BY s.created_at DESC, s.source_cell_id ASC
+`;
+
+/** One staged proposal as the discovery studio reads it. */
+export type StagedSuggestionView = {
+  cellId: string;
+  fieldName: string;
+  rawMillText: string;
+  aiSuggestedValue: string;
+  confidence: number;
+};
+
+function viewFromRow(row: Record<string, unknown>): StagedSuggestionView | null {
+  const cellId = typeof row.source_cell_id === "string" ? row.source_cell_id : "";
+  const fieldName = typeof row.target_field === "string" ? row.target_field : "";
+  const rawMillText = typeof row.source_value === "string" ? row.source_value : "";
+  const aiSuggestedValue = typeof row.suggested_value === "string" ? row.suggested_value.trim() : "";
+  const confidence = typeof row.confidence === "number" ? row.confidence : Number(row.confidence);
+  if (!cellId || !isStandardField(fieldName) || !aiSuggestedValue || !Number.isFinite(confidence)) return null;
+  return { cellId, fieldName, rawMillText, aiSuggestedValue, confidence };
+}
+
+/**
+ * Latest staged proposal for each cell on this deposit.
+ * The connection's current schema is pinned first.
+ */
+export async function listStagedSuggestions(
+  client: Client,
+  depositId: string,
+): Promise<StagedSuggestionView[]> {
+  const deposit = depositId.trim();
+  if (!deposit) throw new Error("deposit_id_required");
+
+  await pinSearchPath(client);
+  const rows = await client.unsafe(LIST_STAGED_SQL, [deposit]);
+  const seen = new Set<string>();
+  const views: StagedSuggestionView[] = [];
+  for (const row of rows) {
+    const view = viewFromRow(row);
+    if (!view || seen.has(view.cellId)) continue;
+    seen.add(view.cellId);
+    views.push(view);
+  }
+  return views;
+}

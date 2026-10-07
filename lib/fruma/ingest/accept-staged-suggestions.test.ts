@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { Client } from "../persist/reload-engines";
 import { resolveActiveCell } from "./cell-mutations";
-import { acceptStagedSuggestions, uniformValue } from "./accept-staged-suggestions";
-import { convertInchToCm, convertOunceToGsm, formatConverted } from "./units";
+import { acceptStagedSuggestions } from "./accept-staged-suggestions";
+import { convertInchToCm, convertOunceToGsm, formatConverted, uniformValue } from "./units";
 
 const DEPOSIT = "dep_current";
 const OPERATOR = "owen.session-token";

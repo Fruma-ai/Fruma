@@ -3,6 +3,11 @@ import { requireTestFounder } from "../intelligence/http-auth";
 import { getPostgresPool, type PinnedLedgerClient } from "../persist/postgres-store";
 import { isFrumaVersion, type FrumaVersion } from "../versions";
 import { acceptStagedSuggestions, type AcceptedSuggestion } from "./accept-staged-suggestions";
+import {
+  generateDeterministicSuggestions,
+  listStagedSuggestions,
+  type StagedSuggestionView,
+} from "./deterministic-suggestions";
 
 export type AcceptStagedSuggestionsBody = {
   success: true;
@@ -10,12 +15,22 @@ export type AcceptStagedSuggestionsBody = {
   accepted: AcceptedSuggestion[];
 };
 
+export type GenerateStagedSuggestionsBody = {
+  success: true;
+  depositId: string;
+  suggestions: StagedSuggestionView[];
+};
+
+export type SuggestAction = "GENERATE" | "BULK_ACCEPT";
+
 export type AcceptStagedSuggestionsHttpResult =
-  | { status: 200; surface: FrumaVersion; body: AcceptStagedSuggestionsBody }
+  | { status: 200; surface: FrumaVersion; body: AcceptStagedSuggestionsBody | GenerateStagedSuggestionsBody }
   | {
       status: 400;
       surface: FrumaVersion | null;
-      body: { error: "invalid_environment_surface" | "missing_selected_cells" };
+      body: {
+        error: "invalid_environment_surface" | "missing_selected_cells" | "missing_deposit_id" | "invalid_suggest_action";
+      };
     }
   | { status: 401; surface: FrumaVersion | null; body: { error: "unauthorized_operator" } }
   | { status: 500; surface: FrumaVersion; body: { error: "internal_ledger_execution_failure" } };
@@ -38,14 +53,25 @@ function founderCookie(request: Request): string {
   return "";
 }
 
-function readSelection(
+function readSuggestRequest(
   body: unknown,
-): { depositId: string; selectedCellIds: string[] } | { error: "missing_selected_cells" } {
+):
+  | { action: "GENERATE"; depositId: string }
+  | { action: "BULK_ACCEPT"; depositId: string; selectedCellIds: string[] }
+  | { error: "missing_selected_cells" | "missing_deposit_id" | "invalid_suggest_action" } {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return { error: "missing_selected_cells" };
   }
-  const record = body as { depositId?: unknown; selectedCellIds?: unknown };
+  const record = body as { action?: unknown; depositId?: unknown; selectedCellIds?: unknown };
+  const action = record.action;
+  if (action !== undefined && action !== "GENERATE" && action !== "BULK_ACCEPT") {
+    return { error: "invalid_suggest_action" };
+  }
   const depositId = typeof record.depositId === "string" ? record.depositId.trim() : "";
+  if (action === "GENERATE") {
+    if (!depositId) return { error: "missing_deposit_id" };
+    return { action: "GENERATE", depositId };
+  }
   if (!depositId || !Array.isArray(record.selectedCellIds) || record.selectedCellIds.length === 0) {
     return { error: "missing_selected_cells" };
   }
@@ -54,12 +80,14 @@ function readSelection(
     if (typeof cellId !== "string" || !cellId.trim()) return { error: "missing_selected_cells" };
     selectedCellIds.push(cellId);
   }
-  return { depositId, selectedCellIds };
+  return { action: "BULK_ACCEPT", depositId, selectedCellIds };
 }
 
 /**
  * Founder session required. The pool is the schema for x-fruma-version.
- * Branch B accepts the selected staged proposals by appending confirm events.
+ * GENERATE writes proposals for the deposit and returns them.
+ * BULK_ACCEPT appends a confirm for each selected cell. A body with no action
+ * accepts, so earlier clients keep working.
  */
 export async function handleAcceptStagedSuggestionsRequest(
   request: Request,
@@ -84,7 +112,7 @@ export async function handleAcceptStagedSuggestionsRequest(
   } catch {
     return { status: 400, surface: version, body: { error: "missing_selected_cells" } };
   }
-  const selection = readSelection(payload);
+  const selection = readSuggestRequest(payload);
   if ("error" in selection) {
     return { status: 400, surface: version, body: { error: selection.error } };
   }
@@ -93,6 +121,15 @@ export async function handleAcceptStagedSuggestionsRequest(
   try {
     const pool = getPostgresPool(version);
     client = await pool.connect();
+    if (selection.action === "GENERATE") {
+      await generateDeterministicSuggestions(client, selection.depositId);
+      const suggestions = await listStagedSuggestions(client, selection.depositId);
+      return {
+        status: 200,
+        surface: version,
+        body: { success: true, depositId: selection.depositId, suggestions },
+      };
+    }
     const accepted = await acceptStagedSuggestions(
       client,
       selection.depositId,

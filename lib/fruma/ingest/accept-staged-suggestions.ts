@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { isStandardField, type StandardField } from "./types";
-import { normalizedValueFor } from "./units";
+import { uniformValue } from "./units";
 import type { Client } from "../persist/reload-engines";
 import { searchPathStatement } from "../persist/postgres-schema";
 import { isFrumaVersion } from "../versions";
@@ -45,15 +45,6 @@ async function pinSearchPath(client: Client): Promise<void> {
 function textColumn(row: Record<string, unknown>, key: string): string {
   const value = row[key];
   return typeof value === "string" ? value : "";
-}
-
-/**
- * Uniform text for one accepted proposal.
- * Ounces and inches go through the conversion engine. Every other source stays
- * as the staged suggestion. The mill's source text is not rewritten.
- */
-export function uniformValue(field: StandardField, sourceValue: string, suggestedValue: string): string {
-  return normalizedValueFor(field, sourceValue) ?? suggestedValue.trim();
 }
 
 /**

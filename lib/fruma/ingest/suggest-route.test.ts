@@ -16,6 +16,7 @@ type Call = { query: string; parameters?: readonly unknown[] };
 function ledgerPool(options: {
   schema: string;
   staged?: Record<string, unknown>[];
+  listed?: Record<string, unknown>[];
   failSchema?: boolean;
 }): PostgresPool & { calls: Call[]; connects: number; releases: number } {
   const calls: Call[] = [];
@@ -38,7 +39,11 @@ function ledgerPool(options: {
             return [{ schema_name: options.schema }];
           }
           if (query.trim().startsWith("SET search_path")) return [];
+          if (query.includes("FROM fruma_source_cells") && query.includes("normalized_value IS NULL")) return [];
+          if (query.includes("FROM fruma_cell_mutation_events") && query.includes("supplier_org_id")) return [];
+          if (query.includes("s.confidence")) return options.listed ?? [];
           if (query.includes("FROM fruma_staged_suggestions")) return options.staged ?? [];
+          if (query.includes("INSERT INTO fruma_staged_suggestions")) return [];
           if (query.includes("INSERT INTO fruma_cell_mutation_events")) return [];
           throw new Error(`Unexpected suggest query: ${query}`);
         },
@@ -153,6 +158,69 @@ describe("POST /api/analytics/suggest", { concurrency: 1 }, () => {
     assert.deepEqual(insert?.parameters?.slice(1, 5), ["weight", cookie, gsm, "weight"]);
     assert.equal(pool.calls.some((call) => /\bUPDATE\b/.test(call.query)), false);
     assert.equal(pool.calls.some((call) => call.query.includes("SET search_path TO fruma_test;")), true);
+  });
+
+  it("generates proposals for a deposit and returns the latest row per cell", async () => {
+    process.env.FRUMA_DEMO_PASSWORD = TEST_PASS;
+    const cookie = await sessionToken("owen");
+    const pool = ledgerPool({
+      schema: "fruma_demo",
+      listed: [
+        {
+          source_cell_id: "cell_101_wgt",
+          target_field: "weight",
+          suggested_value: "8.2 oz",
+          confidence: 0.95,
+          source_value: "8.2 oz",
+          created_at: "2026-10-02T00:00:00.000Z",
+        },
+        {
+          source_cell_id: "cell_101_wgt",
+          target_field: "weight",
+          suggested_value: "old",
+          confidence: 0.5,
+          source_value: "8.2 oz",
+          created_at: "2026-10-01T00:00:00.000Z",
+        },
+        {
+          source_cell_id: "cell_102_wid",
+          target_field: "width",
+          suggested_value: "42",
+          confidence: "0.95",
+          source_value: '42"',
+          created_at: "2026-10-02T00:00:00.000Z",
+        },
+      ],
+    });
+    setPostgresPoolForTests("demo", pool);
+
+    const found = await handleAcceptStagedSuggestionsRequest(
+      postAccept("demo", { action: "GENERATE", depositId: DEPOSIT }, cookie),
+    );
+    assert.equal(found.status, 200);
+    if (found.status !== 200) return;
+    assert.deepEqual(found.body, {
+      success: true,
+      depositId: DEPOSIT,
+      suggestions: [
+        {
+          cellId: "cell_101_wgt",
+          fieldName: "weight",
+          rawMillText: "8.2 oz",
+          aiSuggestedValue: "8.2 oz",
+          confidence: 0.95,
+        },
+        {
+          cellId: "cell_102_wid",
+          fieldName: "width",
+          rawMillText: '42"',
+          aiSuggestedValue: "42",
+          confidence: 0.95,
+        },
+      ],
+    });
+    assert.equal(pool.calls.some((call) => call.query.includes("INSERT INTO fruma_cell_mutation_events")), false);
+    assert.equal(pool.releases, 1);
   });
 
   it("returns a ledger failure and still releases the connection", async () => {

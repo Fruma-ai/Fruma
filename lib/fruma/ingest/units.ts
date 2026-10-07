@@ -31,6 +31,15 @@ const OUNCE_VALUE =
 const INCH_VALUE = /^\s*(\d+(?:\.\d+)?)\s*(?:"|″|''|in(?:ch(?:es)?)?)\.?\s*$/i;
 
 /**
+ * Uniform text for one accepted proposal.
+ * Ounces and inches go through the conversion engine. Every other source stays
+ * as the staged suggestion. The mill's source text is not rewritten.
+ */
+export function uniformValue(field: StandardField, sourceValue: string, suggestedValue: string): string {
+  return normalizedValueFor(field, sourceValue) ?? suggestedValue.trim();
+}
+
+/**
  * Convert only when the standard field is weight or width and the source unit
  * is ounces or inches. Grams, gsm, and centimetres stay source-only.
  */
