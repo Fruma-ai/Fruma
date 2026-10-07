@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { assertFileSpineRootAllowed } from "./configuration";
 import { isStandardField } from "../ingest/types";
 import type { ProductTruthRecord } from "../product-truth";
 import {
@@ -87,6 +88,7 @@ export class FileSpineStore implements SpineStore {
   private readonly metaPath: string;
 
   constructor(root = defaultDataDir()) {
+    assertFileSpineRootAllowed(root);
     this.root = root;
     this.objectsDir = join(root, "objects");
     this.metaPath = join(root, "spine.json");

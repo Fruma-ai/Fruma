@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, it } from "node:test";
 import { resolveActiveCell } from "../ingest/cell-mutations";
+import { MissingConfigurationException } from "./configuration";
 import { FileSpineStore } from "./file-store";
 import { IdempotencyException, conflictingDeposit } from "./idempotency";
 import { defaultSurfaceForPersist } from "./index";
+import { PostgresSpineStore } from "./postgres-store";
+import { bootstrapEnginesFromDatabase } from "./reload-engines";
 import {
   dropSchemaStatement,
   legacyLedgerMessage,
@@ -129,6 +132,28 @@ describe("immutable postgres ledger schema", () => {
     assert.equal(searchPathStatement("production"), "SET search_path TO fruma_production;");
     assert.throws(() => searchPathStatement("public"), /version/);
     assert.throws(() => searchPathStatement("demo;drop schema public"), /version/);
+
+    for (const token of ["writeFileSync", "saveToDiskBackup", "spine.json", "privateDir", ".data/fruma-"]) {
+      assert.equal(storeSrc.includes(token), false, token);
+    }
+    const indexSrc = readFileSync(join(import.meta.dirname, "index.ts"), "utf8");
+    const open = indexSrc.indexOf("export function getSpineStore");
+    const acquire = indexSrc.slice(open, indexSrc.indexOf("export function setSpineStoreForTests"));
+    const refused = acquire.indexOf("MissingConfigurationException");
+    const fileStore = acquire.indexOf("new FileSpineStore");
+    assert.ok(refused >= 0 && fileStore > refused);
+    assert.match(acquire, /surface === "production"/);
+    for (const [name, next] of [
+      ["saveHeaderMap", "saveRequest"],
+      ["saveRequest", "saveConfirmation"],
+      ["saveConfirmation", "saveProductTruth"],
+      ["saveProductTruth", "saveDepositPointer"],
+    ] as const) {
+      const body = methodBody(name, next);
+      assert.match(body, /searchPathStatement\(this\.surface\)/, name);
+      assert.match(body, /INSERT INTO/, name);
+      assert.equal(body.includes("writeFileSync"), false, name);
+    }
     assert.match(storeSrc, /searchPathStatement\(this\.surface\)/);
     assert.match(storeSrc, /await reserved\.unsafe\(statement\)/);
     assert.match(storeSrc, /sql\.reserve\(\)/);
@@ -144,6 +169,75 @@ describe("immutable postgres ledger schema", () => {
       if (previous === undefined) delete process.env.FRUMA_PERSIST_SURFACE;
       else process.env.FRUMA_PERSIST_SURFACE = previous;
     }
+  });
+
+  it("refuses a production ledger when DATABASE_URL is missing", async () => {
+    if (process.env.DATABASE_URL?.trim()) return;
+
+    const root = join(mkdtempSync(join(tmpdir(), "fruma-config-")), "fruma-production");
+    assert.equal(existsSync(root), false);
+    assert.throws(() => new FileSpineStore(root), MissingConfigurationException);
+    assert.equal(existsSync(root), false);
+    assert.equal(existsSync(join(process.cwd(), ".data", "fruma-production")), false);
+
+    const ledger = new PostgresSpineStore("production");
+    await assert.rejects(
+      () =>
+        ledger.saveHeaderMap({
+          surface: "production",
+          overlays: {},
+          updatedAt: "2026-10-07T00:00:00.000Z",
+        }),
+      MissingConfigurationException,
+    );
+    await assert.rejects(
+      () =>
+        ledger.saveRequest({
+          id: "req-prod",
+          brandId: "org_brand_secret",
+          productId: "prod-prod",
+          millOrgId: "org_mill_production",
+          qualityArticle: "HX-100",
+          millVisible: { category: "cloth", deliveryRegion: "PT" },
+          status: "open",
+          createdAt: "2026-10-07T00:00:00.000Z",
+        }),
+      MissingConfigurationException,
+    );
+    await assert.rejects(
+      () =>
+        ledger.saveConfirmation({
+          id: "conf-prod",
+          requestId: "req-prod",
+          millOrgId: "org_mill_production",
+          qualityArticle: "HX-100",
+          moqM: 1,
+          leadWeeks: 2,
+          available: true,
+          confirmedAt: "2026-10-07T00:00:00.000Z",
+        }),
+      MissingConfigurationException,
+    );
+    await assert.rejects(
+      () =>
+        ledger.saveProductTruth({
+          productId: "prod-prod",
+          version: 1,
+          facts: [],
+          evidence: [],
+        }),
+      MissingConfigurationException,
+    );
+
+    const previousSurface = process.env.FRUMA_PERSIST_SURFACE;
+    process.env.FRUMA_PERSIST_SURFACE = "production";
+    try {
+      await assert.rejects(() => bootstrapEnginesFromDatabase(), MissingConfigurationException);
+    } finally {
+      if (previousSurface === undefined) delete process.env.FRUMA_PERSIST_SURFACE;
+      else process.env.FRUMA_PERSIST_SURFACE = previousSurface;
+    }
+    assert.equal(existsSync(join(process.cwd(), ".data", "fruma-production")), false);
   });
 
   it("resets by dropping the environment schema and recreating it", () => {

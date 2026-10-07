@@ -2,6 +2,7 @@ import { isStandardField } from "../ingest/types";
 import { restoreHeaderOverlays } from "../intelligence/overlays";
 import type { ProductTruthRecord } from "../product-truth";
 import { isFrumaVersion, FRUMA_VERSION_IDS, type FrumaVersion } from "../versions";
+import { MissingConfigurationException } from "./configuration";
 import { ledgerSchemaName, postgresLedgerSchema, searchPathStatement } from "./postgres-schema";
 import type { PersistedHeaderMap } from "./types";
 
@@ -107,9 +108,20 @@ export async function reloadEnginesFromDatabase(client: Client): Promise<ActiveE
   };
 }
 
-/** Open each environment schema and restore its active engine cache. No-op without DATABASE_URL. */
+/**
+ * Open each environment schema and restore its active engine cache.
+ * A production boot without DATABASE_URL fails before any local folder is created.
+ * Demo and test boots without DATABASE_URL return without opening a store.
+ */
 export async function bootstrapEnginesFromDatabase(): Promise<void> {
   const url = process.env.DATABASE_URL?.trim();
+  const productionBoot =
+    process.env.NODE_ENV === "production" || process.env.FRUMA_PERSIST_SURFACE === "production";
+  if (!url && productionBoot) {
+    throw new MissingConfigurationException(
+      "DATABASE_URL is required for the production ledger.",
+    );
+  }
   if (!url) return;
   const postgres = (await import("postgres")).default;
   for (const version of FRUMA_VERSION_IDS) {

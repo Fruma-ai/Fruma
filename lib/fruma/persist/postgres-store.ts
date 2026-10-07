@@ -1,5 +1,6 @@
 import { isStandardField } from "../ingest/types";
 import type { EvidenceRecord, ProductTruthRecord } from "../product-truth";
+import { databaseUrlOrThrow } from "./configuration";
 import { assertEmbeddingVector, assertMaterialEmbedding, vectorLiteral } from "./embeddings";
 import {
   conflictingDeposit,
@@ -82,8 +83,7 @@ export class PostgresSpineStore implements SpineStore {
       await this.ready;
       return this.sql;
     }
-    const url = process.env.DATABASE_URL?.trim();
-    if (!url) throw new Error("DATABASE_URL is required for PostgresSpineStore");
+    const url = databaseUrlOrThrow(this.surface);
     const postgres = (await import("postgres")).default;
     const statement = searchPathStatement(this.surface);
     this.sql = postgres(url, {
@@ -1071,9 +1071,7 @@ export function getPostgresPool(version: string): PostgresPool {
   }
   const override = poolOverrides.get(version);
   if (override) return override;
-  if (!process.env.DATABASE_URL?.trim()) {
-    throw new Error("DATABASE_URL is required for the Postgres pool");
-  }
+  databaseUrlOrThrow(version);
   const store = postgresSpineStore(version);
   return {
     connect: () => store.connectPinned(),

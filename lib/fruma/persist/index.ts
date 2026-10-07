@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { isFrumaVersion, type FrumaVersion } from "../versions";
 import { TEST_SURFACE } from "../surfaces";
+import { MissingConfigurationException } from "./configuration";
 import { FileSpineStore } from "./file-store";
 import { clearPostgresSpineStoresForTests, postgresSpineStore } from "./postgres-store";
 import type { SpineStore } from "./types";
@@ -24,6 +25,7 @@ export type {
 } from "./types";
 export { FileSpineStore } from "./file-store";
 export { PostgresSpineStore } from "./postgres-store";
+export { MissingConfigurationException, isMissingConfigurationException } from "./configuration";
 export { IdempotencyException, isIdempotencyException } from "./idempotency";
 export type { SurfaceEnvironment } from "./postgres-schema";
 
@@ -37,17 +39,22 @@ function fileRootFor(surface: FrumaVersion): string {
 }
 
 /**
- * File store by default (`.data/fruma-{surface}` or `FRUMA_DATA_DIR/{surface}`).
- * Set DATABASE_URL to use Postgres. Demo, test, and production each get a schema
- * (`fruma_demo`, `fruma_test`, `fruma_production`). Deposit bytes are insert-only.
+ * Postgres when DATABASE_URL is set (`fruma_demo`, `fruma_test`, `fruma_production`).
+ * Demo and test can use a file spine while that variable is unset.
+ * Production requires DATABASE_URL and does not create a local folder.
  */
 export function getSpineStore(surface: FrumaVersion = TEST_SURFACE): SpineStore {
   if (testOverride) return testOverride;
-  const key = process.env.DATABASE_URL?.trim() ? `pg:${surface}` : `file:${surface}`;
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  const key = databaseUrl ? `pg:${surface}` : `file:${surface}`;
   let store = stores.get(key);
   if (store) return store;
-  if (process.env.DATABASE_URL?.trim()) {
+  if (databaseUrl) {
     store = postgresSpineStore(surface);
+  } else if (surface === "production") {
+    throw new MissingConfigurationException(
+      "DATABASE_URL is required for the production ledger.",
+    );
   } else {
     store = new FileSpineStore(fileRootFor(surface));
   }
