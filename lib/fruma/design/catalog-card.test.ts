@@ -33,6 +33,7 @@ describe("uniform material cards", () => {
       { name: "Ecru", dyeLot: "cw:ecru", hex: "#F2E8D5" },
     ]);
     assert.equal(card.hasDppProof, false);
+    assert.equal(card.historicalProductMatch, undefined);
     assert.equal(swatchHex("unknown glaze"), swatchHex("unknown glaze"));
   });
 
