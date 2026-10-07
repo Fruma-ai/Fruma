@@ -1,3 +1,5 @@
+import type { StandardField } from "./ingest/types";
+
 export const DEMO_MILL_FILE = {
   name: "Vale-do-Ave-hanger-list.xlsx",
   size: "48 KB",
@@ -18,7 +20,8 @@ export const MILL_COLUMNS = [
 ] as const;
 
 export type FrumaMillField = {
-  key: string;
+  /** Nine-field standard, plus mill-only finish and yarn which are not standard fields. */
+  key: StandardField | "finish" | "yarn";
   label: string;
   hint: string;
   path: string;
@@ -40,7 +43,7 @@ export const FRUMA_MILL_FIELDS: FrumaMillField[] = [
     confidence: "high",
   },
   {
-    key: "structure",
+    key: "construction",
     label: "Structure",
     hint: "Mill construction → Fruma knit type",
     path: "Catalogue › Knit › Structure",
@@ -60,7 +63,7 @@ export const FRUMA_MILL_FIELDS: FrumaMillField[] = [
     confidence: "med",
   },
   {
-    key: "gsm",
+    key: "weight",
     label: "Weight",
     hint: "Ounces and informal gsm become g/m²",
     path: "Catalogue › Quality › Weight",
@@ -70,7 +73,7 @@ export const FRUMA_MILL_FIELDS: FrumaMillField[] = [
     confidence: "med",
   },
   {
-    key: "widthCm",
+    key: "width",
     label: "Width",
     hint: "Inches become centimetres",
     path: "Catalogue › Quality › Width",
@@ -80,7 +83,7 @@ export const FRUMA_MILL_FIELDS: FrumaMillField[] = [
     confidence: "low",
   },
   {
-    key: "moqM",
+    key: "moq",
     label: "Minimum order",
     hint: "Yards become metres",
     path: "Catalogue › Commercial › MOQ",
@@ -90,7 +93,7 @@ export const FRUMA_MILL_FIELDS: FrumaMillField[] = [
     confidence: "med",
   },
   {
-    key: "colours",
+    key: "colour",
     label: "Stock colourways",
     hint: "So colour search can hit this mill",
     path: "Catalogue › Colour › Stock",
@@ -145,7 +148,7 @@ export function millFieldsFromAsSent(args: {
 }): FrumaMillField[] {
   return FRUMA_MILL_FIELDS.map((field) => {
     if (field.key === "article") return { ...field, preview: args.articlePreview };
-    if (field.key === "colours") return { ...field, preview: args.colourPreview };
+    if (field.key === "colour") return { ...field, preview: args.colourPreview };
     return { ...field, preview: "—" };
   });
 }

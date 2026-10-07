@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FRUMA_VERSIONS, type FrumaVersion } from "@/lib/fruma/versions";
+import { FRUMA_VERSIONS } from "@/lib/fruma/versions";
 
-export function VersionBanner({ version }: { version: FrumaVersion }) {
+export function VersionBanner({ version }: { version: keyof typeof FRUMA_VERSIONS }) {
   const current = FRUMA_VERSIONS[version];
   const other = FRUMA_VERSIONS[version === "demo" ? "test" : "demo"];
   const freeze =

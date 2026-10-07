@@ -1,4 +1,10 @@
 import { randomUUID } from "node:crypto";
+import {
+  freezeSourceCell,
+  resolveActiveCell,
+  sourceCellId,
+  type CellMutationEvent,
+} from "./cell-mutations";
 import { IngestException } from "./exceptions";
 import { sha256Hex } from "./hash";
 import { qualitiesFromCells } from "./identity";
@@ -35,13 +41,16 @@ export class IngestEngine {
   private readonly cellsByDeposit = new Map<string, SourceCell[]>();
   private readonly qualities: BaseQuality[] = [];
   private readonly grants: NamedGrant[] = [];
+  /** Append-only. mapCell and confirmCell never edit the deposited SourceCell. */
+  private readonly mutations: CellMutationEvent[] = [];
 
   constructor(options?: { privateDir?: string }) {
     this.store = new PrivateByteStore(options?.privateDir);
   }
 
   deposit(input: DepositInput): DepositResult {
-    const { cells } = parseMillBytes(input.filename, input.bytes, input.headerOverlays);
+    const parsed = parseMillBytes(input.filename, input.bytes, input.headerOverlays);
+    const cells = parsed.cells.map((cell) => freezeSourceCell(cell));
     const deposit = this.store.put({
       supplierOrgId: input.supplierOrgId,
       filename: input.filename,
@@ -79,24 +88,51 @@ export class IngestEngine {
     pointer: { sheet: string; row: number; column: string },
     standardField: StandardField,
     standardValue?: string,
+    operatorCookie = "",
   ): SourceCell {
     const cell = this.findCell(depositId, pointer);
-    cell.standardField = standardField;
-    if (standardValue !== undefined) cell.standardValue = standardValue;
-    return cloneCell(cell);
+    const active = this.activeCell(depositId, cell);
+    const previous = active.standardValue ?? null;
+    const next = standardValue !== undefined ? standardValue : previous;
+    this.appendMutation({
+      depositId,
+      cell,
+      actionType: "map",
+      operatorCookie,
+      standardField,
+      oldStandardValue: previous,
+      newStandardValue: next,
+    });
+    return this.activeCell(depositId, cell);
   }
 
   confirmCell(
     depositId: string,
     pointer: { sheet: string; row: number; column: string },
+    operatorCookie = "",
   ): SourceCell {
     const cell = this.findCell(depositId, pointer);
-    cell.confirmed = true;
-    return cloneCell(cell);
+    const active = this.activeCell(depositId, cell);
+    const value = active.standardValue ?? null;
+    this.appendMutation({
+      depositId,
+      cell,
+      actionType: "confirm",
+      operatorCookie,
+      standardField: null,
+      oldStandardValue: value,
+      newStandardValue: value,
+    });
+    return this.activeCell(depositId, cell);
+  }
+
+  /** Events in append order. The deposited cells are not in this list. */
+  cellMutationEvents(): readonly CellMutationEvent[] {
+    return this.mutations.map((event) => ({ ...event }));
   }
 
   /** Certs only after an explicit mill confirm. Never inferred. */
-  confirmCert(baseQualityId: string, valueAsWritten: string): void {
+  confirmCert(baseQualityId: string, valueAsWritten: string, operatorCookie = ""): void {
     const quality = this.qualities.find((q) => q.id === baseQualityId);
     if (!quality) {
       throw new IngestException("unknown_deposit", "BaseQuality is not in the ingest store.", {
@@ -112,7 +148,17 @@ export class IngestEngine {
         "Cert is not mill-sourced on this quality; ingest will not infer one.",
       );
     }
-    sourceCell.confirmed = true;
+    const active = this.activeCell(quality.depositId, sourceCell);
+    const value = active.standardValue ?? null;
+    this.appendMutation({
+      depositId: quality.depositId,
+      cell: sourceCell,
+      actionType: "confirm",
+      operatorCookie,
+      standardField: null,
+      oldStandardValue: value,
+      newStandardValue: value,
+    });
     if (!quality.certs.some((c) => c.valueAsWritten === valueAsWritten)) {
       quality.certs.push({ valueAsWritten, sourceCell, millConfirmed: true });
     }
@@ -175,11 +221,13 @@ export class IngestEngine {
   }
 
   millQualities(supplierOrgId: string): BaseQuality[] {
-    return this.qualities.filter((q) => q.supplierOrgId === supplierOrgId).map(cloneQuality);
+    return this.qualitiesWithActiveCells()
+      .filter((q) => q.supplierOrgId === supplierOrgId)
+      .map(cloneQuality);
   }
 
   brandVisibleRows(brandOrgId: string): BrandVisibleQuality[] {
-    return brandView(brandOrgId, this.qualities, this.grants);
+    return brandView(brandOrgId, this.qualitiesWithActiveCells(), this.grants);
   }
 
   brandSourcePointer(brandOrgId: string, baseQualityId: string): SourceExistsPointer | null {
@@ -203,6 +251,57 @@ export class IngestEngine {
 
   fieldClassOf(field: StandardField): FieldClass {
     return FIELD_CLASS_OF[field];
+  }
+
+  private appendMutation(input: {
+    depositId: string;
+    cell: SourceCell;
+    actionType: CellMutationEvent["actionType"];
+    operatorCookie: string;
+    standardField: StandardField | null;
+    oldStandardValue: string | null;
+    newStandardValue: string | null;
+  }): CellMutationEvent {
+    const event: CellMutationEvent = {
+      eventId: randomUUID(),
+      sourceCellId: sourceCellId(input.depositId, input.cell.pointer),
+      operatorCookie: input.operatorCookie,
+      actionType: input.actionType,
+      oldStandardValue: input.oldStandardValue,
+      newStandardValue: input.newStandardValue,
+      standardField: input.standardField,
+      occurredAt: new Date().toISOString(),
+    };
+    this.mutations.push(event);
+    return event;
+  }
+
+  private activeCell(depositId: string, cell: SourceCell): SourceCell {
+    const id = sourceCellId(depositId, cell.pointer);
+    return resolveActiveCell(
+      cell,
+      this.mutations.filter((event) => event.sourceCellId === id),
+    );
+  }
+
+  /** Brand and mill reads see replayed state. The stored quality still points at frozen source cells. */
+  private qualitiesWithActiveCells(): BaseQuality[] {
+    return this.qualities.map((quality) => ({
+      ...quality,
+      cells: quality.cells.map((cell) => this.activeCell(quality.depositId, cell)),
+      colourways: quality.colourways.map((colourway) => ({
+        ...colourway,
+        sourceCell: this.activeCell(quality.depositId, colourway.sourceCell),
+      })),
+      widths: quality.widths.map((width) => ({
+        ...width,
+        sourceCell: this.activeCell(quality.depositId, width.sourceCell),
+      })),
+      certs: quality.certs.map((cert) => ({
+        ...cert,
+        sourceCell: this.activeCell(quality.depositId, cert.sourceCell),
+      })),
+    }));
   }
 
   private findCell(

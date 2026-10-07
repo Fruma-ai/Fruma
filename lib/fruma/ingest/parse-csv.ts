@@ -2,6 +2,7 @@ import { IngestException } from "./exceptions";
 import { resolveHeaderField } from "./header-map";
 import type { SourceCell, StandardField } from "./types";
 import { columnLetter } from "./columns";
+import { normalizedValueFor } from "./units";
 
 export function decodeUtf8(bytes: Uint8Array): string {
   if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
@@ -98,6 +99,7 @@ export function cellsFromTable(
       const header = headers[c] ?? "";
       const sourceValue = record[c] ?? "";
       const standardField = resolveHeaderField(header, overlays);
+      const normalizedValue = normalizedValueFor(standardField, sourceValue);
       cells.push({
         pointer: {
           sheet,
@@ -107,6 +109,7 @@ export function cellsFromTable(
         sourceValue,
         header,
         ...(standardField ? { standardField } : {}),
+        ...(normalizedValue != null ? { normalizedValue } : {}),
       });
     }
   }

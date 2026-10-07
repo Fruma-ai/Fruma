@@ -221,9 +221,9 @@ export function MillReviewView() {
                     row={row}
                     approved={Boolean(millRowApproved[row.id])}
                     ranked={rankMillOptions(
-                      "structure",
+                      "construction",
                       row.raw.construction,
-                      row.options.structure,
+                      row.options.construction,
                       millLearn,
                     )}
                     onField={setCatalogField}
@@ -305,7 +305,7 @@ function ReviewRow({
   provenance: string;
   mapped: boolean;
 }) {
-  const structure = row.values.structure || "";
+  const structure = row.values.construction || "";
   const review = reviewRowLabel(row.status);
   const tick = showWeldTick({
     provenance: row.provenance,
@@ -329,7 +329,7 @@ function ReviewRow({
         <select
           className="suggest-select mill-suggest w-full max-w-[240px]"
           value={structure}
-          onChange={(e) => onField(row.id, "structure", e.target.value)}
+          onChange={(e) => onField(row.id, "construction", e.target.value)}
           aria-label={`Fruma structure for ${row.article}`}
         >
           <option value="">Unknown</option>
@@ -341,7 +341,7 @@ function ReviewRow({
         </select>
         <p className="mt-1 spec text-[11px] text-mute">{frumaPath(structure)}</p>
         <p className="mt-0.5 spec text-[11px] text-mute">
-          {CATALOG_FIELDS.filter((f) => f.key !== "structure")
+          {CATALOG_FIELDS.filter((f) => f.key !== "construction")
             .map((f) => row.values[f.key])
             .filter(Boolean)
             .slice(0, 2)

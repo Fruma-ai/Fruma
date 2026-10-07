@@ -21,7 +21,10 @@ import {
   runPilotSlice,
   type PilotSliceResult,
 } from "../pilot";
-import { lockProductSource } from "../truth/lock";
+import { sourceCellId } from "../ingest/cell-mutations";
+import { normalizedValueFor } from "../ingest/units";
+import type { FieldCitation } from "../pilot/citations";
+import { lockProductSource, type LockedMillCell } from "../truth/lock";
 import type { ProductTruthRecord } from "../product-truth";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -45,6 +48,28 @@ export type WedgeSliceResult = {
     confirmedAt: string;
   };
 };
+
+function lockedCell(
+  depositId: string,
+  citations: FieldCitation[],
+  field: FieldCitation["field"],
+): LockedMillCell {
+  const citation = citations.find((item) => item.field === field);
+  if (!citation) throw new Error(`lock_missing_cell:${field}`);
+  return {
+    sourceCellId: sourceCellId(depositId, {
+      sheet: citation.sheet,
+      row: citation.row,
+      column: citation.column,
+    }),
+    sheet: citation.sheet,
+    row: citation.row,
+    column: citation.column,
+    rawHeader: citation.header,
+    sourceValue: citation.sourceValue,
+    normalizedValue: normalizedValueFor(field, citation.sourceValue),
+  };
+}
 
 async function persistPilotArtifacts(
   pilot: PilotSliceResult,
@@ -124,16 +149,24 @@ export async function runWedgeSlice(options?: {
         : "Pilot mill confirmation — current commercial terms.",
   });
 
+  const depositId = pilot.workbook.depositId;
   const locked = await lockProductSource({
     brief: pilot.brief,
     millOrgId: PILOT_WORKBOOK.millOrgId,
     millName: PILOT_WORKBOOK.millName,
     qualityArticle: hit.articleCode,
-    depositId: pilot.workbook.depositId,
+    depositId,
     constructionAsWritten: hit.constructionAsWritten,
     compositionAsWritten: hit.compositionAsWritten,
     weightAsWritten: hit.weightAsWritten,
     colourAsWritten: hit.colourAsWritten,
+    cells: {
+      article: lockedCell(depositId, hit.citations, "article"),
+      construction: lockedCell(depositId, hit.citations, "construction"),
+      composition: lockedCell(depositId, hit.citations, "composition"),
+      weight: lockedCell(depositId, hit.citations, "weight"),
+      colour: hit.colourAsWritten ? lockedCell(depositId, hit.citations, "colour") : null,
+    },
     confirmation,
     surface,
   });

@@ -29,6 +29,13 @@ export type ProductTruthFact = {
   field: string;
   value: string | number | boolean | null;
   sourceType: SourceType;
+  /**
+   * Mill-file facts reference `fruma_source_cells.id`.
+   * Coordinates come from that row, not from a copied string.
+   */
+  sourceCellId?: string;
+  /** Mill-file facts reference `fruma_deposits.id`. Must be the cell's deposit. */
+  depositId?: string;
   sourceRecordId?: string;
   sourceField?: string;
   sourceValue?: string | number | boolean | null;
@@ -42,6 +49,17 @@ export type ProductTruthFact = {
   applicability?: string[];
   version: number;
 };
+
+/** A mill-file fact that can be joined to a source cell and its deposit. */
+export type MillLinkedFact = ProductTruthFact & {
+  sourceType: "mill-file";
+  sourceCellId: string;
+  depositId: string;
+};
+
+export function isMillLinkedFact(fact: ProductTruthFact): fact is MillLinkedFact {
+  return fact.sourceType === "mill-file" && Boolean(fact.sourceCellId) && Boolean(fact.depositId);
+}
 
 export type EvidenceRecord = {
   id: string;
