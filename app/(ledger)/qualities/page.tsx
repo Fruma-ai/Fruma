@@ -1,5 +1,10 @@
-import { QualityDataTable } from "@/components/fruma/QualityDataTable";
+import { QualityWorkspace } from "@/components/fruma/QualityWorkspace";
 import { qualityRowsFromCells, type QualityRow } from "@/lib/fruma/catalog/quality-rows";
+import {
+  catalogFieldResolver,
+  standardGapsFromCells,
+  type StandardGap,
+} from "@/lib/fruma/catalog/standard-gaps";
 import { isIngestException } from "@/lib/fruma/ingest/exceptions";
 import { parseMillBytes } from "@/lib/fruma/ingest/parse";
 import { confirmedHeaderOverlays } from "@/lib/fruma/intelligence/overlays";
@@ -16,7 +21,9 @@ export default async function QualitiesPage() {
   const store = getSpineStore(DEMO_SURFACE);
   const snap = await store.load();
   const overlays = confirmedHeaderOverlays(DEMO_SURFACE);
+  const resolve = catalogFieldResolver(overlays);
   const qualities: QualityRow[] = [];
+  const gaps: StandardGap[] = [];
   const unread: string[] = [];
 
   for (const deposit of snap.deposits) {
@@ -27,25 +34,13 @@ export default async function QualitiesPage() {
     }
     try {
       const parsed = parseMillBytes(deposit.filename, bytes, overlays);
-      qualities.push(...qualityRowsFromCells(deposit.depositId, parsed.cells));
+      qualities.push(...qualityRowsFromCells(deposit.depositId, parsed.cells, resolve));
+      gaps.push(...standardGapsFromCells(deposit.depositId, parsed.cells, resolve));
     } catch (error) {
       const message = isIngestException(error) ? error.message : "Could not read this deposit.";
       unread.push(`${deposit.filename}: ${message}`);
     }
   }
 
-  return (
-    <div className="space-y-3">
-      {qualities.length === 0 ? (
-        <p className="font-mono text-xs text-[#6E7E91]">No material cells on fruma_demo.</p>
-      ) : (
-        <QualityDataTable qualities={qualities} />
-      )}
-      {unread.map((line) => (
-        <p key={line} className="font-mono text-xs text-[#6E7E91]" role="status">
-          {line}
-        </p>
-      ))}
-    </div>
-  );
+  return <QualityWorkspace rows={qualities} gaps={gaps} unread={unread} />;
 }
