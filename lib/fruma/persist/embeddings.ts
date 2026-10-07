@@ -37,6 +37,28 @@ export function vectorLiteral(values: readonly number[]): string {
  * pgvector `<=>` on cosine ops: 1 − cosine similarity.
  * A zero vector has no direction, so the distance is the maximum similarity gap of 1.
  */
+/**
+ * Deterministic 1536-d brief vector. The same text always maps to the same point,
+ * using the same byte scaling as the visual stand-in.
+ */
+export async function briefEmbedding(text: string): Promise<number[]> {
+  const values: number[] = [];
+  let block = 0;
+  const encoded = new TextEncoder();
+  const source = text.trim();
+  while (values.length < MATERIAL_EMBEDDING_DIMENSIONS) {
+    const digest = new Uint8Array(
+      await crypto.subtle.digest("SHA-256", encoded.encode(`${source}\0${block}`)),
+    );
+    for (const byte of digest) {
+      if (values.length === MATERIAL_EMBEDDING_DIMENSIONS) break;
+      values.push(byte / 127.5 - 1);
+    }
+    block += 1;
+  }
+  return values;
+}
+
 export function cosineDistance(left: readonly number[], right: readonly number[]): number {
   const width = Math.min(left.length, right.length);
   let dot = 0;

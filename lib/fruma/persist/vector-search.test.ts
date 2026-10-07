@@ -6,7 +6,20 @@ import { sourceCellId } from "../ingest/cell-mutations";
 import { sha256Hex } from "../ingest/hash";
 import { assertWorkspaceDataDirUntouched, installDiskFreeSchemas } from "./disk-free";
 import { setSpineStoreForTests } from "./index";
+import { briefEmbedding } from "./embeddings";
 import { dropSchemaStatement, ledgerSchemaName, searchPathStatement } from "./postgres-schema";
+
+describe("briefEmbedding", () => {
+  it("returns a stable 1536-d vector for the same brief", async () => {
+    const first = await briefEmbedding("220 gsm cotton mesh");
+    const second = await briefEmbedding("  220 gsm cotton mesh  ");
+    const other = await briefEmbedding("linen canvas");
+    assert.equal(first.length, 1536);
+    assert.deepEqual(first, second);
+    assert.notDeepEqual(first, other);
+    assert.ok(first.every((value) => value >= -1 && value <= 1));
+  });
+});
 
 const TEST_PASS = "vector-search-test-password";
 const SUPPLIER_ORG_ID = "org_mill_test";

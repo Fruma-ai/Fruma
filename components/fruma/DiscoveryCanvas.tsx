@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { uniformMaterialFromHit } from "@/lib/fruma/design/catalog-card";
 import { isStandardField } from "@/lib/fruma/ingest/types";
 import { uniformValue } from "@/lib/fruma/ingest/units";
-import { MaterialCatalogGrid } from "./MaterialCatalogGrid";
 
 export type SuggestionItem = {
   cellId: string;
@@ -51,8 +49,6 @@ export function DiscoveryCanvas({
   isSearching,
   isAccepting,
   status,
-  results,
-  onInspectMaterial,
 }: {
   onSearchExecute: (payload: DiscoverySearchPayload) => void;
   suggestions: SuggestionItem[];
@@ -60,8 +56,6 @@ export function DiscoveryCanvas({
   isSearching: boolean;
   isAccepting: boolean;
   status: string | null;
-  results: DiscoverySearchHit[];
-  onInspectMaterial: (id: string) => void;
 }) {
   const [prompt, setPrompt] = useState("");
   const [complianceTarget, setComplianceTarget] = useState<DiscoverySearchPayload["complianceTarget"]>(null);
@@ -128,14 +122,6 @@ export function DiscoveryCanvas({
           {status}
         </p>
       ) : null}
-
-      <section className="space-y-2" aria-label="Material catalog">
-        <h3 className="font-mono text-[10px] uppercase tracking-widest text-[#6E7E91]">Material catalog</h3>
-        <MaterialCatalogGrid
-          materials={results.map((hit) => uniformMaterialFromHit(hit))}
-          onInspectMaterial={onInspectMaterial}
-        />
-      </section>
 
       <section className="space-y-3" aria-label="Staged suggestions">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
