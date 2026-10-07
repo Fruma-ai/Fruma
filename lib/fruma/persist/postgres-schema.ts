@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS ${rel("fruma_header_maps")} (
   version INTEGER NOT NULL CHECK (version >= 1),
   overlays JSONB NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   CONSTRAINT fruma_header_maps_surface_version_key UNIQUE (surface, version)
 );
 CREATE TABLE IF NOT EXISTS ${rel("fruma_mill_requests")} (
@@ -117,8 +118,11 @@ CREATE TABLE IF NOT EXISTS ${rel("fruma_product_truth")} (
   product_id TEXT NOT NULL,
   version INTEGER NOT NULL CHECK (version >= 1),
   payload JSONB NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   CONSTRAINT fruma_product_truth_product_version_key UNIQUE (product_id, version)
 );
+ALTER TABLE ${rel("fruma_header_maps")} ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE ${rel("fruma_product_truth")} ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 CREATE TABLE IF NOT EXISTS ${rel("fruma_deposits")} (
   id TEXT PRIMARY KEY,
   byte_hash TEXT NOT NULL,

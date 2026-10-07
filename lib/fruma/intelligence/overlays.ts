@@ -43,6 +43,21 @@ export function confirmLexiconForHeaders(
   return confirmHeaders(batch, surface);
 }
 
+/** Replace the in-memory map for one surface with the rows restored from the ledger. */
+export function restoreHeaderOverlays(
+  surface: FrumaVersion,
+  overlays: Record<string, string>,
+): Record<string, StandardField> {
+  const next: Record<string, StandardField> = {};
+  for (const [rawHeader, rawField] of Object.entries(overlays)) {
+    const header = rawHeader.trim().toLowerCase();
+    if (!header || !isStandardField(rawField)) continue;
+    next[header] = rawField;
+  }
+  overlaysBySurface.set(surface, next);
+  return { ...next };
+}
+
 export function resetHeaderOverlaysForTests() {
   overlaysBySurface.clear();
 }

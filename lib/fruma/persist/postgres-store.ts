@@ -16,6 +16,7 @@ import {
   type SurfaceEnvironment,
   LEDGER_TABLES,
 } from "./postgres-schema";
+import { reloadEnginesFromDatabase } from "./reload-engines";
 import type {
   AnonymousMillRequest,
   MillConfirmation,
@@ -79,6 +80,7 @@ export class PostgresSpineStore implements SpineStore {
     this.ready = (async () => {
       await this.applySearchPath(sql, statement);
       await this.prepare(sql);
+      await reloadEnginesFromDatabase(sql);
     })();
     await this.ready;
     return sql;
