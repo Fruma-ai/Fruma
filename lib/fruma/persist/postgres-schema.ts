@@ -65,6 +65,8 @@ export const LEDGER_TABLES = [
   "fruma_named_grants",
   "fruma_cell_mutation_events",
   "fruma_product_truth_facts",
+  "fruma_factory_profiles",
+  "fruma_loom_capabilities",
 ] as const;
 
 /**
@@ -73,6 +75,7 @@ export const LEDGER_TABLES = [
  * and product-truth headers are versioned documents: the row id is a UUID,
  * and the business key is unique only together with `version`.
  * Active state is the greatest version for that key.
+ * Factory profiles are versioned by mill. Loom capabilities belong to one profile row.
  * `fruma_deposits.bytes` is the raw file. Nothing in this script updates it.
  * Isolation is the schema (`fruma_demo`, `fruma_test`, `fruma_production`).
  */
@@ -215,6 +218,28 @@ CREATE INDEX IF NOT EXISTS fruma_product_truth_facts_cell_idx
   ON ${rel("fruma_product_truth_facts")} (source_cell_id);
 CREATE INDEX IF NOT EXISTS fruma_product_truth_facts_deposit_idx
   ON ${rel("fruma_product_truth_facts")} (deposit_id);
+CREATE TABLE IF NOT EXISTS ${rel("fruma_factory_profiles")} (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mill_org_id TEXT NOT NULL,
+  facility_name TEXT NOT NULL,
+  country_location TEXT NOT NULL,
+  active_loom_count INTEGER NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  CONSTRAINT fruma_factory_profiles_mill_version_key UNIQUE (mill_org_id, version)
+);
+CREATE TABLE IF NOT EXISTS ${rel("fruma_loom_capabilities")} (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  factory_profile_id UUID NOT NULL REFERENCES ${rel("fruma_factory_profiles")} (id) ON DELETE CASCADE,
+  construction_type TEXT NOT NULL,
+  min_gsm INTEGER NOT NULL,
+  max_gsm INTEGER NOT NULL,
+  max_usable_width_cm INTEGER NOT NULL,
+  yarn_feed_compatibility JSONB NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1)
+);
+CREATE INDEX IF NOT EXISTS fruma_loom_capabilities_profile_idx
+  ON ${rel("fruma_loom_capabilities")} (factory_profile_id);
 CREATE OR REPLACE VIEW ${rel("fruma_product_truth_provenance")} AS
 SELECT
   f.id AS fact_id,
