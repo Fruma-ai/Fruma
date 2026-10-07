@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NextRequest } from "next/server";
+import { bootsLedgerOnThisProcess } from "../../instrumentation";
 import { DEMO_COOKIE, sessionToken } from "../gate";
 import { config, proxy } from "../../proxy";
 
@@ -54,5 +55,20 @@ describe("workspace proxy gate", () => {
     const rejected = await proxy(request("/deposits", { cookie: `${DEMO_COOKIE}=owen.not-a-session` }));
     assert.equal(rejected.status, 307);
     assert.equal(new URL(rejected.headers.get("location") ?? "").pathname, "/enter");
+  });
+
+  it("skips the ledger boot inside the request proxy bundle", () => {
+    const proxyStack = [
+      "Error",
+      "    at register (/var/task/.next/server/instrumentation.js:4:20)",
+      "    at internalHandler (/var/task/.next/server/middleware.js:137:11)",
+    ].join("\n");
+    const serverStack = [
+      "Error",
+      "    at register (/var/task/.next/server/instrumentation.js:4:20)",
+      "    at NextNodeServer.prepareImpl (/var/task/node_modules/next/dist/server/next-server.js:575:5)",
+    ].join("\n");
+    assert.equal(bootsLedgerOnThisProcess(proxyStack), false);
+    assert.equal(bootsLedgerOnThisProcess(serverStack), true);
   });
 });
