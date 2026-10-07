@@ -152,14 +152,12 @@ export class FileSpineStore implements SpineStore {
         );
       }
     }
-    if (snap.productTruth.some((row) => row.productId === record.productId && row.version === record.version)) {
-      throw new IdempotencyException(
-        "product_truth",
-        `Product truth ${record.productId} version ${record.version} already exists. Documents are append-only.`,
-        { productId: record.productId, version: record.version },
-      );
-    }
-    snap.productTruth.push(record);
+    const version = nextVersion(snap.productTruth.filter((row) => row.productId === record.productId));
+    snap.productTruth.push({
+      ...record,
+      version,
+      facts: record.facts.map((fact) => ({ ...fact, version })),
+    });
     await this.write(snap);
   }
 

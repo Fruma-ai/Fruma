@@ -190,6 +190,7 @@ export class PostgresSpineStore implements SpineStore {
     const sql = await this.client();
     await retryUnique(() =>
       sql.begin(async (tx) => {
+        await tx.unsafe(searchPathStatement(this.surface));
         const rows = await tx`
           SELECT COALESCE(MAX(version), 0) AS version
           FROM ${this.table(tx, "fruma_header_maps")}
@@ -209,10 +210,12 @@ export class PostgresSpineStore implements SpineStore {
     const sql = await this.client();
     await retryUnique(() =>
       sql.begin(async (tx) => {
+        await tx.unsafe(searchPathStatement(this.surface));
         const rows = await tx`
           SELECT COALESCE(MAX(version), 0) AS version
           FROM ${this.table(tx, "fruma_mill_requests")}
           WHERE request_id = ${request.id}
+            AND mill_org_id = ${request.millOrgId}
         `;
         const version = Number(rows[0]?.version ?? 0) + 1;
         await tx`
@@ -228,10 +231,12 @@ export class PostgresSpineStore implements SpineStore {
     const sql = await this.client();
     await retryUnique(() =>
       sql.begin(async (tx) => {
+        await tx.unsafe(searchPathStatement(this.surface));
         const rows = await tx`
           SELECT COALESCE(MAX(version), 0) AS version
           FROM ${this.table(tx, "fruma_mill_confirmations")}
           WHERE confirmation_id = ${confirmation.id}
+            AND mill_org_id = ${confirmation.millOrgId}
         `;
         const version = Number(rows[0]?.version ?? 0) + 1;
         await tx`
@@ -253,48 +258,50 @@ export class PostgresSpineStore implements SpineStore {
   async saveProductTruth(record: ProductTruthRecord): Promise<void> {
     const sql = await this.client();
     try {
-      await sql.begin(async (tx) => {
-        await tx`
-          INSERT INTO ${this.table(tx, "fruma_product_truth")}
-            (document_type, product_id, version, payload)
-          VALUES ('product_truth', ${record.productId}, ${record.version}, ${tx.json(record)})
-        `;
-        const existing = await tx`
-          SELECT id FROM ${this.table(tx, "fruma_product_truth_facts")}
-          WHERE product_id = ${record.productId}
-            AND version = ${record.version}
-        `;
-        if (existing.length) {
-          throw new IdempotencyException(
-            "product_truth_fact",
-            `Product truth ${record.productId} version ${record.version} already has fact rows.`,
-            { productId: record.productId, version: record.version },
-          );
-        }
-        for (const fact of record.facts) {
-          const linked = fact.sourceType === "mill-file" && fact.status !== "missing";
-          if (linked && (!fact.sourceCellId || !fact.depositId)) {
-            throw new Error(`product_truth_source_cell_required:${fact.field}`);
-          }
-          if (fact.sourceType === "mill-file" && fact.status === "missing") continue;
-          await tx`
-            INSERT INTO ${this.table(tx, "fruma_product_truth_facts")} (
-              id, product_id, version, field, value, source_type,
-              source_cell_id, deposit_id
-            )
-            VALUES (
-              ${fact.id},
-              ${fact.productId},
-              ${fact.version},
-              ${fact.field},
-              ${fact.value == null ? null : String(fact.value)},
-              ${fact.sourceType},
-              ${fact.sourceCellId ?? null},
-              ${fact.depositId ?? null}
-            )
+      await retryUnique(() =>
+        sql.begin(async (tx) => {
+          await tx.unsafe(searchPathStatement(this.surface));
+          const rows = await tx`
+            SELECT COALESCE(MAX(version), 0) AS version
+            FROM ${this.table(tx, "fruma_product_truth")}
+            WHERE product_id = ${record.productId}
           `;
-        }
-      });
+          const version = Number(rows[0]?.version ?? 0) + 1;
+          const stored: ProductTruthRecord = {
+            ...record,
+            version,
+            facts: record.facts.map((fact) => ({ ...fact, version })),
+          };
+          await tx`
+            INSERT INTO ${this.table(tx, "fruma_product_truth")}
+              (document_type, product_id, version, payload)
+            VALUES ('product_truth', ${stored.productId}, ${version}, ${tx.json(stored)})
+          `;
+          for (const fact of stored.facts) {
+            const linked = fact.sourceType === "mill-file" && fact.status !== "missing";
+            if (linked && (!fact.sourceCellId || !fact.depositId)) {
+              throw new Error(`product_truth_source_cell_required:${fact.field}`);
+            }
+            if (fact.sourceType === "mill-file" && fact.status === "missing") continue;
+            await tx`
+              INSERT INTO ${this.table(tx, "fruma_product_truth_facts")} (
+                id, product_id, version, field, value, source_type,
+                source_cell_id, deposit_id
+              )
+              VALUES (
+                ${fact.id},
+                ${fact.productId},
+                ${fact.version},
+                ${fact.field},
+                ${fact.value == null ? null : String(fact.value)},
+                ${fact.sourceType},
+                ${fact.sourceCellId ?? null},
+                ${fact.depositId ?? null}
+              )
+            `;
+          }
+        }),
+      );
     } catch (err) {
       if (err instanceof IdempotencyException) throw err;
       const mapped = idempotencyFromUniqueViolation(err);

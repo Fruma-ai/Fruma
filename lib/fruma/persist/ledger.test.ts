@@ -164,6 +164,16 @@ describe("immutable postgres ledger schema", () => {
       const body = methodBody(name, next);
       assert.equal(body.includes("ON CONFLICT"), false, name);
       assert.match(body, /INSERT INTO/);
+      if (
+        name === "saveHeaderMap" ||
+        name === "saveRequest" ||
+        name === "saveConfirmation" ||
+        name === "saveProductTruth"
+      ) {
+        assert.match(body, /COALESCE\(MAX\(version\), 0\)/, name);
+        assert.match(body, /searchPathStatement\(this\.surface\)/, name);
+        assert.match(body, /const version = Number\(rows\[0\]\?\.version \?\? 0\) \+ 1/, name);
+      }
     }
     for (const [name, next] of [
       ["saveProductTruth", "saveDepositPointer"],
@@ -398,11 +408,7 @@ describe("file spine deposit immutability", () => {
       evidence: [],
     };
     await store.saveProductTruth(truth);
-    await assert.rejects(
-      () => store.saveProductTruth(truth),
-      (err: unknown) => err instanceof IdempotencyException && err.conflict === "product_truth",
-    );
-    await store.saveProductTruth({ ...truth, version: 2 });
+    await store.saveProductTruth({ ...truth, version: 1 });
 
     const snap = await store.load();
     assert.equal(snap.headerMaps.length, 1);
