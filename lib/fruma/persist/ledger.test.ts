@@ -73,7 +73,19 @@ describe("immutable postgres ledger schema", () => {
     assert.equal(ddl.includes("ON CONFLICT"), false);
     assert.equal(ddl.includes("pointer JSONB"), false);
     assert.equal(ddl.includes("surface_environment"), false);
-    assert.equal(ddl.match(/id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/g)?.length, 4);
+    assert.equal(ddl.match(/id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/g)?.length, 5);
+    assert.match(ddl, /SET search_path TO public;\nCREATE EXTENSION IF NOT EXISTS vector;/);
+    assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_material_embeddings/);
+    assert.match(
+      ddl,
+      /source_cell_id TEXT NOT NULL REFERENCES fruma_test\.fruma_source_cells \(id\) ON DELETE CASCADE/,
+    );
+    assert.match(ddl, /embedding public\.vector\(1536\) NOT NULL/);
+    assert.match(ddl, /updated_at TIMESTAMPTZ NOT NULL/);
+    assert.match(
+      ddl,
+      /CREATE INDEX IF NOT EXISTS material_embedding_hnsw_idx\s+ON fruma_test\.fruma_material_embeddings\s+USING hnsw \(embedding public\.vector_cosine_ops\)/,
+    );
     assert.match(ddl, /CONSTRAINT fruma_header_maps_surface_version_key UNIQUE \(surface, version\)/);
     assert.match(ddl, /CONSTRAINT fruma_mill_requests_request_version_key UNIQUE \(request_id, version\)/);
     assert.match(ddl, /CONSTRAINT fruma_mill_confirmations_confirmation_version_key UNIQUE \(confirmation_id, version\)/);
@@ -98,7 +110,7 @@ describe("immutable postgres ledger schema", () => {
       assert.match(ddl, new RegExp(`CREATE SCHEMA IF NOT EXISTS ${schema}`));
       assert.match(ddl, new RegExp(`SET search_path TO ${schema}`));
       const tables = ddl.split("CREATE TABLE IF NOT EXISTS ").slice(1);
-      assert.equal(tables.length, 9);
+      assert.equal(tables.length, 10);
       for (const table of tables) {
         assert.match(table, new RegExp(`^${schema}\\.fruma_`));
         assert.equal(table.includes("surface_environment"), false);

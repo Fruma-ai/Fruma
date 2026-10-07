@@ -61,6 +61,7 @@ export const LEDGER_TABLES = [
   "fruma_product_truth",
   "fruma_deposits",
   "fruma_source_cells",
+  "fruma_material_embeddings",
   "fruma_named_grants",
   "fruma_cell_mutation_events",
   "fruma_product_truth_facts",
@@ -81,6 +82,8 @@ export function postgresLedgerSchema(targetSchema: string): string {
     `${schema}.${table}`;
 
   return `
+SET search_path TO public;
+CREATE EXTENSION IF NOT EXISTS vector;
 CREATE SCHEMA IF NOT EXISTS ${schema};
 SET search_path TO ${schema};
 CREATE TABLE IF NOT EXISTS ${rel("fruma_header_maps")} (
@@ -171,6 +174,15 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 ALTER TABLE ${rel("fruma_source_cells")} ADD COLUMN IF NOT EXISTS normalized_value TEXT;
+CREATE TABLE IF NOT EXISTS ${rel("fruma_material_embeddings")} (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_cell_id TEXT NOT NULL REFERENCES ${rel("fruma_source_cells")} (id) ON DELETE CASCADE,
+  embedding public.vector(1536) NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS material_embedding_hnsw_idx
+  ON ${rel("fruma_material_embeddings")}
+  USING hnsw (embedding public.vector_cosine_ops);
 CREATE TABLE IF NOT EXISTS ${rel("fruma_product_truth_facts")} (
   id TEXT PRIMARY KEY,
   product_id TEXT NOT NULL,
