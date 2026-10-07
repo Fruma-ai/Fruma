@@ -45,8 +45,15 @@ function ledgerClient(options: {
       if (query.trim().startsWith("SET search_path")) return [];
       if (query.includes("FROM fruma_source_cells") && query.includes("normalized_value IS NULL")) {
         const depositId = String(parameters?.[0] ?? "");
+        const hideConfirmed = query.includes("NOT EXISTS") && query.includes("action_type = 'confirm'");
         return options.cells
-          .filter((cell) => cell.deposit_id === depositId && cell.normalized_value == null)
+          .filter((cell) => {
+            if (cell.deposit_id !== depositId || cell.normalized_value != null) return false;
+            if (!hideConfirmed) return true;
+            return !(options.confirms ?? []).some(
+              (event) => event.source_cell_id === cell.id && event.action_type === "confirm",
+            );
+          })
           .map((cell) => ({
             id: cell.id,
             raw_header: cell.raw_header,
@@ -157,7 +164,10 @@ describe("generateDeterministicSuggestions", () => {
     assert.equal(written.length, 5);
     assert.deepEqual(written[4]?.parameters, [DEPOSIT, "article-cotton", "article", "cotton"]);
     assert.equal(inserts(client, INTRA_MILL_HISTORICAL_ALIAS).length, 0);
-    assert.equal(client.calls.some((call) => call.query.includes("fruma_cell_mutation_events")), false);
+    assert.equal(
+      client.calls.some((call) => call.query.includes("supplier_org_id")),
+      false,
+    );
 
     const text = client.calls.map((call) => call.query);
     assert.match(text[0] ?? "", /current_schema/);
@@ -271,7 +281,7 @@ describe("generateDeterministicSuggestions", () => {
     assert.equal(historical.length, 1);
     assert.deepEqual(historical[0]?.parameters, [DEPOSIT, "open", "composition", "organic cotton"]);
     assert.match(client.calls[1]?.query ?? "", /SET search_path TO fruma_demo;/);
-    const lookups = client.calls.filter((call) => call.query.includes("FROM fruma_cell_mutation_events"));
+    const lookups = client.calls.filter((call) => call.query.includes("supplier_org_id"));
     assert.deepEqual(
       lookups.map((call) => call.parameters),
       [
@@ -327,7 +337,47 @@ describe("generateDeterministicSuggestions", () => {
       staged.map((row) => [row.sourceCellId, row.targetField, row.suggestedValue, row.derivationSource]),
       [["header-wins", "weight", "140", GLOBAL_STANDARD_ASTM]],
     );
-    assert.equal(client.calls.some((call) => call.query.includes("fruma_cell_mutation_events")), false);
+    assert.equal(client.calls.some((call) => call.query.includes("supplier_org_id")), false);
+  });
+
+  it("leaves a confirmed cell out of the next proposal pass", async () => {
+    const client = ledgerClient({
+      deposits: [{ id: DEPOSIT, supplier_org_id: MILL_A }],
+      cells: [
+        {
+          id: "accepted",
+          deposit_id: DEPOSIT,
+          raw_header: "Fibre",
+          source_value: "cotton",
+          normalized_value: null,
+        },
+        {
+          id: "open",
+          deposit_id: DEPOSIT,
+          raw_header: "Wgt GSM",
+          source_value: "180",
+          normalized_value: null,
+        },
+      ],
+      confirms: [
+        {
+          source_cell_id: "accepted",
+          action_type: "confirm",
+          standard_field: "composition",
+          new_standard_value: "cotton",
+          occurred_at: "2026-09-02T00:00:00.000Z",
+        },
+      ],
+    });
+
+    const staged = await generateDeterministicSuggestions(client, DEPOSIT);
+    assert.deepEqual(
+      staged.map((row) => row.sourceCellId),
+      ["open"],
+    );
+    const lookup = client.calls.find((call) => call.query.includes("normalized_value IS NULL"));
+    assert.match(lookup?.query ?? "", /NOT EXISTS/);
+    assert.match(lookup?.query ?? "", /action_type = 'confirm'/);
   });
 
   it("refuses a connection outside the ledger schemas and an empty deposit id", async () => {

@@ -10,7 +10,11 @@ export type CellMutationEvent = {
   actionType: CellMutationAction;
   oldStandardValue: string | null;
   newStandardValue: string | null;
-  /** Field written by a map event. Confirm events leave this null. */
+  /**
+   * Field written by a map event.
+   * A confirm that accepts a staged proposal names the field too.
+   * Older confirms leave it null and keep the mapped field.
+   */
   standardField: StandardField | null;
   occurredAt: string;
 };
@@ -50,6 +54,8 @@ export function resolveActiveCell(
       if (event.standardField) standardField = event.standardField;
       standardValue = event.newStandardValue ?? undefined;
     } else {
+      if (event.standardField) standardField = event.standardField;
+      if (event.newStandardValue != null) standardValue = event.newStandardValue;
       confirmed = true;
     }
   }

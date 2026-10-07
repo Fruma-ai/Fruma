@@ -43,10 +43,16 @@ type RawUnmappedCell = {
 };
 
 const UNMAPPED_CELLS_SQL = `
-  SELECT id, raw_header, source_value
-  FROM fruma_source_cells
-  WHERE deposit_id = $1
-    AND normalized_value IS NULL
+  SELECT c.id, c.raw_header, c.source_value
+  FROM fruma_source_cells c
+  WHERE c.deposit_id = $1
+    AND c.normalized_value IS NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM fruma_cell_mutation_events ev
+      WHERE ev.source_cell_id = c.id
+        AND ev.action_type = 'confirm'
+    )
 `;
 
 const HISTORICAL_ALIAS_SQL = `
@@ -120,7 +126,7 @@ function stagedRow(
 }
 
 /**
- * Stage proposals for cells this deposit has not normalized yet.
+ * Stage proposals for cells this deposit has not normalized and has not confirmed.
  * The client's current schema is pinned first. Every statement uses unqualified
  * tables, so the rows stay on that search path and out of product-truth facts.
  * A dictionary hit on the header writes GLOBAL_STANDARD_ASTM. Otherwise the
