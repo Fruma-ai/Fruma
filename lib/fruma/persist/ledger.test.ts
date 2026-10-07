@@ -47,6 +47,7 @@ describe("immutable postgres ledger schema", () => {
     assert.match(ddl, /source_value TEXT NOT NULL/);
     assert.match(ddl, /normalized_value TEXT/);
     assert.equal(/normalized_value TEXT NOT NULL/.test(ddl), false);
+    assert.match(ddl, /WHEN duplicate_object OR duplicate_table THEN NULL/);
     assert.match(ddl, /mill_org_id TEXT NOT NULL/);
     assert.match(ddl, /brand_org_id TEXT NOT NULL/);
     assert.match(ddl, /scope_class TEXT NOT NULL/);

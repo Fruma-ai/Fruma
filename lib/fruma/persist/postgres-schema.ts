@@ -179,7 +179,7 @@ BEGIN
   ALTER TABLE ${rel("fruma_source_cells")}
     ADD CONSTRAINT fruma_source_cells_id_deposit_key UNIQUE (id, deposit_id);
 EXCEPTION
-  WHEN duplicate_object THEN NULL;
+  WHEN duplicate_object OR duplicate_table THEN NULL;
 END $$;
 ALTER TABLE ${rel("fruma_source_cells")} ADD COLUMN IF NOT EXISTS normalized_value TEXT;
 CREATE TABLE IF NOT EXISTS ${rel("fruma_material_embeddings")} (
