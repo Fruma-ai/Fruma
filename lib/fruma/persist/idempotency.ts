@@ -6,6 +6,7 @@ export type IdempotencyConflict =
   | "source_cell"
   | "named_grant"
   | "cell_mutation"
+  | "product_truth"
   | "product_truth_fact";
 
 export class IdempotencyException extends Error {
@@ -89,6 +90,13 @@ export function idempotencyFromUniqueViolation(
     return new IdempotencyException(
       "product_truth_fact",
       "Product truth fact already exists. Provenance rows are not overwritten.",
+      { constraint },
+    );
+  }
+  if (table === "fruma_product_truth" || constraint.includes("product_version")) {
+    return new IdempotencyException(
+      "product_truth",
+      "Product truth version already exists. Documents are append-only.",
       { constraint },
     );
   }

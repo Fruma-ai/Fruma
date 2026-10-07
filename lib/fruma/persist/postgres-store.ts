@@ -55,7 +55,7 @@ export class PostgresSpineStore implements SpineStore {
     this.schemaName = ledgerSchemaName(surface);
   }
 
-  private table(sql: Sql, name: LedgerTable) {
+  private table(sql: { unsafe(query: string): ReturnType<Sql["unsafe"]> }, name: LedgerTable) {
     return sql.unsafe(`"${this.schemaName}"."${name}"`);
   }
 
@@ -131,12 +131,25 @@ export class PostgresSpineStore implements SpineStore {
     const sql = await this.client();
     const [maps, requests, confirmations, truth, deposits, cells, grants, mutations] = await Promise.all([
       sql`
-        SELECT surface, overlays, updated_at
+        SELECT DISTINCT ON (surface) surface, overlays, updated_at
         FROM ${this.table(sql, "fruma_header_maps")}
+        ORDER BY surface, version DESC
       `,
-      sql`SELECT payload FROM ${this.table(sql, "fruma_mill_requests")}`,
-      sql`SELECT payload FROM ${this.table(sql, "fruma_mill_confirmations")}`,
-      sql`SELECT payload FROM ${this.table(sql, "fruma_product_truth")}`,
+      sql`
+        SELECT DISTINCT ON (request_id) payload
+        FROM ${this.table(sql, "fruma_mill_requests")}
+        ORDER BY request_id, version DESC
+      `,
+      sql`
+        SELECT DISTINCT ON (confirmation_id) payload
+        FROM ${this.table(sql, "fruma_mill_confirmations")}
+        ORDER BY confirmation_id, version DESC
+      `,
+      sql`
+        SELECT DISTINCT ON (product_id) payload
+        FROM ${this.table(sql, "fruma_product_truth")}
+        ORDER BY product_id, version DESC
+      `,
       sql`
         SELECT id, byte_hash, filename, received_at, supplier_org_id, octet_length(bytes) AS byte_length
         FROM ${this.table(sql, "fruma_deposits")}
@@ -175,30 +188,66 @@ export class PostgresSpineStore implements SpineStore {
   async saveHeaderMap(map: PersistedHeaderMap): Promise<void> {
     this.assertSameSurface(map.surface);
     const sql = await this.client();
-    await sql`
-      INSERT INTO ${this.table(sql, "fruma_header_maps")} (surface, overlays, updated_at)
-      VALUES (${map.surface}, ${sql.json(map.overlays)}, ${map.updatedAt})
-      ON CONFLICT (surface) DO UPDATE
-      SET overlays = EXCLUDED.overlays, updated_at = EXCLUDED.updated_at
-    `;
+    await retryUnique(() =>
+      sql.begin(async (tx) => {
+        const rows = await tx`
+          SELECT COALESCE(MAX(version), 0) AS version
+          FROM ${this.table(tx, "fruma_header_maps")}
+          WHERE surface = ${map.surface}
+        `;
+        const version = Number(rows[0]?.version ?? 0) + 1;
+        await tx`
+          INSERT INTO ${this.table(tx, "fruma_header_maps")}
+            (document_type, surface, version, overlays, updated_at)
+          VALUES ('header_map', ${map.surface}, ${version}, ${tx.json(map.overlays)}, ${map.updatedAt})
+        `;
+      }),
+    );
   }
 
   async saveRequest(request: AnonymousMillRequest): Promise<void> {
     const sql = await this.client();
-    await sql`
-      INSERT INTO ${this.table(sql, "fruma_mill_requests")} (id, payload)
-      VALUES (${request.id}, ${sql.json(request)})
-      ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload
-    `;
+    await retryUnique(() =>
+      sql.begin(async (tx) => {
+        const rows = await tx`
+          SELECT COALESCE(MAX(version), 0) AS version
+          FROM ${this.table(tx, "fruma_mill_requests")}
+          WHERE request_id = ${request.id}
+        `;
+        const version = Number(rows[0]?.version ?? 0) + 1;
+        await tx`
+          INSERT INTO ${this.table(tx, "fruma_mill_requests")}
+            (document_type, request_id, mill_org_id, version, payload)
+          VALUES ('mill_request', ${request.id}, ${request.millOrgId}, ${version}, ${tx.json(request)})
+        `;
+      }),
+    );
   }
 
   async saveConfirmation(confirmation: MillConfirmation): Promise<void> {
     const sql = await this.client();
-    await sql`
-      INSERT INTO ${this.table(sql, "fruma_mill_confirmations")} (id, payload)
-      VALUES (${confirmation.id}, ${sql.json(confirmation)})
-      ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload
-    `;
+    await retryUnique(() =>
+      sql.begin(async (tx) => {
+        const rows = await tx`
+          SELECT COALESCE(MAX(version), 0) AS version
+          FROM ${this.table(tx, "fruma_mill_confirmations")}
+          WHERE confirmation_id = ${confirmation.id}
+        `;
+        const version = Number(rows[0]?.version ?? 0) + 1;
+        await tx`
+          INSERT INTO ${this.table(tx, "fruma_mill_confirmations")}
+            (document_type, confirmation_id, request_id, mill_org_id, version, payload)
+          VALUES (
+            'mill_confirmation',
+            ${confirmation.id},
+            ${confirmation.requestId},
+            ${confirmation.millOrgId},
+            ${version},
+            ${tx.json(confirmation)}
+          )
+        `;
+      }),
+    );
   }
 
   async saveProductTruth(record: ProductTruthRecord): Promise<void> {
@@ -206,9 +255,9 @@ export class PostgresSpineStore implements SpineStore {
     try {
       await sql.begin(async (tx) => {
         await tx`
-          INSERT INTO ${this.table(tx, "fruma_product_truth")} (product_id, version, payload)
-          VALUES (${record.productId}, ${record.version}, ${tx.json(record)})
-          ON CONFLICT (product_id, version) DO UPDATE SET payload = EXCLUDED.payload
+          INSERT INTO ${this.table(tx, "fruma_product_truth")}
+            (document_type, product_id, version, payload)
+          VALUES ('product_truth', ${record.productId}, ${record.version}, ${tx.json(record)})
         `;
         const existing = await tx`
           SELECT id FROM ${this.table(tx, "fruma_product_truth_facts")}
@@ -454,6 +503,22 @@ export class PostgresSpineStore implements SpineStore {
       throw new Error(
         `Refusing to write surface ${surface} through the ${this.surface} ledger.`,
       );
+    }
+  }
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === "23505";
+}
+
+/** A concurrent writer that claims the same version number is retried. */
+async function retryUnique(run: () => Promise<void>): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await run();
+      return;
+    } catch (err) {
+      if (!isUniqueViolation(err) || attempt === 2) throw err;
     }
   }
 }

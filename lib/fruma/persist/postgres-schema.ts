@@ -68,7 +68,10 @@ export const LEDGER_TABLES = [
 
 /**
  * Immutable ledger DDL for one environment schema.
- * Deposits, source cells, named grants, mutation events, and fact rows are insert-only.
+ * Every table is insert-only. Header maps, mill requests, mill confirmations,
+ * and product-truth headers are versioned documents: the row id is a UUID,
+ * and the business key is unique only together with `version`.
+ * Active state is the greatest version for that key.
  * `fruma_deposits.bytes` is the raw file. Nothing in this script updates it.
  * Isolation is the schema (`fruma_demo`, `fruma_test`, `fruma_production`).
  */
@@ -81,26 +84,40 @@ export function postgresLedgerSchema(targetSchema: string): string {
 CREATE SCHEMA IF NOT EXISTS ${schema};
 SET search_path TO ${schema};
 CREATE TABLE IF NOT EXISTS ${rel("fruma_header_maps")} (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_type TEXT NOT NULL DEFAULT 'header_map' CHECK (document_type = 'header_map'),
   surface TEXT NOT NULL,
+  version INTEGER NOT NULL CHECK (version >= 1),
   overlays JSONB NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL,
-  PRIMARY KEY (surface)
+  CONSTRAINT fruma_header_maps_surface_version_key UNIQUE (surface, version)
 );
 CREATE TABLE IF NOT EXISTS ${rel("fruma_mill_requests")} (
-  id TEXT NOT NULL,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_type TEXT NOT NULL DEFAULT 'mill_request' CHECK (document_type = 'mill_request'),
+  request_id TEXT NOT NULL,
+  mill_org_id TEXT NOT NULL,
+  version INTEGER NOT NULL CHECK (version >= 1),
   payload JSONB NOT NULL,
-  PRIMARY KEY (id)
+  CONSTRAINT fruma_mill_requests_request_version_key UNIQUE (request_id, version)
 );
 CREATE TABLE IF NOT EXISTS ${rel("fruma_mill_confirmations")} (
-  id TEXT NOT NULL,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_type TEXT NOT NULL DEFAULT 'mill_confirmation' CHECK (document_type = 'mill_confirmation'),
+  confirmation_id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  mill_org_id TEXT NOT NULL,
+  version INTEGER NOT NULL CHECK (version >= 1),
   payload JSONB NOT NULL,
-  PRIMARY KEY (id)
+  CONSTRAINT fruma_mill_confirmations_confirmation_version_key UNIQUE (confirmation_id, version)
 );
 CREATE TABLE IF NOT EXISTS ${rel("fruma_product_truth")} (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_type TEXT NOT NULL DEFAULT 'product_truth' CHECK (document_type = 'product_truth'),
   product_id TEXT NOT NULL,
-  version INTEGER NOT NULL,
+  version INTEGER NOT NULL CHECK (version >= 1),
   payload JSONB NOT NULL,
-  PRIMARY KEY (product_id, version)
+  CONSTRAINT fruma_product_truth_product_version_key UNIQUE (product_id, version)
 );
 CREATE TABLE IF NOT EXISTS ${rel("fruma_deposits")} (
   id TEXT PRIMARY KEY,
@@ -230,6 +247,18 @@ export function legacyLedgerMessage(columnsByTable: Map<string, Set<string>>): s
     if (!cols) continue;
     if (cols.has("surface_environment")) {
       return `${table} still has surface_environment. Drop this schema's fruma_* tables and reinitialize.`;
+    }
+  }
+  for (const table of [
+    "fruma_header_maps",
+    "fruma_mill_requests",
+    "fruma_mill_confirmations",
+    "fruma_product_truth",
+  ] as const) {
+    const cols = columnsByTable.get(table);
+    if (!cols) continue;
+    if (!cols.has("id") || !cols.has("document_type") || !cols.has("version")) {
+      return `${table} is still an upserted JSONB document. Drop this schema and reinitialize.`;
     }
   }
   return null;

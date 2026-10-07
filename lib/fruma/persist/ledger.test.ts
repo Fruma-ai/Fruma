@@ -73,6 +73,23 @@ describe("immutable postgres ledger schema", () => {
     assert.equal(ddl.includes("ON CONFLICT"), false);
     assert.equal(ddl.includes("pointer JSONB"), false);
     assert.equal(ddl.includes("surface_environment"), false);
+    assert.equal(ddl.match(/id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/g)?.length, 4);
+    assert.match(ddl, /CONSTRAINT fruma_header_maps_surface_version_key UNIQUE \(surface, version\)/);
+    assert.match(ddl, /CONSTRAINT fruma_mill_requests_request_version_key UNIQUE \(request_id, version\)/);
+    assert.match(ddl, /CONSTRAINT fruma_mill_confirmations_confirmation_version_key UNIQUE \(confirmation_id, version\)/);
+    assert.match(ddl, /CONSTRAINT fruma_product_truth_product_version_key UNIQUE \(product_id, version\)/);
+    assert.match(ddl, /document_type TEXT NOT NULL DEFAULT 'header_map'/);
+    assert.match(ddl, /document_type TEXT NOT NULL DEFAULT 'mill_request'/);
+    assert.match(ddl, /document_type TEXT NOT NULL DEFAULT 'mill_confirmation'/);
+    assert.match(ddl, /document_type TEXT NOT NULL DEFAULT 'product_truth'/);
+    assert.match(ddl, /request_id TEXT NOT NULL/);
+    assert.match(ddl, /confirmation_id TEXT NOT NULL/);
+    assert.equal(/PRIMARY KEY \(surface\)/.test(ddl), false);
+    assert.equal(/UNIQUE \(surface\)/.test(ddl), false);
+    assert.equal(/UNIQUE \(request_id\)/.test(ddl), false);
+    assert.equal(/UNIQUE \(confirmation_id\)/.test(ddl), false);
+    assert.equal(/UNIQUE \(product_id\)/.test(ddl), false);
+    assert.equal(storeSrc.includes("ON CONFLICT"), false);
   });
 
   it("creates each environment schema and keeps the provenance view inside it", () => {
@@ -133,8 +150,12 @@ describe("immutable postgres ledger schema", () => {
     assert.equal(body.includes("surface_environment"), false);
   });
 
-  it("inserts deposits, cells, and grants with no ON CONFLICT DO UPDATE", () => {
+  it("inserts deposits, cells, grants, and versioned documents with no ON CONFLICT DO UPDATE", () => {
     for (const [name, next] of [
+      ["saveHeaderMap", "saveRequest"],
+      ["saveRequest", "saveConfirmation"],
+      ["saveConfirmation", "saveProductTruth"],
+      ["saveProductTruth", "saveDepositPointer"],
       ["saveDepositPointer", "saveSourceCells"],
       ["saveSourceCells", "saveNamedGrant"],
       ["saveNamedGrant", "appendCellMutation"],
@@ -143,7 +164,16 @@ describe("immutable postgres ledger schema", () => {
       const body = methodBody(name, next);
       assert.equal(body.includes("ON CONFLICT"), false, name);
       assert.match(body, /INSERT INTO/);
-      assert.match(body, /IdempotencyException|depositIdempotencyException/);
+    }
+    for (const [name, next] of [
+      ["saveProductTruth", "saveDepositPointer"],
+      ["saveDepositPointer", "saveSourceCells"],
+      ["saveSourceCells", "saveNamedGrant"],
+      ["saveNamedGrant", "appendCellMutation"],
+      ["appendCellMutation", "getDepositBytes"],
+    ] as const) {
+      const body = methodBody(name, next);
+      assert.match(body, /IdempotencyException|depositIdempotencyException/, name);
     }
   });
 
@@ -162,10 +192,19 @@ describe("immutable postgres ledger schema", () => {
 
     const current = new Map<string, Set<string>>([
       ["fruma_deposits", new Set(["id", "byte_hash", "filename", "received_at", "bytes"])],
-      ["fruma_header_maps", new Set(["surface", "overlays"])],
+      ["fruma_header_maps", new Set(["id", "document_type", "surface", "version", "overlays"])],
+      ["fruma_mill_requests", new Set(["id", "document_type", "request_id", "version", "payload"])],
+      ["fruma_mill_confirmations", new Set(["id", "document_type", "confirmation_id", "version", "payload"])],
+      ["fruma_product_truth", new Set(["id", "document_type", "product_id", "version", "payload"])],
       ["fruma_source_cells", new Set(["id", "source_value"])],
     ]);
     assert.equal(legacyLedgerMessage(current), null);
+
+    const upserted = new Map<string, Set<string>>([
+      ["fruma_header_maps", new Set(["surface", "overlays", "updated_at"])],
+      ["fruma_mill_requests", new Set(["id", "payload"])],
+    ]);
+    assert.match(legacyLedgerMessage(upserted) ?? "", /upserted JSONB/);
   });
 
   it("classifies deposit_id ahead of byte_hash when both match", () => {
@@ -316,5 +355,76 @@ describe("file spine deposit immutability", () => {
     assert.equal(active.standardField, "construction");
     assert.equal(active.standardValue, "mesh");
     assert.equal(active.confirmed, true);
+  });
+
+  it("appends a new version of header maps, requests, and product truth", async () => {
+    const dir = join(tmpdir(), `fruma-docs-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    const store = new FileSpineStore(dir);
+    await store.saveHeaderMap({
+      surface: "test",
+      overlays: { Art: "article" },
+      updatedAt: "2026-10-07T00:00:00.000Z",
+    });
+    await store.saveHeaderMap({
+      surface: "test",
+      overlays: { Art: "article", Weight: "weight" },
+      updatedAt: "2026-10-07T00:01:00.000Z",
+    });
+    await store.saveRequest({
+      id: "req-1",
+      brandId: "brand-1",
+      productId: "prod-1",
+      millOrgId: "org_mill",
+      qualityArticle: "Q75",
+      millVisible: { category: "polo", deliveryRegion: "EU" },
+      status: "open",
+      createdAt: "2026-10-07T00:00:00.000Z",
+    });
+    await store.saveRequest({
+      id: "req-1",
+      brandId: "brand-1",
+      productId: "prod-1",
+      millOrgId: "org_mill",
+      qualityArticle: "Q75",
+      millVisible: { category: "polo", deliveryRegion: "EU" },
+      status: "answered",
+      createdAt: "2026-10-07T00:00:00.000Z",
+      answeredAt: "2026-10-07T00:02:00.000Z",
+    });
+    const truth = {
+      productId: "prod-1",
+      version: 1,
+      facts: [],
+      evidence: [],
+    };
+    await store.saveProductTruth(truth);
+    await assert.rejects(
+      () => store.saveProductTruth(truth),
+      (err: unknown) => err instanceof IdempotencyException && err.conflict === "product_truth",
+    );
+    await store.saveProductTruth({ ...truth, version: 2 });
+
+    const snap = await store.load();
+    assert.equal(snap.headerMaps.length, 1);
+    assert.equal(snap.headerMaps[0]?.overlays.Weight, "weight");
+    assert.equal(snap.requests.length, 1);
+    assert.equal(snap.requests[0]?.status, "answered");
+    assert.equal(snap.productTruth.length, 1);
+    assert.equal(snap.productTruth[0]?.version, 2);
+
+    const raw = JSON.parse(readFileSync(join(dir, "spine.json"), "utf8")) as {
+      headerMaps: { version: number }[];
+      requests: { version: number; status: string }[];
+      productTruth: { version: number }[];
+    };
+    assert.deepEqual(raw.headerMaps.map((row) => row.version), [1, 2]);
+    assert.deepEqual(
+      raw.requests.map((row) => [row.version, row.status]),
+      [
+        [1, "open"],
+        [2, "answered"],
+      ],
+    );
+    assert.deepEqual(raw.productTruth.map((row) => row.version), [1, 2]);
   });
 });

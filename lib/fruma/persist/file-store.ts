@@ -18,7 +18,22 @@ import type {
   SpineStore,
 } from "./types";
 
-const EMPTY: SpineSnapshot = {
+type HeaderRevision = PersistedHeaderMap & { version: number };
+type RequestRevision = AnonymousMillRequest & { version: number };
+type ConfirmationRevision = MillConfirmation & { version: number };
+
+type SpineFile = {
+  headerMaps: HeaderRevision[];
+  requests: RequestRevision[];
+  confirmations: ConfirmationRevision[];
+  productTruth: ProductTruthRecord[];
+  deposits: PersistedDepositPointer[];
+  sourceCells: PersistedSourceCell[];
+  namedGrants: PersistedNamedGrant[];
+  cellMutations: PersistedCellMutation[];
+};
+
+const EMPTY: SpineFile = {
   headerMaps: [],
   requests: [],
   confirmations: [],
@@ -28,6 +43,24 @@ const EMPTY: SpineSnapshot = {
   namedGrants: [],
   cellMutations: [],
 };
+
+function revisionOf(version: number | undefined): number {
+  return Number.isInteger(version) && (version as number) >= 1 ? (version as number) : 1;
+}
+
+function nextVersion(rows: { version: number }[]): number {
+  return rows.reduce((max, row) => Math.max(max, row.version), 0) + 1;
+}
+
+function latestBy<T extends { version: number }>(rows: T[], key: (row: T) => string): T[] {
+  const best = new Map<string, T>();
+  for (const row of rows) {
+    const id = key(row);
+    const prev = best.get(id);
+    if (!prev || row.version > prev.version) best.set(id, row);
+  }
+  return [...best.values()];
+}
 
 function defaultDataDir(): string {
   return process.env.FRUMA_DATA_DIR?.trim() || join(process.cwd(), ".data", "fruma-test");
@@ -47,13 +80,27 @@ export class FileSpineStore implements SpineStore {
   }
 
   async load(): Promise<SpineSnapshot> {
+    const snap = await this.readAll();
+    return {
+      ...snap,
+      headerMaps: latestBy(snap.headerMaps, (row) => row.surface),
+      requests: latestBy(snap.requests, (row) => row.id),
+      confirmations: latestBy(snap.confirmations, (row) => row.id),
+      productTruth: latestBy(snap.productTruth, (row) => row.productId),
+    };
+  }
+
+  private async readAll(): Promise<SpineFile> {
     if (!existsSync(this.metaPath)) return structuredClone(EMPTY);
     const raw = readFileSync(this.metaPath, "utf8");
-    const parsed = JSON.parse(raw) as SpineSnapshot;
+    const parsed = JSON.parse(raw) as Partial<SpineFile>;
     return {
-      headerMaps: parsed.headerMaps ?? [],
-      requests: parsed.requests ?? [],
-      confirmations: parsed.confirmations ?? [],
+      headerMaps: (parsed.headerMaps ?? []).map((row) => ({ ...row, version: revisionOf(row.version) })),
+      requests: (parsed.requests ?? []).map((row) => ({ ...row, version: revisionOf(row.version) })),
+      confirmations: (parsed.confirmations ?? []).map((row) => ({
+        ...row,
+        version: revisionOf(row.version),
+      })),
       productTruth: parsed.productTruth ?? [],
       deposits: parsed.deposits ?? [],
       sourceCells: (parsed.sourceCells ?? []).map((cell) => ({
@@ -65,37 +112,34 @@ export class FileSpineStore implements SpineStore {
     };
   }
 
-  private async write(next: SpineSnapshot): Promise<void> {
+  private async write(next: SpineFile): Promise<void> {
     mkdirSync(this.root, { recursive: true });
     writeFileSync(this.metaPath, JSON.stringify(next, null, 2));
   }
 
   async saveHeaderMap(map: PersistedHeaderMap): Promise<void> {
-    const snap = await this.load();
-    const idx = snap.headerMaps.findIndex((m) => m.surface === map.surface);
-    if (idx === -1) snap.headerMaps.push(map);
-    else snap.headerMaps[idx] = map;
+    const snap = await this.readAll();
+    const version = nextVersion(snap.headerMaps.filter((row) => row.surface === map.surface));
+    snap.headerMaps.push({ ...map, version });
     await this.write(snap);
   }
 
   async saveRequest(request: AnonymousMillRequest): Promise<void> {
-    const snap = await this.load();
-    const idx = snap.requests.findIndex((r) => r.id === request.id);
-    if (idx === -1) snap.requests.push(request);
-    else snap.requests[idx] = request;
+    const snap = await this.readAll();
+    const version = nextVersion(snap.requests.filter((row) => row.id === request.id));
+    snap.requests.push({ ...request, version });
     await this.write(snap);
   }
 
   async saveConfirmation(confirmation: MillConfirmation): Promise<void> {
-    const snap = await this.load();
-    const idx = snap.confirmations.findIndex((c) => c.id === confirmation.id);
-    if (idx === -1) snap.confirmations.push(confirmation);
-    else snap.confirmations[idx] = confirmation;
+    const snap = await this.readAll();
+    const version = nextVersion(snap.confirmations.filter((row) => row.id === confirmation.id));
+    snap.confirmations.push({ ...confirmation, version });
     await this.write(snap);
   }
 
   async saveProductTruth(record: ProductTruthRecord): Promise<void> {
-    const snap = await this.load();
+    const snap = await this.readAll();
     for (const fact of record.facts) {
       if (fact.sourceType !== "mill-file" || fact.status === "missing") continue;
       if (!fact.sourceCellId || !fact.depositId) {
@@ -108,16 +152,19 @@ export class FileSpineStore implements SpineStore {
         );
       }
     }
-    const idx = snap.productTruth.findIndex(
-      (r) => r.productId === record.productId && r.version === record.version,
-    );
-    if (idx === -1) snap.productTruth.push(record);
-    else snap.productTruth[idx] = record;
+    if (snap.productTruth.some((row) => row.productId === record.productId && row.version === record.version)) {
+      throw new IdempotencyException(
+        "product_truth",
+        `Product truth ${record.productId} version ${record.version} already exists. Documents are append-only.`,
+        { productId: record.productId, version: record.version },
+      );
+    }
+    snap.productTruth.push(record);
     await this.write(snap);
   }
 
   async saveDepositPointer(pointer: PersistedDepositPointer, bytes: Uint8Array): Promise<void> {
-    const snap = await this.load();
+    const snap = await this.readAll();
     const incoming = { id: pointer.depositId, byteHash: pointer.sha256 };
     const conflict = conflictingDeposit(
       snap.deposits.map((row) => ({ id: row.depositId, byteHash: row.sha256 })),
@@ -133,7 +180,7 @@ export class FileSpineStore implements SpineStore {
 
   async saveSourceCells(cells: PersistedSourceCell[]): Promise<void> {
     if (!cells.length) return;
-    const snap = await this.load();
+    const snap = await this.readAll();
     for (const cell of cells) {
       const slotTaken = snap.sourceCells.some(
         (row) =>
@@ -158,7 +205,7 @@ export class FileSpineStore implements SpineStore {
   }
 
   async saveNamedGrant(grant: PersistedNamedGrant): Promise<void> {
-    const snap = await this.load();
+    const snap = await this.readAll();
     if (snap.namedGrants.some((row) => row.id === grant.id)) {
       throw new IdempotencyException(
         "named_grant",
@@ -171,7 +218,7 @@ export class FileSpineStore implements SpineStore {
   }
 
   async appendCellMutation(event: PersistedCellMutation): Promise<void> {
-    const snap = await this.load();
+    const snap = await this.readAll();
     if (snap.cellMutations.some((row) => row.eventId === event.eventId)) {
       throw new IdempotencyException(
         "cell_mutation",
