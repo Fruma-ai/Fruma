@@ -79,14 +79,28 @@ export function describeDatabaseUrl(value: string): string {
 }
 
 /**
+ * The Vercel build cannot open the Neon pooler on port 6543.
+ * The same database accepts the direct compute host on port 5432.
+ * Password and query string stay intact. Only the pooler host label and port change.
+ */
+export function toDirectComputeUrl(rawUrl: string): string {
+  const url = new URL(rawUrl);
+  const wasPooler = url.hostname.includes("-pooler");
+  url.hostname = url.hostname.replace(/-pooler(?=\.)/, "");
+  if (url.port === "6543" || wasPooler) url.port = "5432";
+  return url.href;
+}
+
+/**
  * Install public.vector, then create fruma_demo, fruma_test, and fruma_production
  * in one transaction. Each schema uses postgresLedgerSchema, including the HNSW
  * cosine index on fruma_material_embeddings.
  */
 export async function provisionLedgerSchemas(sql: CloudSql): Promise<void> {
-  await sql.unsafe(PUBLIC_VECTOR_EXTENSION_SQL);
   await sql.begin(async (tx) => {
+    await tx.unsafe(PUBLIC_VECTOR_EXTENSION_SQL);
     for (const version of FRUMA_VERSION_IDS) {
+      console.log(`Provisioning Namespace Surface: ${ledgerSchemaName(version)}...`);
       await tx.unsafe(postgresLedgerSchema(ledgerSchemaName(version)));
     }
   });
@@ -142,12 +156,16 @@ export async function assertCloudLedgerProvisioned(sql: CloudSql): Promise<void>
 
 export async function initializeCloudDatabase(env: NodeJS.ProcessEnv = process.env): Promise<void> {
   const url = assertLiveDatabaseUrl(env.DATABASE_URL);
-  console.log(`Connecting to Neon at ${describeDatabaseUrl(url)}`);
-  const sql = postgres(url, {
+  const directUrl = toDirectComputeUrl(url);
+  const target = new URL(directUrl);
+  console.log("Normalizing connection coordinates for build-phase traversal...");
+  console.log(`Targeting Direct Compute Node: ${target.hostname}:${target.port || "5432"}`);
+  const sql = postgres(directUrl, {
     max: 1,
     prepare: false,
     connect_timeout: 15,
     idle_timeout: 5,
+    ssl: { rejectUnauthorized: false },
     connection: { application_name: "fruma-initialize-cloud-database" },
   });
   try {
@@ -156,6 +174,7 @@ export async function initializeCloudDatabase(env: NodeJS.ProcessEnv = process.e
   } finally {
     await sql.end({ timeout: 5 });
   }
+  console.log("Core ledger schemas and HNSW indexes are ready.");
   console.log(`Neon ledger schemas are ready: ${LEDGER_SCHEMA_NAMES.join(", ")}`);
 }
 
@@ -186,7 +205,7 @@ export function describeInitFailure(err: unknown): string {
 if (invokedDirectly()) {
   loadCloudDatabaseEnv();
   initializeCloudDatabase().catch((err: unknown) => {
-    console.error(describeInitFailure(err));
+    console.error(`Cloud Migration Refused: ${describeInitFailure(err)}`);
     process.exitCode = 1;
   });
 }

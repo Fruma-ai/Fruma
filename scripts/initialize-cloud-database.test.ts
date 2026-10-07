@@ -15,6 +15,7 @@ import {
   loadCloudDatabaseEnv,
   provisionLedgerSchemas,
   PUBLIC_VECTOR_EXTENSION_SQL,
+  toDirectComputeUrl,
   type CloudSql,
 } from "./initialize-cloud-database";
 
@@ -58,6 +59,21 @@ describe("initialize cloud database", () => {
         ),
       /sslmode=require/,
     );
+  });
+
+  it("rewrites the Neon pooler on 6543 to the direct compute host on 5432", () => {
+    const direct = toDirectComputeUrl(`${LIVE_URL}&channel_binding=require`);
+    const parsed = new URL(direct);
+    assert.equal(parsed.hostname, "ep-weathered-dream-zamxo4kk.eu-west-2.aws.neon.tech");
+    assert.equal(parsed.port, "5432");
+    assert.equal(parsed.username, "neondb_owner");
+    assert.equal(parsed.password, "secret-pass");
+    assert.equal(parsed.pathname, "/neondb");
+    assert.equal(parsed.searchParams.get("sslmode"), "require");
+    assert.equal(parsed.searchParams.get("channel_binding"), "require");
+    assert.equal(direct.includes("-pooler"), false);
+    assert.equal(direct.includes(":6543"), false);
+    assert.equal(direct.includes("secret-pass"), true);
   });
 
   it("accepts a live Neon URL and describes it without the password", () => {
@@ -105,10 +121,8 @@ describe("initialize cloud database", () => {
       },
     };
     const sql: CloudSql = {
-      async unsafe(query: string) {
-        assert.equal(began, false);
-        calls.push(query);
-        return [];
+      async unsafe() {
+        throw new Error("schema DDL must run inside the transaction");
       },
       async begin(fn) {
         began = true;
