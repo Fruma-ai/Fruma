@@ -45,13 +45,27 @@ describe("immutable postgres ledger schema", () => {
     assert.match(POSTGRES_LEDGER_SCHEMA, /old_standard_value TEXT/);
     assert.match(POSTGRES_LEDGER_SCHEMA, /new_standard_value TEXT/);
     assert.match(POSTGRES_LEDGER_SCHEMA, /occurred_at TIMESTAMPTZ NOT NULL/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /CREATE TABLE IF NOT EXISTS fruma_product_truth_facts/);
+    assert.match(
+      POSTGRES_LEDGER_SCHEMA,
+      /FOREIGN KEY \(source_cell_id, deposit_id\)\s+REFERENCES fruma_source_cells \(id, deposit_id\)/,
+    );
+    assert.match(
+      POSTGRES_LEDGER_SCHEMA,
+      /FOREIGN KEY \(deposit_id\) REFERENCES fruma_deposits \(id\)/,
+    );
+    assert.match(POSTGRES_LEDGER_SCHEMA, /CREATE OR REPLACE VIEW fruma_product_truth_provenance AS/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /INNER JOIN fruma_source_cells c/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /c\.sheet_name/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /c\.row_index/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /c\.col_index/);
     assert.equal(POSTGRES_LEDGER_SCHEMA.includes("ON CONFLICT"), false);
     assert.equal(POSTGRES_LEDGER_SCHEMA.includes("pointer JSONB"), false);
   });
 
   it("requires surface_environment on every table", () => {
     const tables = POSTGRES_LEDGER_SCHEMA.split("CREATE TABLE IF NOT EXISTS ").slice(1);
-    assert.equal(tables.length, 8);
+    assert.equal(tables.length, 9);
     for (const table of tables) {
       assert.match(table, /surface_environment TEXT NOT NULL CHECK \(surface_environment IN \('demo', 'test', 'production'\)\)/);
     }

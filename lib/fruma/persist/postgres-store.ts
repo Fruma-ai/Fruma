@@ -71,7 +71,8 @@ export class PostgresSpineStore implements SpineStore {
           'fruma_deposits',
           'fruma_source_cells',
           'fruma_named_grants',
-          'fruma_cell_mutation_events'
+          'fruma_cell_mutation_events',
+          'fruma_product_truth_facts'
         )
     `;
     const columnsByTable = new Map<string, Set<string>>();
@@ -167,11 +168,57 @@ export class PostgresSpineStore implements SpineStore {
 
   async saveProductTruth(record: ProductTruthRecord): Promise<void> {
     const sql = await this.client();
-    await sql`
-      INSERT INTO fruma_product_truth (surface_environment, product_id, version, payload)
-      VALUES (${this.surface}, ${record.productId}, ${record.version}, ${sql.json(record)})
-      ON CONFLICT (surface_environment, product_id, version) DO UPDATE SET payload = EXCLUDED.payload
-    `;
+    try {
+      await sql.begin(async (tx) => {
+        await tx`
+          INSERT INTO fruma_product_truth (surface_environment, product_id, version, payload)
+          VALUES (${this.surface}, ${record.productId}, ${record.version}, ${tx.json(record)})
+          ON CONFLICT (surface_environment, product_id, version) DO UPDATE SET payload = EXCLUDED.payload
+        `;
+        const existing = await tx`
+          SELECT id FROM fruma_product_truth_facts
+          WHERE surface_environment = ${this.surface}
+            AND product_id = ${record.productId}
+            AND version = ${record.version}
+        `;
+        if (existing.length) {
+          throw new IdempotencyException(
+            "product_truth_fact",
+            `Product truth ${record.productId} version ${record.version} already has fact rows.`,
+            { productId: record.productId, version: record.version },
+          );
+        }
+        for (const fact of record.facts) {
+          const linked = fact.sourceType === "mill-file" && fact.status !== "missing";
+          if (linked && (!fact.sourceCellId || !fact.depositId)) {
+            throw new Error(`product_truth_source_cell_required:${fact.field}`);
+          }
+          if (fact.sourceType === "mill-file" && fact.status === "missing") continue;
+          await tx`
+            INSERT INTO fruma_product_truth_facts (
+              id, product_id, version, field, value, source_type,
+              source_cell_id, deposit_id, surface_environment
+            )
+            VALUES (
+              ${fact.id},
+              ${fact.productId},
+              ${fact.version},
+              ${fact.field},
+              ${fact.value == null ? null : String(fact.value)},
+              ${fact.sourceType},
+              ${fact.sourceCellId ?? null},
+              ${fact.depositId ?? null},
+              ${this.surface}
+            )
+          `;
+        }
+      });
+    } catch (err) {
+      if (err instanceof IdempotencyException) throw err;
+      const mapped = idempotencyFromUniqueViolation(err);
+      if (mapped) throw mapped;
+      throw err;
+    }
   }
 
   async saveDepositPointer(pointer: PersistedDepositPointer, bytes: Uint8Array): Promise<void> {

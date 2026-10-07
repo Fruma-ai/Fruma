@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS fruma_source_cells (
   raw_header TEXT NOT NULL,
   source_value TEXT NOT NULL,
   surface_environment ${SURFACE_SQL},
-  CONSTRAINT fruma_source_cells_slot_key UNIQUE (deposit_id, sheet_name, row_index, col_index)
+  CONSTRAINT fruma_source_cells_slot_key UNIQUE (deposit_id, sheet_name, row_index, col_index),
+  CONSTRAINT fruma_source_cells_id_deposit_key UNIQUE (id, deposit_id)
 );
 CREATE TABLE IF NOT EXISTS fruma_named_grants (
   id TEXT PRIMARY KEY,
@@ -89,6 +90,40 @@ CREATE TABLE IF NOT EXISTS fruma_cell_mutation_events (
   occurred_at TIMESTAMPTZ NOT NULL,
   surface_environment ${SURFACE_SQL}
 );
+DO $$
+BEGIN
+  ALTER TABLE fruma_source_cells
+    ADD CONSTRAINT fruma_source_cells_id_deposit_key UNIQUE (id, deposit_id);
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+CREATE TABLE IF NOT EXISTS fruma_product_truth_facts (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  field TEXT NOT NULL,
+  value TEXT,
+  source_type TEXT NOT NULL,
+  source_cell_id TEXT,
+  deposit_id TEXT,
+  surface_environment ${SURFACE_SQL},
+  CONSTRAINT fruma_product_truth_facts_deposit_fk
+    FOREIGN KEY (deposit_id) REFERENCES fruma_deposits (id),
+  CONSTRAINT fruma_product_truth_facts_cell_fk
+    FOREIGN KEY (source_cell_id, deposit_id)
+    REFERENCES fruma_source_cells (id, deposit_id),
+  CONSTRAINT fruma_product_truth_facts_pair_chk CHECK (
+    (source_cell_id IS NULL AND deposit_id IS NULL)
+    OR (source_cell_id IS NOT NULL AND deposit_id IS NOT NULL)
+  ),
+  CONSTRAINT fruma_product_truth_facts_mill_file_chk CHECK (
+    source_type <> 'mill-file'
+    OR (source_cell_id IS NOT NULL AND deposit_id IS NOT NULL)
+  ),
+  CONSTRAINT fruma_product_truth_facts_version_fk
+    FOREIGN KEY (surface_environment, product_id, version)
+    REFERENCES fruma_product_truth (surface_environment, product_id, version)
+);
 CREATE INDEX IF NOT EXISTS fruma_deposits_surface_idx ON fruma_deposits (surface_environment);
 CREATE INDEX IF NOT EXISTS fruma_source_cells_surface_idx ON fruma_source_cells (surface_environment);
 CREATE INDEX IF NOT EXISTS fruma_named_grants_surface_idx ON fruma_named_grants (surface_environment);
@@ -96,6 +131,34 @@ CREATE INDEX IF NOT EXISTS fruma_cell_mutation_events_cell_idx
   ON fruma_cell_mutation_events (source_cell_id, occurred_at);
 CREATE INDEX IF NOT EXISTS fruma_cell_mutation_events_surface_idx
   ON fruma_cell_mutation_events (surface_environment);
+CREATE INDEX IF NOT EXISTS fruma_product_truth_facts_cell_idx
+  ON fruma_product_truth_facts (source_cell_id);
+CREATE INDEX IF NOT EXISTS fruma_product_truth_facts_deposit_idx
+  ON fruma_product_truth_facts (deposit_id);
+CREATE OR REPLACE VIEW fruma_product_truth_provenance AS
+SELECT
+  f.id AS fact_id,
+  f.product_id,
+  f.version,
+  f.field,
+  f.value,
+  f.surface_environment,
+  f.deposit_id,
+  f.source_cell_id,
+  d.filename AS deposit_filename,
+  d.byte_hash,
+  c.sheet_name,
+  c.row_index,
+  c.col_index,
+  c.raw_header,
+  c.source_value
+FROM fruma_product_truth_facts f
+INNER JOIN fruma_source_cells c
+  ON c.id = f.source_cell_id
+ AND c.deposit_id = f.deposit_id
+INNER JOIN fruma_deposits d
+  ON d.id = f.deposit_id
+ AND d.id = c.deposit_id;
 `;
 
 const LEDGER_TABLES = [
@@ -107,6 +170,7 @@ const LEDGER_TABLES = [
   "fruma_source_cells",
   "fruma_named_grants",
   "fruma_cell_mutation_events",
+  "fruma_product_truth_facts",
 ] as const;
 
 /**

@@ -5,7 +5,8 @@ export type IdempotencyConflict =
   | "byte_hash"
   | "source_cell"
   | "named_grant"
-  | "cell_mutation";
+  | "cell_mutation"
+  | "product_truth_fact";
 
 export class IdempotencyException extends Error {
   readonly conflict: IdempotencyConflict;
@@ -81,6 +82,13 @@ export function idempotencyFromUniqueViolation(
     return new IdempotencyException(
       "source_cell",
       "Source cell already exists. Source values are immutable.",
+      { constraint },
+    );
+  }
+  if (table === "fruma_product_truth_facts" || constraint.includes("product_truth_fact")) {
+    return new IdempotencyException(
+      "product_truth_fact",
+      "Product truth fact already exists. Provenance rows are not overwritten.",
       { constraint },
     );
   }

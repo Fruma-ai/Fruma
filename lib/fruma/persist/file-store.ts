@@ -93,6 +93,18 @@ export class FileSpineStore implements SpineStore {
 
   async saveProductTruth(record: ProductTruthRecord): Promise<void> {
     const snap = await this.load();
+    for (const fact of record.facts) {
+      if (fact.sourceType !== "mill-file" || fact.status === "missing") continue;
+      if (!fact.sourceCellId || !fact.depositId) {
+        throw new Error(`product_truth_source_cell_required:${fact.field}`);
+      }
+      const cell = snap.sourceCells.find((row) => row.id === fact.sourceCellId);
+      if (!cell || cell.depositId !== fact.depositId) {
+        throw new Error(
+          `product_truth_cell_fk: ${fact.sourceCellId} is not a cell of deposit ${fact.depositId}`,
+        );
+      }
+    }
     const idx = snap.productTruth.findIndex(
       (r) => r.productId === record.productId && r.version === record.version,
     );
