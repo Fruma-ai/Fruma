@@ -6,13 +6,14 @@ import { afterEach, describe, it } from "node:test";
 import { DEMO_COOKIE, sessionToken } from "../../gate";
 import { handleDesignRefusalsRequest } from "../design/refusals-http";
 import { sourceCellId } from "../ingest/cell-mutations";
+import { handleMillDepositsAuditRequest } from "../ingest/deposits-http";
 import { sha256Hex } from "../ingest/hash";
 import { handleMillQualitiesRequest } from "../ingest/qualities-http";
 import { STANDARD_FIELDS } from "../ingest/types";
 import { confirmedHeaderOverlays, resetHeaderOverlaysForTests } from "../intelligence/overlays";
 import type { ProductTruthRecord } from "../product-truth";
 import { IdempotencyException } from "./idempotency";
-import { FileSpineStore, PostgresSpineStore, setSpineStoreForTests } from "./index";
+import { FileSpineStore, getSpineStore, PostgresSpineStore, setSpineStoreForTests } from "./index";
 import type { SpineStore } from "./types";
 import { dropSchemaStatement, ledgerSchemaName, searchPathStatement } from "./postgres-schema";
 import {
@@ -43,14 +44,14 @@ type HistoryFile = {
   productTruth: ProductTruthRecord[];
 };
 
-function sessionRequest(path: string, depositId?: string): Request {
+function sessionRequest(path: string, depositId?: string, version = "test"): Request {
   const url = new URL(path, "http://localhost");
   if (depositId) url.searchParams.set("depositId", depositId);
   return new Request(url, {
     method: "GET",
     headers: {
       cookie: `${DEMO_COOKIE}=${process.env.FRUMA_LIFECYCLE_COOKIE ?? ""}`,
-      "x-fruma-version": "test",
+      "x-fruma-version": version,
     },
   });
 }
@@ -372,5 +373,101 @@ describe("schema-isolated append-only ledger lifecycle", { concurrency: 1 }, () 
     );
     assert.equal(refusals.body.ignored_mill_headers[0]?.sourceValue, "Twill");
     assert.equal(refusals.body.ignored_mill_headers[0]?.cellId, weaveCellId);
+  });
+
+  it("Enforce Hard Schema Isolation Boundaries", async () => {
+    process.env.FRUMA_DEMO_PASSWORD = TEST_PASS;
+    process.env.FRUMA_LIFECYCLE_COOKIE = await sessionToken("owen");
+
+    const previousDataDir = process.env.FRUMA_DATA_DIR;
+    const isolationDir = mkdtempSync(join(tmpdir(), "fruma-schema-isolation-"));
+    setSpineStoreForTests(null);
+    if (!process.env.DATABASE_URL?.trim()) process.env.FRUMA_DATA_DIR = isolationDir;
+
+    try {
+      assert.equal(ledgerSchemaName("demo"), "fruma_demo");
+      assert.equal(searchPathStatement("demo"), "SET search_path TO fruma_demo;");
+      assert.equal(searchPathStatement("test"), "SET search_path TO fruma_test;");
+
+      const demo = getSpineStore("demo");
+      const testLedger = getSpineStore("test");
+      assert.notEqual(demo, testLedger);
+      await demo.reset();
+      await testLedger.reset();
+
+      const bytes = Uint8Array.from([68, 101, 109, 111, 45, 99, 97, 116, 97, 108, 111, 103]);
+      const depositId = "dep-demo-catalog";
+      const cellId = sourceCellId(depositId, { sheet: "demo-factory.csv", row: 2, column: "A" });
+      await demo.saveDepositPointer(
+        {
+          depositId,
+          supplierOrgId: "org_mill_synthetic",
+          filename: "demo-factory.csv",
+          sha256: sha256Hex(bytes),
+          byteLength: bytes.byteLength,
+          receivedAt: "2026-10-07T13:00:00.000Z",
+          objectKey: `${depositId}.bin`,
+        },
+        bytes,
+      );
+      await demo.saveSourceCells([
+        {
+          id: cellId,
+          depositId,
+          sheetName: "demo-factory.csv",
+          rowIndex: 2,
+          colIndex: 1,
+          rawHeader: "Art. No",
+          sourceValue: "DEMO-1",
+          normalizedValue: null,
+        },
+      ]);
+      await demo.appendCellMutation({
+        eventId: "evt-demo-article",
+        sourceCellId: cellId,
+        operatorCookie: "founder=owen",
+        actionType: "map",
+        oldStandardValue: null,
+        newStandardValue: "DEMO-1",
+        standardField: "article",
+        occurredAt: "2026-10-07T13:01:00.000Z",
+      });
+
+      const deposits = await handleMillDepositsAuditRequest(
+        sessionRequest("http://localhost/api/mill/deposits", undefined, "test"),
+      );
+      const qualities = await handleMillQualitiesRequest(
+        sessionRequest("http://localhost/api/mill/qualities", undefined, "test"),
+      );
+      assert.equal(deposits.status, 200);
+      assert.equal(deposits.surface, "test");
+      assert.equal(qualities.status, 200);
+      assert.equal(qualities.surface, "test");
+      if (deposits.status !== 200 || qualities.status !== 200) return;
+      assert.deepEqual(deposits.body, []);
+      assert.deepEqual(qualities.body, []);
+
+      const demoDeposits = await handleMillDepositsAuditRequest(
+        sessionRequest("http://localhost/api/mill/deposits", undefined, "demo"),
+      );
+      const demoQualities = await handleMillQualitiesRequest(
+        sessionRequest("http://localhost/api/mill/qualities", undefined, "demo"),
+      );
+      assert.equal(demoDeposits.status, 200);
+      assert.equal(demoQualities.status, 200);
+      if (demoDeposits.status !== 200 || demoQualities.status !== 200) return;
+      assert.deepEqual(
+        demoDeposits.body.map((row) => row.id),
+        [depositId],
+      );
+      assert.deepEqual(
+        demoQualities.body.map((row) => row.millArticleCode),
+        ["DEMO-1"],
+      );
+    } finally {
+      if (previousDataDir === undefined) delete process.env.FRUMA_DATA_DIR;
+      else process.env.FRUMA_DATA_DIR = previousDataDir;
+      setSpineStoreForTests(null);
+    }
   });
 });
