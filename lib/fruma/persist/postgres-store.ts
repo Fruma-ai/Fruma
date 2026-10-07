@@ -1,3 +1,4 @@
+import { isStandardField } from "../ingest/types";
 import type { ProductTruthRecord } from "../product-truth";
 import {
   conflictingDeposit,
@@ -558,6 +559,50 @@ export class PostgresSpineStore implements SpineStore {
     return groupCellMutationRows(rows);
   }
 
+  async latestActiveHeaderMap(surface: string): Promise<PersistedHeaderMap | null> {
+    if (surface !== this.surface) {
+      throw new Error(
+        `Refusing to read surface ${surface} through the ${this.surface} ledger.`,
+      );
+    }
+    const sql = await this.client();
+    const maps = this.table(sql, "fruma_header_maps");
+    const rows = await sql`
+      SELECT surface, overlays, updated_at, version
+      FROM ${maps} AS h
+      WHERE h.surface = ${this.surface}
+        AND h.is_active = TRUE
+        AND h.version = (
+          SELECT MAX(version)
+          FROM ${maps} AS m
+          WHERE m.surface = h.surface
+            AND m.is_active = TRUE
+        )
+    `;
+    const row = rows[0];
+    if (!row) return null;
+    return headerMapFromRow(row);
+  }
+
+  async listDepositSourceCells(depositId: string): Promise<PersistedSourceCell[]> {
+    const sql = await this.client();
+    const rows = await sql`
+      SELECT
+        id,
+        deposit_id,
+        sheet_name,
+        row_index,
+        col_index,
+        raw_header,
+        source_value,
+        normalized_value
+      FROM ${this.table(sql, "fruma_source_cells")}
+      WHERE deposit_id = ${depositId}
+      ORDER BY sheet_name ASC, row_index ASC, col_index ASC
+    `;
+    return rows.map((row) => cellFromRow(row));
+  }
+
   async reset(): Promise<void> {
     const sql = await this.client();
     await sql.unsafe(dropSchemaStatement(this.surface));
@@ -612,6 +657,23 @@ function depositFromRow(row: Record<string, unknown>): PersistedDepositPointer {
     byteLength: Number(row.byte_length),
     receivedAt: new Date(row.received_at as string | Date).toISOString(),
     objectKey: `${id}.bin`,
+  };
+}
+
+function headerMapFromRow(row: Record<string, unknown>): PersistedHeaderMap {
+  const raw = row.overlays;
+  const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+  const overlays: PersistedHeaderMap["overlays"] = {};
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    for (const [header, field] of Object.entries(parsed)) {
+      const key = header.trim().toLowerCase();
+      if (key && typeof field === "string" && isStandardField(field)) overlays[key] = field;
+    }
+  }
+  return {
+    surface: String(row.surface),
+    overlays,
+    updatedAt: new Date(row.updated_at as string | Date).toISOString(),
   };
 }
 

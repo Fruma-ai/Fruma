@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { isStandardField } from "../ingest/types";
 import type { ProductTruthRecord } from "../product-truth";
 import {
   conflictingDeposit,
@@ -256,6 +257,39 @@ export class FileSpineStore implements SpineStore {
         mutations,
       };
     });
+  }
+
+  async latestActiveHeaderMap(surface: string): Promise<PersistedHeaderMap | null> {
+    const snap = await this.readAll();
+    const active = snap.headerMaps
+      .filter((row) => row.surface === surface)
+      .reduce<HeaderRevision | null>((best, row) => {
+        if (!best || row.version > best.version) return row;
+        return best;
+      }, null);
+    if (!active) return null;
+    const overlays: PersistedHeaderMap["overlays"] = {};
+    for (const [header, field] of Object.entries(active.overlays)) {
+      const key = header.trim().toLowerCase();
+      if (key && isStandardField(field)) overlays[key] = field;
+    }
+    return {
+      surface: active.surface,
+      overlays,
+      updatedAt: active.updatedAt,
+    };
+  }
+
+  async listDepositSourceCells(depositId: string): Promise<PersistedSourceCell[]> {
+    const snap = await this.readAll();
+    return snap.sourceCells
+      .filter((cell) => cell.depositId === depositId)
+      .sort(
+        (a, b) =>
+          a.sheetName.localeCompare(b.sheetName) ||
+          a.rowIndex - b.rowIndex ||
+          a.colIndex - b.colIndex,
+      );
   }
 
   async reset(): Promise<void> {

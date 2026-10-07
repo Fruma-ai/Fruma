@@ -112,5 +112,12 @@ export type SpineStore = {
    * Mutations are LEFT JOINed and ordered by occurred_at ASC. Deposit bytes are not read.
    */
   listSourceCellsWithMutations(filter?: { depositId?: string }): Promise<JoinedSourceCell[]>;
+  /**
+   * Greatest header-map version for this surface with is_active true.
+   * The caller’s surface must be the store’s environment.
+   */
+  latestActiveHeaderMap(surface: string): Promise<PersistedHeaderMap | null>;
+  /** Source cells for one deposit. Deposit bytes are not read. */
+  listDepositSourceCells(depositId: string): Promise<PersistedSourceCell[]>;
   reset(): Promise<void>;
 };
