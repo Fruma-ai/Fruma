@@ -1,3 +1,4 @@
+import { applyEuDppCompliance, readComplianceTarget, type ComplianceWarning } from "./compliance";
 import { replayActiveCell, type ActiveMaterialQuality } from "../ingest/qualities-http";
 import { qualitiesFromCells } from "../ingest/identity";
 import type { SourceCell } from "../ingest/types";
@@ -13,6 +14,7 @@ export const DESIGN_SEARCH_RESULT_LIMIT = 10;
 export type RankedMaterialQuality = ActiveMaterialQuality & {
   rank: number;
   cosineDistance: number;
+  compliance_warning?: ComplianceWarning;
 };
 
 export type DesignSearchHttpResult =
@@ -146,18 +148,30 @@ export async function handleDesignSearchRequest(request: Request): Promise<Desig
     return { status: 400, surface, body: { error: "Request body must be JSON." } };
   }
   const embedding = readEmbedding(payload);
-  if (!embedding) {
+  if (!embedding || !payload || typeof payload !== "object" || Array.isArray(payload)) {
     return {
       status: 400,
       surface,
       body: { error: "embedding must be an array of 1536 finite numbers." },
     };
   }
+  const complianceTarget = readComplianceTarget(payload);
+  if (complianceTarget === "invalid") {
+    return {
+      status: 400,
+      surface,
+      body: { error: "complianceTarget must be EU_DPP, UK_STANDARDS, or null." },
+    };
+  }
 
   // Acquiring the surface store runs SET search_path TO fruma_${version} on the pool.
   const store = getSpineStore(surface);
   const hits = await store.searchMaterialEmbeddings(embedding);
-  const body = rankDesignSearchHits(hits);
+  const ranked = rankDesignSearchHits(hits);
+  const body =
+    complianceTarget === "EU_DPP"
+      ? applyEuDppCompliance(ranked, await store.listActiveProductTruthEvidence(), hits)
+      : ranked;
   assertNoFileBytes(body);
   return { status: 200, surface, body };
 }

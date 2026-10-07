@@ -1,5 +1,5 @@
 import { isStandardField } from "../ingest/types";
-import type { ProductTruthRecord } from "../product-truth";
+import type { EvidenceRecord, ProductTruthRecord } from "../product-truth";
 import { assertEmbeddingVector, assertMaterialEmbedding, vectorLiteral } from "./embeddings";
 import {
   conflictingDeposit,
@@ -26,7 +26,9 @@ import type {
   PersistedDepositPointer,
   PersistedHeaderMap,
   PersistedCellMutation,
+  ActiveProductTruthEvidence,
   JoinedSourceCell,
+  LinkedProductTruthFact,
   MaterialSearchHit,
   PersistedMaterialEmbedding,
   PersistedNamedGrant,
@@ -720,6 +722,36 @@ export class PostgresSpineStore implements SpineStore {
     return groupSearchRows(rows);
   }
 
+  async listActiveProductTruthEvidence(): Promise<ActiveProductTruthEvidence[]> {
+    const sql = await this.client();
+    const truth = this.table(sql, "fruma_product_truth");
+    const truthMax = this.table(sql, "fruma_product_truth");
+    const facts = this.table(sql, "fruma_product_truth_facts");
+    const rows = await sql`
+      SELECT
+        t.product_id,
+        t.version,
+        t.payload,
+        f.id AS fact_id,
+        f.field AS fact_field,
+        f.source_type AS fact_source_type,
+        f.source_cell_id,
+        f.deposit_id
+      FROM ${truth} t
+      LEFT JOIN ${facts} f
+        ON f.product_id = t.product_id
+       AND f.version = t.version
+      WHERE t.is_active = TRUE
+        AND t.version = (
+          SELECT MAX(version)
+          FROM ${truthMax} m
+          WHERE m.product_id = t.product_id
+            AND m.is_active = TRUE
+        )
+    `;
+    return groupProductTruthEvidence(rows);
+  }
+
   async reset(): Promise<void> {
     const sql = await this.client();
     await sql.unsafe(dropSchemaStatement(this.surface));
@@ -819,6 +851,102 @@ function mutationFromRow(row: Record<string, unknown>): PersistedCellMutation {
     standardField: field == null ? null : (String(field) as PersistedCellMutation["standardField"]),
     occurredAt: new Date(row.occurred_at as string | Date).toISOString(),
   };
+}
+
+const EVIDENCE_STATUSES = new Set(["current", "expired", "missing", "unverified"]);
+const TRUTH_SCOPES = new Set([
+  "quality",
+  "product",
+  "mill-site",
+  "organisation",
+  "process",
+  "shipment",
+]);
+
+function payloadRecord(value: unknown): Record<string, unknown> | null {
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function evidenceFromPayload(value: unknown): EvidenceRecord[] {
+  const record = payloadRecord(value);
+  if (!record || !Array.isArray(record.evidence)) return [];
+  const evidence: EvidenceRecord[] = [];
+  for (const item of record.evidence) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Partial<EvidenceRecord>;
+    if (typeof row.id !== "string" || typeof row.claim !== "string" || typeof row.subjectId !== "string") {
+      continue;
+    }
+    if (typeof row.status !== "string" || !EVIDENCE_STATUSES.has(row.status)) continue;
+    if (typeof row.scope !== "string" || !TRUTH_SCOPES.has(row.scope)) continue;
+    evidence.push({
+      id: row.id,
+      claim: row.claim,
+      scope: row.scope as EvidenceRecord["scope"],
+      subjectId: row.subjectId,
+      ...(typeof row.documentId === "string" ? { documentId: row.documentId } : {}),
+      ...(typeof row.issuer === "string" ? { issuer: row.issuer } : {}),
+      ...(typeof row.validFrom === "string" ? { validFrom: row.validFrom } : {}),
+      ...(typeof row.validUntil === "string" ? { validUntil: row.validUntil } : {}),
+      status: row.status as EvidenceRecord["status"],
+    });
+  }
+  return evidence;
+}
+
+function factsFromPayload(value: unknown): LinkedProductTruthFact[] {
+  const record = payloadRecord(value);
+  if (!record || !Array.isArray(record.facts)) return [];
+  const facts: LinkedProductTruthFact[] = [];
+  for (const item of record.facts) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    if (typeof row.id !== "string" || typeof row.field !== "string") continue;
+    facts.push({
+      id: row.id,
+      field: row.field,
+      sourceType: typeof row.sourceType === "string" ? row.sourceType : "",
+      sourceCellId: typeof row.sourceCellId === "string" ? row.sourceCellId : null,
+      depositId: typeof row.depositId === "string" ? row.depositId : null,
+      evidenceId: typeof row.evidenceId === "string" ? row.evidenceId : null,
+    });
+  }
+  return facts;
+}
+
+function groupProductTruthEvidence(rows: readonly Record<string, unknown>[]): ActiveProductTruthEvidence[] {
+  const byProduct = new Map<string, ActiveProductTruthEvidence>();
+  for (const row of rows) {
+    const productId = String(row.product_id);
+    let group = byProduct.get(productId);
+    if (!group) {
+      group = {
+        productId,
+        version: Number(row.version),
+        facts: factsFromPayload(row.payload),
+        evidence: evidenceFromPayload(row.payload),
+      };
+      byProduct.set(productId, group);
+    }
+    if (row.fact_id == null) continue;
+    const id = String(row.fact_id);
+    if (group.facts.some((fact) => fact.id === id)) continue;
+    group.facts.push({
+      id,
+      field: String(row.fact_field ?? ""),
+      sourceType: String(row.fact_source_type ?? ""),
+      sourceCellId: row.source_cell_id == null ? null : String(row.source_cell_id),
+      depositId: row.deposit_id == null ? null : String(row.deposit_id),
+      evidenceId: null,
+    });
+  }
+  return [...byProduct.values()];
 }
 
 function groupSearchRows(rows: readonly Record<string, unknown>[]): MaterialSearchHit[] {

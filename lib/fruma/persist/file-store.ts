@@ -20,6 +20,7 @@ import type {
   DepositAuditRow,
   PersistedDepositPointer,
   PersistedHeaderMap,
+  ActiveProductTruthEvidence,
   JoinedSourceCell,
   MaterialSearchHit,
   PersistedMaterialEmbedding,
@@ -384,6 +385,28 @@ export class FileSpineStore implements SpineStore {
       }
     }
     return hits;
+  }
+
+  async listActiveProductTruthEvidence(): Promise<ActiveProductTruthEvidence[]> {
+    const snap = await this.readAll();
+    const latest = new Map<string, (typeof snap.productTruth)[number]>();
+    for (const row of snap.productTruth) {
+      const previous = latest.get(row.productId);
+      if (!previous || row.version > previous.version) latest.set(row.productId, row);
+    }
+    return [...latest.values()].map((record) => ({
+      productId: record.productId,
+      version: record.version,
+      facts: record.facts.map((fact) => ({
+        id: fact.id,
+        field: fact.field,
+        sourceType: fact.sourceType,
+        sourceCellId: fact.sourceCellId ?? null,
+        depositId: fact.depositId ?? null,
+        evidenceId: fact.evidenceId ?? null,
+      })),
+      evidence: record.evidence ?? [],
+    }));
   }
 
   async reset(): Promise<void> {

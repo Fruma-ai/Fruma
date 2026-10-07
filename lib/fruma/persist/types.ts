@@ -1,6 +1,6 @@
 import type { CellMutationEvent } from "../ingest/cell-mutations";
 import type { StandardField } from "../ingest/types";
-import type { ProductTruthRecord } from "../product-truth";
+import type { EvidenceRecord, ProductTruthRecord } from "../product-truth";
 
 /** Durable shapes for the Test spine. Same tables whether file-backed or Postgres. */
 
@@ -117,6 +117,27 @@ export type MaterialSearchHit = JoinedSourceCell & {
   cosineDistance: number;
 };
 
+/** A fact on the latest active product truth, including the evidence id stored on the document. */
+export type LinkedProductTruthFact = {
+  id: string;
+  field: string;
+  sourceType: string;
+  sourceCellId: string | null;
+  depositId: string | null;
+  evidenceId: string | null;
+};
+
+/**
+ * Latest active product-truth document for one product.
+ * Facts come from `fruma_product_truth_facts`. Evidence records come from the document payload.
+ */
+export type ActiveProductTruthEvidence = {
+  productId: string;
+  version: number;
+  facts: LinkedProductTruthFact[];
+  evidence: EvidenceRecord[];
+};
+
 export type SpineStore = {
   kind: "file" | "postgres";
   load(): Promise<SpineSnapshot>;
@@ -150,5 +171,10 @@ export type SpineStore = {
    * Mutations are LEFT JOINed and ordered by occurred_at ASC.
    */
   searchMaterialEmbeddings(embedding: readonly number[]): Promise<MaterialSearchHit[]>;
+  /**
+   * Latest active product-truth version per product, with its facts and Evidence records.
+   * Deposit file payloads are not read.
+   */
+  listActiveProductTruthEvidence(): Promise<ActiveProductTruthEvidence[]>;
   reset(): Promise<void>;
 };

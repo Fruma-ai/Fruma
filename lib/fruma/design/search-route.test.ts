@@ -194,6 +194,8 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     assert.match(handler, /requireTestFounder\(request\)/);
     assert.match(handler, /getSpineStore\(surface\)/);
     assert.match(handler, /searchMaterialEmbeddings\(embedding\)/);
+    assert.match(handler, /listActiveProductTruthEvidence\(\)/);
+    assert.match(handler, /complianceTarget/);
     assert.match(handler, /search_path/);
     assert.equal(handler.includes("getDepositBytes"), false);
     const start = store.indexOf("async searchMaterialEmbeddings");
@@ -207,6 +209,10 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     assert.match(body, /fruma_cell_mutation_events/);
     assert.match(body, /public\.vector/);
     assert.match(body, /LIMIT 50/);
+    assert.match(body, /fruma_product_truth_facts/);
+    assert.match(body, /fruma_product_truth/);
+    assert.match(body, /MAX\(version\)/);
+    assert.match(body, /is_active = TRUE/);
     assert.equal(body.includes("bytes"), false);
   });
 
@@ -229,6 +235,106 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
       searchRequest({ cookie, body: { embedding: infinite } }),
     );
     assert.equal(nonFinite.status, 400);
+    const badTarget = await handleDesignSearchRequest(
+      searchRequest({ cookie, body: { embedding: axis(0), complianceTarget: "US_FTC" } }),
+    );
+    assert.equal(badTarget.status, 400);
+  });
+
+  it("keeps an EU DPP match visible and warns when traceability evidence is missing or expired", async () => {
+    await seedCatalog();
+    const cookie = await signedCookie();
+    const open = await handleDesignSearchRequest(
+      searchRequest({ cookie, body: { embedding: axis(0), complianceTarget: "EU_DPP" } }),
+    );
+    assert.equal(open.status, 200);
+    if (open.status !== 200) return;
+    assert.equal(open.body.length, 2);
+    assert.equal(open.body[0]?.millArticleCode, "HX-100");
+    assert.equal(open.body[0]?.compliance_warning?.status, "compliance_warning");
+    assert.equal(open.body[0]?.compliance_warning?.complianceTarget, "EU_DPP");
+    assert.equal(open.body[0]?.compliance_warning?.qualityId, "bq:org_mill_synthetic:HX-100");
+    assert.equal(open.body[0]?.cells.find((cell) => cell.header === "Art. No")?.sourceValue, "HX-100");
+    assert.equal(open.body[1]?.compliance_warning?.status, "compliance_warning");
+
+    const store = getSpineStore("demo");
+    await store.saveProductTruth({
+      productId: "prod-dpp",
+      version: 1,
+      facts: [
+        {
+          id: "fact-trace-v1",
+          productId: "prod-dpp",
+          field: "traceability",
+          value: "lot-1",
+          sourceType: "evidence-document",
+          sourceCellId: "cell-near",
+          scope: "quality",
+          status: "evidenced",
+          evidenceId: "ev-trace",
+          version: 1,
+        },
+      ],
+      evidence: [
+        {
+          id: "ev-trace",
+          claim: "traceability",
+          scope: "quality",
+          subjectId: "someone-else",
+          documentId: "doc-trace-1",
+          status: "current",
+          validUntil: "2099-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+    const covered = await handleDesignSearchRequest(
+      searchRequest({ cookie, body: { embedding: axis(0), complianceTarget: "EU_DPP" } }),
+    );
+    assert.equal(covered.status, 200);
+    if (covered.status !== 200) return;
+    const near = covered.body.find((row) => row.millArticleCode === "HX-100");
+    const far = covered.body.find((row) => row.millArticleCode === "HX-900");
+    assert.equal(near?.compliance_warning, undefined);
+    assert.equal(far?.compliance_warning?.status, "compliance_warning");
+
+    await store.saveProductTruth({
+      productId: "prod-dpp",
+      version: 1,
+      facts: [],
+      evidence: [
+        {
+          id: "ev-trace-old",
+          claim: "circularity",
+          scope: "quality",
+          subjectId: "bq:org_mill_synthetic:HX-100",
+          documentId: "doc-old",
+          status: "current",
+          validUntil: "2000-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+    const expired = await handleDesignSearchRequest(
+      searchRequest({ cookie, body: { embedding: axis(0), complianceTarget: "EU_DPP" } }),
+    );
+    assert.equal(expired.status, 200);
+    if (expired.status !== 200) return;
+    assert.equal(
+      expired.body.find((row) => row.millArticleCode === "HX-100")?.compliance_warning?.status,
+      "compliance_warning",
+    );
+
+    const uk = await handleDesignSearchRequest(
+      searchRequest({ cookie, body: { embedding: axis(0), complianceTarget: "UK_STANDARDS" } }),
+    );
+    const absent = await handleDesignSearchRequest(
+      searchRequest({ cookie, body: { embedding: axis(0), complianceTarget: null } }),
+    );
+    assert.equal(uk.status, 200);
+    assert.equal(absent.status, 200);
+    if (uk.status !== 200 || absent.status !== 200) return;
+    assert.equal(uk.body[0]?.compliance_warning, undefined);
+    assert.equal(absent.body[0]?.compliance_warning, undefined);
+    assert.equal(uk.body.length, 2);
   });
 
   it("defaults a missing version header to demo and accepts test", async () => {
