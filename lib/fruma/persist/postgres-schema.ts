@@ -1,22 +1,34 @@
 import { FIELD_CLASSES, STANDARD_FIELDS } from "../ingest/types";
+import { FRUMA_VERSION_IDS, isFrumaVersion, type FrumaVersion } from "../versions";
 
 /** Application environment. Each one owns a PostgreSQL schema. */
-export const SURFACE_ENVIRONMENTS = ["demo", "test", "production"] as const;
-export type SurfaceEnvironment = (typeof SURFACE_ENVIRONMENTS)[number];
+export const SURFACE_ENVIRONMENTS = FRUMA_VERSION_IDS;
+export type SurfaceEnvironment = FrumaVersion;
 
 export const LEDGER_SCHEMAS = {
   demo: "fruma_demo",
   test: "fruma_test",
   production: "fruma_production",
-} as const;
+} as const satisfies Record<FrumaVersion, `fruma_${FrumaVersion}`>;
 export type LedgerSchemaName = (typeof LEDGER_SCHEMAS)[keyof typeof LEDGER_SCHEMAS];
 
 export function isSurfaceEnvironment(value: string): value is SurfaceEnvironment {
-  return (SURFACE_ENVIRONMENTS as readonly string[]).includes(value);
+  return isFrumaVersion(value);
 }
 
 export function ledgerSchemaName(surface: SurfaceEnvironment): LedgerSchemaName {
   return LEDGER_SCHEMAS[surface];
+}
+
+/**
+ * Session configuration for the pool that serves `version`.
+ * The schema identifier is taken from {@link LEDGER_SCHEMAS}, never from raw input.
+ */
+export function searchPathStatement(version: string): string {
+  if (!isFrumaVersion(version)) {
+    throw new Error("version must be demo, test, or production");
+  }
+  return `SET search_path TO ${LEDGER_SCHEMAS[version]};`;
 }
 
 export function assertLedgerSchema(targetSchema: string): LedgerSchemaName {

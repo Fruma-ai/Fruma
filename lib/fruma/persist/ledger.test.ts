@@ -6,7 +6,8 @@ import { describe, it } from "node:test";
 import { resolveActiveCell } from "../ingest/cell-mutations";
 import { FileSpineStore } from "./file-store";
 import { IdempotencyException, conflictingDeposit } from "./idempotency";
-import { legacyLedgerMessage, postgresLedgerSchema } from "./postgres-schema";
+import { defaultSurfaceForPersist } from "./index";
+import { legacyLedgerMessage, postgresLedgerSchema, searchPathStatement } from "./postgres-schema";
 
 const storeSrc = readFileSync(join(import.meta.dirname, "postgres-store.ts"), "utf8");
 
@@ -86,6 +87,29 @@ describe("immutable postgres ledger schema", () => {
       }
     }
     assert.throws(() => postgresLedgerSchema("public"), /targetSchema/);
+  });
+
+  it("sets search_path from the runtime version when the pool is acquired", () => {
+    assert.equal(searchPathStatement("demo"), "SET search_path TO fruma_demo;");
+    assert.equal(searchPathStatement("test"), "SET search_path TO fruma_test;");
+    assert.equal(searchPathStatement("production"), "SET search_path TO fruma_production;");
+    assert.throws(() => searchPathStatement("public"), /version/);
+    assert.throws(() => searchPathStatement("demo;drop schema public"), /version/);
+    assert.match(storeSrc, /searchPathStatement\(this\.surface\)/);
+    assert.match(storeSrc, /await reserved\.unsafe\(statement\)/);
+    assert.match(storeSrc, /sql\.reserve\(\)/);
+    assert.match(storeSrc, /-c search_path=\$\{this\.schemaName\}/);
+
+    const previous = process.env.FRUMA_PERSIST_SURFACE;
+    try {
+      process.env.FRUMA_PERSIST_SURFACE = "production";
+      assert.equal(defaultSurfaceForPersist(), "production");
+      process.env.FRUMA_PERSIST_SURFACE = "nope";
+      assert.equal(defaultSurfaceForPersist(), "test");
+    } finally {
+      if (previous === undefined) delete process.env.FRUMA_PERSIST_SURFACE;
+      else process.env.FRUMA_PERSIST_SURFACE = previous;
+    }
   });
 
   it("inserts deposits, cells, and grants with no ON CONFLICT DO UPDATE", () => {

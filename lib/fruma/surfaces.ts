@@ -1,4 +1,4 @@
-import type { FrumaVersion } from "./versions";
+import { isFrumaVersion, type FrumaVersion } from "./versions";
 
 /**
  * Hard rules for keeping Demo / production story intact while Test evolves.
@@ -15,14 +15,15 @@ export function surfaceStorageKey(surface: FrumaVersion, name: string): string {
 
 /** Synthetic mill org for Workshop deposits — partitioned by surface. */
 export function surfaceMillOrgId(surface: FrumaVersion): string {
-  return surface === "test" ? "org_mill_test" : "org_mill_synthetic";
+  if (surface === "test") return "org_mill_test";
+  if (surface === "production") return "org_mill_production";
+  return "org_mill_synthetic";
 }
 
 export function parseFrumaSurface(
   value: string | null | undefined,
 ): FrumaVersion | null {
-  if (value === "demo" || value === "test") return value;
-  return null;
+  return isFrumaVersion(value) ? value : null;
 }
 
 /** Default for legacy mill deposit route: demo, so Test experiments stay off Demo. */

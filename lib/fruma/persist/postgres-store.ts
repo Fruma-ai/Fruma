@@ -10,6 +10,7 @@ import {
   ledgerSchemaName,
   legacyLedgerMessage,
   postgresLedgerSchema,
+  searchPathStatement,
   type LedgerSchemaName,
   type SurfaceEnvironment,
   LEDGER_TABLES,
@@ -28,6 +29,9 @@ import type {
 
 type Sql = ReturnType<typeof import("postgres")>;
 type LedgerTable = (typeof LEDGER_TABLES)[number];
+
+/** Matches `postgres({ max })`. Every slot runs SET search_path before use. */
+const POOL_MAX = 4;
 
 /**
  * Postgres-backed spine. Requires DATABASE_URL and the `postgres` package.
@@ -62,10 +66,35 @@ export class PostgresSpineStore implements SpineStore {
     const url = process.env.DATABASE_URL?.trim();
     if (!url) throw new Error("DATABASE_URL is required for PostgresSpineStore");
     const postgres = (await import("postgres")).default;
-    this.sql = postgres(url, { max: 4, prepare: false });
-    this.ready = this.prepare(this.sql);
+    const statement = searchPathStatement(this.surface);
+    this.sql = postgres(url, {
+      max: POOL_MAX,
+      prepare: false,
+      connection: {
+        options: `-c search_path=${this.schemaName}`,
+      },
+    });
+    const sql = this.sql;
+    this.ready = (async () => {
+      await this.applySearchPath(sql, statement);
+      await this.prepare(sql);
+    })();
     await this.ready;
-    return this.sql;
+    return sql;
+  }
+
+  /** Run `SET search_path TO fruma_${version}` on every connection the pool can hand out. */
+  private async applySearchPath(sql: Sql, statement: string): Promise<void> {
+    const held = [];
+    try {
+      for (let i = 0; i < POOL_MAX; i += 1) {
+        const reserved = await sql.reserve();
+        await reserved.unsafe(statement);
+        held.push(reserved);
+      }
+    } finally {
+      for (const reserved of held) reserved.release();
+    }
   }
 
   private async prepare(sql: Sql): Promise<void> {

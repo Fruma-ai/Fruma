@@ -1,6 +1,6 @@
 import { join } from "node:path";
-import type { FrumaVersion } from "../versions";
-import { DEMO_SURFACE, TEST_SURFACE } from "../surfaces";
+import { isFrumaVersion, type FrumaVersion } from "../versions";
+import { TEST_SURFACE } from "../surfaces";
 import { FileSpineStore } from "./file-store";
 import { PostgresSpineStore } from "./postgres-store";
 import type { SpineStore } from "./types";
@@ -60,5 +60,6 @@ export function spineBackendKind(): "file" | "postgres" {
 }
 
 export function defaultSurfaceForPersist(): FrumaVersion {
-  return process.env.FRUMA_PERSIST_SURFACE === "demo" ? DEMO_SURFACE : TEST_SURFACE;
+  const configured = process.env.FRUMA_PERSIST_SURFACE;
+  return isFrumaVersion(configured) ? configured : TEST_SURFACE;
 }
