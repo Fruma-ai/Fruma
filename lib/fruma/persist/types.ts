@@ -88,6 +88,13 @@ export type SpineSnapshot = {
   cellMutations: PersistedCellMutation[];
 };
 
+/** One immutable source cell plus its append-only mutations, in occurred_at order. */
+export type JoinedSourceCell = {
+  cell: PersistedSourceCell;
+  supplierOrgId: string;
+  mutations: PersistedCellMutation[];
+};
+
 export type SpineStore = {
   kind: "file" | "postgres";
   load(): Promise<SpineSnapshot>;
@@ -100,5 +107,10 @@ export type SpineStore = {
   saveNamedGrant(grant: PersistedNamedGrant): Promise<void>;
   appendCellMutation(event: PersistedCellMutation): Promise<void>;
   getDepositBytes(depositId: string): Promise<Uint8Array | null>;
+  /**
+   * Source cells for a deposit, or every cell in the active schema.
+   * Mutations are LEFT JOINed and ordered by occurred_at ASC. Deposit bytes are not read.
+   */
+  listSourceCellsWithMutations(filter?: { depositId?: string }): Promise<JoinedSourceCell[]>;
   reset(): Promise<void>;
 };

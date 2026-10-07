@@ -23,6 +23,7 @@ import type {
   PersistedDepositPointer,
   PersistedHeaderMap,
   PersistedCellMutation,
+  JoinedSourceCell,
   PersistedNamedGrant,
   PersistedSourceCell,
   SpineSnapshot,
@@ -500,6 +501,63 @@ export class PostgresSpineStore implements SpineStore {
     return new Uint8Array(buf);
   }
 
+  async listSourceCellsWithMutations(filter?: { depositId?: string }): Promise<JoinedSourceCell[]> {
+    const sql = await this.client();
+    const cells = this.table(sql, "fruma_source_cells");
+    const deposits = this.table(sql, "fruma_deposits");
+    const events = this.table(sql, "fruma_cell_mutation_events");
+    const depositId = filter?.depositId?.trim();
+    const rows = depositId
+      ? await sql`
+          SELECT
+            c.id,
+            c.deposit_id,
+            c.sheet_name,
+            c.row_index,
+            c.col_index,
+            c.raw_header,
+            c.source_value,
+            c.normalized_value,
+            d.supplier_org_id,
+            e.event_id,
+            e.operator_cookie,
+            e.action_type,
+            e.old_standard_value,
+            e.new_standard_value,
+            e.standard_field,
+            e.occurred_at
+          FROM ${cells} c
+          INNER JOIN ${deposits} d ON d.id = c.deposit_id
+          LEFT JOIN ${events} e ON e.source_cell_id = c.id
+          WHERE c.deposit_id = ${depositId}
+          ORDER BY e.occurred_at ASC
+        `
+      : await sql`
+          SELECT
+            c.id,
+            c.deposit_id,
+            c.sheet_name,
+            c.row_index,
+            c.col_index,
+            c.raw_header,
+            c.source_value,
+            c.normalized_value,
+            d.supplier_org_id,
+            e.event_id,
+            e.operator_cookie,
+            e.action_type,
+            e.old_standard_value,
+            e.new_standard_value,
+            e.standard_field,
+            e.occurred_at
+          FROM ${cells} c
+          INNER JOIN ${deposits} d ON d.id = c.deposit_id
+          LEFT JOIN ${events} e ON e.source_cell_id = c.id
+          ORDER BY e.occurred_at ASC
+        `;
+    return groupCellMutationRows(rows);
+  }
+
   async reset(): Promise<void> {
     const sql = await this.client();
     await sql.unsafe(dropSchemaStatement(this.surface));
@@ -582,6 +640,27 @@ function mutationFromRow(row: Record<string, unknown>): PersistedCellMutation {
     standardField: field == null ? null : (String(field) as PersistedCellMutation["standardField"]),
     occurredAt: new Date(row.occurred_at as string | Date).toISOString(),
   };
+}
+
+function groupCellMutationRows(rows: readonly Record<string, unknown>[]): JoinedSourceCell[] {
+  const byId = new Map<string, JoinedSourceCell>();
+  for (const row of rows) {
+    const id = String(row.id);
+    let group = byId.get(id);
+    if (!group) {
+      group = {
+        cell: cellFromRow(row),
+        supplierOrgId: String(row.supplier_org_id),
+        mutations: [],
+      };
+      byId.set(id, group);
+    }
+    if (row.event_id != null) group.mutations.push(mutationFromRow(row));
+  }
+  for (const group of byId.values()) {
+    group.mutations.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  }
+  return [...byId.values()];
 }
 
 function grantFromRow(row: Record<string, unknown>): PersistedNamedGrant {

@@ -11,6 +11,7 @@ export type {
   PersistedCellMutation,
   PersistedDepositPointer,
   PersistedHeaderMap,
+  JoinedSourceCell,
   PersistedNamedGrant,
   PersistedSourceCell,
   SpineSnapshot,

@@ -12,6 +12,7 @@ import type {
   PersistedCellMutation,
   PersistedDepositPointer,
   PersistedHeaderMap,
+  JoinedSourceCell,
   PersistedNamedGrant,
   PersistedSourceCell,
   SpineSnapshot,
@@ -238,6 +239,23 @@ export class FileSpineStore implements SpineStore {
     const objectPath = join(this.objectsDir, pointer.objectKey);
     if (!existsSync(objectPath)) return null;
     return new Uint8Array(readFileSync(objectPath));
+  }
+
+  async listSourceCellsWithMutations(filter?: { depositId?: string }): Promise<JoinedSourceCell[]> {
+    const snap = await this.readAll();
+    const depositId = filter?.depositId?.trim();
+    const cells = snap.sourceCells.filter((cell) => !depositId || cell.depositId === depositId);
+    return cells.map((cell) => {
+      const deposit = snap.deposits.find((row) => row.depositId === cell.depositId);
+      const mutations = snap.cellMutations
+        .filter((event) => event.sourceCellId === cell.id)
+        .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+      return {
+        cell,
+        supplierOrgId: deposit?.supplierOrgId ?? "",
+        mutations,
+      };
+    });
   }
 
   async reset(): Promise<void> {
