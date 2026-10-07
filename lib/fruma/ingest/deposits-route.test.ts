@@ -1,16 +1,22 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { DEMO_COOKIE, sessionToken } from "../../gate";
 import { FILE_RECEIVED_COPY } from "../honesty";
 import { toMillDepositResponse } from "../mill-deposit";
+import { FileSpineStore, getSpineStore, setSpineStoreForTests } from "../persist";
+import { IdempotencyException } from "../persist/idempotency";
 import {
   handleMillDepositRequest,
   SYNTHETIC_MILL_ORG_ID,
+  type MillDepositHttpResult,
 } from "./deposits-http";
 import { sha256Hex } from "./hash";
+import { depositPointerFrom, sourceCellsFrom } from "./persist-deposit";
+import { formatConverted } from "./units";
 
 const FIXTURE_DIR = dirname(fileURLToPath(import.meta.url));
 const CSV_NAME = "synthetic-hanger.csv";
@@ -55,7 +61,23 @@ function depositRequest(args: {
   });
 }
 
-describe("SPEC 8 mill deposits Route Handler", () => {
+async function persistLikeMillRoute(outcome: MillDepositHttpResult) {
+  if (outcome.status !== 200) return;
+  const store = getSpineStore(outcome.surface);
+  await store.saveDepositPointer(depositPointerFrom(outcome.result), outcome.bytes);
+  await store.saveSourceCells(sourceCellsFrom(outcome.result));
+}
+
+describe("SPEC 8 mill deposits Route Handler", { concurrency: 1 }, () => {
+  beforeEach(() => {
+    const dir = mkdtempSync(join(tmpdir(), "fruma-mill-deposit-"));
+    setSpineStoreForTests(new FileSpineStore(dir));
+  });
+
+  afterEach(() => {
+    setSpineStoreForTests(null);
+  });
+
   it("returns 401 without a mill/Workshop session cookie", async () => {
     const file = new File([CSV_BYTES], CSV_NAME, { type: "text/csv" });
     const result = await handleMillDepositRequest(depositRequest({ file }));
@@ -115,6 +137,27 @@ describe("SPEC 8 mill deposits Route Handler", () => {
     assert.equal(keys.has("cells"), false);
     assert.equal(keys.has("millReadStatus"), false);
     assert.equal(keys.has("grants"), false);
+
+    await persistLikeMillRoute(result);
+    const snap = await getSpineStore(result.surface).load();
+    assert.equal(snap.deposits.length, 1);
+    assert.equal(snap.deposits[0]?.sha256, body.sha256);
+    const ounces = snap.sourceCells.find((cell) => cell.sourceValue === "8.2 OZ");
+    assert.ok(ounces);
+    assert.equal(ounces.sourceValue, "8.2 OZ");
+    assert.equal(ounces.normalizedValue, formatConverted(8.2 * 33.905747));
+    const alreadyCm = snap.sourceCells.find((cell) => cell.sourceValue === "160cm");
+    assert.equal(alreadyCm?.normalizedValue, null);
+    const inches = snap.sourceCells.find((cell) => cell.sourceValue === '68"');
+    assert.equal(inches?.sourceValue, '68"');
+    assert.equal(inches?.normalizedValue, formatConverted(68 * 2.54));
+
+    await assert.rejects(
+      () => persistLikeMillRoute(result),
+      (err: unknown) => err instanceof IdempotencyException && err.conflict === "deposit_id",
+    );
+    const again = await getSpineStore(result.surface).load();
+    assert.equal(again.sourceCells.find((cell) => cell.rawHeader === "Weight" && cell.sourceValue === "8.2 OZ")?.sourceValue, "8.2 OZ");
 
     const dumped = JSON.stringify(body);
     assert.ok(!dumped.includes("SYN-QA-100,S/J 30/1"));

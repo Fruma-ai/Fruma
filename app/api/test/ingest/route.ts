@@ -1,9 +1,11 @@
 import { factoryById, hangerCsvFor } from "@/lib/fruma/test-corpus";
 import { millIngestEngineFor } from "@/lib/fruma/ingest/deposits-http";
+import { depositPointerFrom, sourceCellsFrom } from "@/lib/fruma/ingest/persist-deposit";
 import { toMillDepositResponse } from "@/lib/fruma/mill-deposit";
 import { confirmedHeaderOverlays } from "@/lib/fruma/intelligence/overlays";
 import { requireTestFounder, testJson } from "@/lib/fruma/intelligence/http-auth";
 import { scoreFactoryCoverage } from "@/lib/fruma/intelligence/coverage";
+import { getSpineStore, isIdempotencyException } from "@/lib/fruma/persist";
 import { surfaceMillOrgId, TEST_SURFACE } from "@/lib/fruma/surfaces";
 
 export const runtime = "nodejs";
@@ -46,6 +48,9 @@ export async function POST(request: Request) {
       bytes,
       headerOverlays: overlays,
     });
+    const store = getSpineStore(TEST_SURFACE);
+    await store.saveDepositPointer(depositPointerFrom(result), bytes);
+    await store.saveSourceCells(sourceCellsFrom(result));
     const coverage = scoreFactoryCoverage(factory, overlays);
     const unmappedHeaders = [
       ...new Set(result.cells.filter((c) => !c.standardField && c.header.trim()).map((c) => c.header)),
@@ -78,6 +83,9 @@ export async function POST(request: Request) {
       }),
     });
   } catch (err) {
+    if (isIdempotencyException(err)) {
+      return testJson({ error: err.message, conflict: err.conflict }, 409);
+    }
     const message = err instanceof Error ? err.message : "ingest_failed";
     return testJson({ error: message }, 400);
   }

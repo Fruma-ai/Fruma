@@ -20,6 +20,7 @@ export type LockedMillCell = {
   column: string;
   rawHeader: string;
   sourceValue: string;
+  normalizedValue?: string | null;
 };
 
 export type LockSourceInput = {
@@ -98,6 +99,7 @@ export function persistedCellForLock(depositId: string, cell: LockedMillCell): P
     colIndex: columnNumber(cell.column),
     rawHeader: cell.rawHeader,
     sourceValue: cell.sourceValue,
+    normalizedValue: cell.normalizedValue ?? null,
   };
 }
 

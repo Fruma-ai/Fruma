@@ -35,6 +35,8 @@ describe("immutable postgres ledger schema", () => {
     assert.match(POSTGRES_LEDGER_SCHEMA, /col_index INTEGER NOT NULL/);
     assert.match(POSTGRES_LEDGER_SCHEMA, /raw_header TEXT NOT NULL/);
     assert.match(POSTGRES_LEDGER_SCHEMA, /source_value TEXT NOT NULL/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /normalized_value TEXT/);
+    assert.equal(/normalized_value TEXT NOT NULL/.test(POSTGRES_LEDGER_SCHEMA), false);
     assert.match(POSTGRES_LEDGER_SCHEMA, /mill_org_id TEXT NOT NULL/);
     assert.match(POSTGRES_LEDGER_SCHEMA, /brand_org_id TEXT NOT NULL/);
     assert.match(POSTGRES_LEDGER_SCHEMA, /scope_class TEXT NOT NULL/);
@@ -155,6 +157,7 @@ describe("file spine deposit immutability", () => {
         colIndex: 1,
         rawHeader: "Fabric No",
         sourceValue: "Q75",
+        normalizedValue: null,
       },
     ]);
     await assert.rejects(
@@ -168,11 +171,14 @@ describe("file spine deposit immutability", () => {
             colIndex: 1,
             rawHeader: "Fabric No",
             sourceValue: "CHANGED",
+            normalizedValue: "999",
           },
         ]),
       (err: unknown) => err instanceof IdempotencyException && err.conflict === "source_cell",
     );
-    assert.equal((await store.load()).sourceCells[0]?.sourceValue, "Q75");
+    const kept = (await store.load()).sourceCells[0];
+    assert.equal(kept?.sourceValue, "Q75");
+    assert.equal(kept?.normalizedValue, null);
 
     await store.saveNamedGrant({
       id: "grant-1",

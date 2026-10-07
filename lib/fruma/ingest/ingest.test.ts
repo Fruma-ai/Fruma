@@ -9,6 +9,7 @@ import { IngestException } from "./exceptions";
 import { baseQualityId } from "./identity";
 import { sha256Hex } from "./hash";
 import { buildXlsx } from "./parse-xlsx";
+import { convertInchToCm, convertOunceToGsm, formatConverted } from "./units";
 import {
   GRANT_STATUS_GRANTED,
   GRANT_STATUS_REVOKED,
@@ -74,6 +75,23 @@ describe("SPEC 6 ingest — parse csv and xlsx bytes", () => {
     assert.equal(article.pointer.column, "A");
     assert.equal(article.sourceValue, "SYN-QA-100");
     assert.equal(article.header, "Article");
+  });
+
+  it("writes ounce and inch conversions onto normalizedValue and leaves sourceValue", () => {
+    const { result } = depositCsv();
+    const ounces = result.cells.find((c) => c.sourceValue === "8.2 OZ");
+    const grams = result.cells.find((c) => c.sourceValue === "185gr");
+    const inches = result.cells.find((c) => c.sourceValue === '68"');
+    const centimetres = result.cells.find((c) => c.sourceValue === "160cm");
+    assert.equal(ounces?.standardField, "weight");
+    assert.equal(ounces?.sourceValue, "8.2 OZ");
+    assert.equal(ounces?.normalizedValue, formatConverted(convertOunceToGsm(8.2)));
+    assert.equal(grams?.normalizedValue, undefined);
+    assert.equal(inches?.standardField, "width");
+    assert.equal(inches?.sourceValue, '68"');
+    assert.equal(inches?.normalizedValue, formatConverted(convertInchToCm(68)));
+    assert.equal(centimetres?.normalizedValue, undefined);
+    assert.equal(centimetres?.sourceValue, "160cm");
   });
 
   it("parses synthetic xlsx bytes and keeps the sheet name as written", () => {

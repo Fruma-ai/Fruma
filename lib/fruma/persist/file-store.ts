@@ -56,7 +56,10 @@ export class FileSpineStore implements SpineStore {
       confirmations: parsed.confirmations ?? [],
       productTruth: parsed.productTruth ?? [],
       deposits: parsed.deposits ?? [],
-      sourceCells: parsed.sourceCells ?? [],
+      sourceCells: (parsed.sourceCells ?? []).map((cell) => ({
+        ...cell,
+        normalizedValue: cell.normalizedValue ?? null,
+      })),
       namedGrants: parsed.namedGrants ?? [],
       cellMutations: parsed.cellMutations ?? [],
     };

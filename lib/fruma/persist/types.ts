@@ -62,6 +62,8 @@ export type PersistedSourceCell = {
   colIndex: number;
   rawHeader: string;
   sourceValue: string;
+  /** Converted gsm or centimetres. Null leaves sourceValue as the only stored reading. */
+  normalizedValue: string | null;
 };
 
 /** Named mill → brand grant. Insert-only. */

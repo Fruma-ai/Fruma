@@ -104,7 +104,7 @@ export class PostgresSpineStore implements SpineStore {
         WHERE surface_environment = ${surface}
       `,
       sql`
-        SELECT id, deposit_id, sheet_name, row_index, col_index, raw_header, source_value
+        SELECT id, deposit_id, sheet_name, row_index, col_index, raw_header, source_value, normalized_value
         FROM fruma_source_cells
         WHERE surface_environment = ${surface}
       `,
@@ -292,7 +292,7 @@ export class PostgresSpineStore implements SpineStore {
           }
           await tx`
             INSERT INTO fruma_source_cells (
-              id, deposit_id, sheet_name, row_index, col_index, raw_header, source_value, surface_environment
+              id, deposit_id, sheet_name, row_index, col_index, raw_header, source_value, normalized_value, surface_environment
             )
             VALUES (
               ${cell.id},
@@ -302,6 +302,7 @@ export class PostgresSpineStore implements SpineStore {
               ${cell.colIndex},
               ${cell.rawHeader},
               ${cell.sourceValue},
+              ${cell.normalizedValue},
               ${this.surface}
             )
           `;
@@ -470,6 +471,7 @@ function cellFromRow(row: Record<string, unknown>): PersistedSourceCell {
     colIndex: Number(row.col_index),
     rawHeader: String(row.raw_header),
     sourceValue: String(row.source_value),
+    normalizedValue: row.normalized_value == null ? null : String(row.normalized_value),
   };
 }
 

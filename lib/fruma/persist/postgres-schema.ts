@@ -1,4 +1,4 @@
-import { FIELD_CLASSES } from "../ingest/types";
+import { FIELD_CLASSES, STANDARD_FIELDS } from "../ingest/types";
 
 /** Environment gate stored on every ledger table. */
 export const SURFACE_ENVIRONMENTS = ["demo", "test", "production"] as const;
@@ -11,6 +11,7 @@ export function isSurfaceEnvironment(value: string): value is SurfaceEnvironment
 const SURFACE_SQL = `TEXT NOT NULL CHECK (surface_environment IN ('demo', 'test', 'production'))`;
 
 const SCOPE_SQL = FIELD_CLASSES.map((field) => `'${field}'`).join(", ");
+const STANDARD_FIELD_SQL = STANDARD_FIELDS.map((field) => `'${field}'`).join(", ");
 
 /**
  * Immutable ledger DDL.
@@ -63,6 +64,7 @@ CREATE TABLE IF NOT EXISTS fruma_source_cells (
   col_index INTEGER NOT NULL CHECK (col_index >= 1),
   raw_header TEXT NOT NULL,
   source_value TEXT NOT NULL,
+  normalized_value TEXT,
   surface_environment ${SURFACE_SQL},
   CONSTRAINT fruma_source_cells_slot_key UNIQUE (deposit_id, sheet_name, row_index, col_index),
   CONSTRAINT fruma_source_cells_id_deposit_key UNIQUE (id, deposit_id)
@@ -83,9 +85,7 @@ CREATE TABLE IF NOT EXISTS fruma_cell_mutation_events (
   old_standard_value TEXT,
   new_standard_value TEXT,
   standard_field TEXT CHECK (
-    standard_field IS NULL OR standard_field IN (
-      'article', 'construction', 'composition', 'weight', 'width', 'colour', 'moq', 'customer', 'cert'
-    )
+    standard_field IS NULL OR standard_field IN (${STANDARD_FIELD_SQL})
   ),
   occurred_at TIMESTAMPTZ NOT NULL,
   surface_environment ${SURFACE_SQL}
@@ -97,6 +97,7 @@ BEGIN
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
+ALTER TABLE fruma_source_cells ADD COLUMN IF NOT EXISTS normalized_value TEXT;
 CREATE TABLE IF NOT EXISTS fruma_product_truth_facts (
   id TEXT PRIMARY KEY,
   product_id TEXT NOT NULL,
@@ -151,7 +152,8 @@ SELECT
   c.row_index,
   c.col_index,
   c.raw_header,
-  c.source_value
+  c.source_value,
+  c.normalized_value
 FROM fruma_product_truth_facts f
 INNER JOIN fruma_source_cells c
   ON c.id = f.source_cell_id

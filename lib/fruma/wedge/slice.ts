@@ -22,6 +22,7 @@ import {
   type PilotSliceResult,
 } from "../pilot";
 import { sourceCellId } from "../ingest/cell-mutations";
+import { normalizedValueFor } from "../ingest/units";
 import type { FieldCitation } from "../pilot/citations";
 import { lockProductSource, type LockedMillCell } from "../truth/lock";
 import type { ProductTruthRecord } from "../product-truth";
@@ -66,6 +67,7 @@ function lockedCell(
     column: citation.column,
     rawHeader: citation.header,
     sourceValue: citation.sourceValue,
+    normalizedValue: normalizedValueFor(field, citation.sourceValue),
   };
 }
 

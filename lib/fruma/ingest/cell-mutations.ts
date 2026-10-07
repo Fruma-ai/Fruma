@@ -60,6 +60,7 @@ export function resolveActiveCell(
     header: cell.header,
     ...(standardField ? { standardField } : {}),
     ...(standardValue !== undefined ? { standardValue } : {}),
+    ...(cell.normalizedValue != null ? { normalizedValue: cell.normalizedValue } : {}),
     confirmed,
   };
 }

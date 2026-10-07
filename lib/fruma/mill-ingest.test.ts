@@ -30,7 +30,7 @@ describe("SPEC 9 mill-ingest Map column samples", () => {
       colourPreview: "1 colourway",
     });
     const article = fields.find((f) => f.key === "article");
-    const structure = fields.find((f) => f.key === "structure");
+    const structure = fields.find((f) => f.key === "construction");
     assert.equal(article?.preview, "SYN-QA-100");
     assert.equal(structure?.preview, "—");
     assert.equal(fields.some((f) => f.preview.includes("DPWR192924")), false);

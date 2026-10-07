@@ -1,3 +1,5 @@
+import type { StandardField } from "./ingest/types";
+
 export type ViewId =
   | "designer"
   | "ingest"
@@ -18,7 +20,11 @@ export type MillFile = {
   source: "demo" | "upload";
 };
 export type CatalogStatus = "ready" | "review" | "confirmed" | "gap";
-export type CatalogField = "structure" | "composition" | "gsm" | "widthCm" | "moqM";
+/** Workshop catalogue columns that are members of the nine-field standard. */
+export type CatalogField = Extract<
+  StandardField,
+  "construction" | "composition" | "weight" | "width" | "moq"
+>;
 export type CatalogFilter = "all" | "review" | "ready" | "confirmed" | "gap";
 export type SearchStatus = "idle" | "loading" | "ready" | "empty" | "error";
 export type SwatchStage = "desk" | "ordered" | "in-hand" | "signed-off";
