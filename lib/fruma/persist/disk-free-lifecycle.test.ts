@@ -8,10 +8,11 @@ import { handleMillQualitiesRequest } from "../ingest/qualities-http";
 import { initiateSourcingHandshake } from "../sourcing/handshake";
 import { surfaceMillOrgId } from "../surfaces";
 import { isFrumaVersion, type FrumaVersion } from "../versions";
+import { resetHeaderOverlaysForTests } from "../intelligence/overlays";
 import { assertWorkspaceDataDirUntouched, installDiskFreeSchemas } from "./disk-free";
-import { getSpineStore, setSpineStoreForTests } from "./index";
+import { clearVolatileTestSpine, getSpineStore, setSpineStoreForTests } from "./index";
 import { ledgerSchemaName, searchPathStatement } from "./postgres-schema";
-import type { Client } from "./reload-engines";
+import { activeEngineCache, reloadEnginesFromDatabase, resetEngineCacheForTests, type Client } from "./reload-engines";
 
 const TEST_PASS = "disk-free-lifecycle-password";
 const BRAND_ORG_ID = "org_brand_secret_disk_free";
@@ -287,6 +288,83 @@ describe("disk-free schema lifecycle", { concurrency: 1 }, () => {
       schemas.close();
       millRequests.clear();
       assertWorkspaceDataDirUntouched();
+    }
+  });
+
+  it("drops the in-memory test schema and leaves the demo schema in place", async () => {
+    const previousUrl = process.env.DATABASE_URL;
+    delete process.env.DATABASE_URL;
+    const schemas = installDiskFreeSchemas();
+    try {
+      const testBytes = Uint8Array.from([9, 8, 7]);
+      const demoBytes = Uint8Array.from([1]);
+      await schemas.test.saveDepositPointer(
+        {
+          depositId: "dep-volatile",
+          supplierOrgId: SUPPLIER_ORG_ID,
+          filename: SHEET,
+          sha256: sha256Hex(testBytes),
+          byteLength: testBytes.byteLength,
+          receivedAt: "2026-10-07T16:00:00.000Z",
+          objectKey: "dep-volatile.bin",
+        },
+        testBytes,
+      );
+      await schemas.demo.saveDepositPointer(
+        {
+          depositId: "dep-volatile-demo",
+          supplierOrgId: SUPPLIER_ORG_ID,
+          filename: SHEET,
+          sha256: sha256Hex(demoBytes),
+          byteLength: demoBytes.byteLength,
+          receivedAt: "2026-10-07T16:00:00.000Z",
+          objectKey: "dep-volatile-demo.bin",
+        },
+        demoBytes,
+      );
+      assert.equal((await schemas.test.getDepositBytes("dep-volatile"))?.byteLength, 3);
+
+      await reloadEnginesFromDatabase({
+        async unsafe(query: string) {
+          if (query.includes("current_schema")) return [{ schema_name: "fruma_test" }];
+          if (query.includes("fruma_header_maps")) {
+            return [
+              {
+                surface: "test",
+                overlays: { "art. no": "article" },
+                updated_at: "2026-10-07T16:00:00.000Z",
+                version: 1,
+              },
+            ];
+          }
+          if (query.includes("fruma_product_truth")) return [];
+          throw new Error(query);
+        },
+      });
+      assert.equal(activeEngineCache("test").headerMaps.length, 1);
+
+      await clearVolatileTestSpine("staging");
+      assert.equal((await schemas.test.load()).deposits.length, 1);
+
+      await clearVolatileTestSpine("test");
+      assert.equal((await schemas.test.load()).deposits.length, 0);
+      assert.equal(await schemas.test.getDepositBytes("dep-volatile"), null);
+      assert.equal(schemas.test.kind, "memory");
+      assert.equal(getSpineStore("test"), schemas.test);
+      assert.equal(activeEngineCache("test").headerMaps.length, 0);
+      assert.equal((await schemas.demo.load()).deposits.length, 1);
+      assertWorkspaceDataDirUntouched();
+
+      process.env.DATABASE_URL = "postgres://fruma-test";
+      await clearVolatileTestSpine("demo");
+      assert.equal((await schemas.demo.load()).deposits.length, 1);
+      assertWorkspaceDataDirUntouched();
+    } finally {
+      if (previousUrl === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = previousUrl;
+      resetHeaderOverlaysForTests();
+      resetEngineCacheForTests();
+      schemas.close();
     }
   });
 });

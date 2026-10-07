@@ -454,10 +454,23 @@ export class FileSpineStore implements SpineStore {
 
   async reset(): Promise<void> {
     if (this.kind === "memory") {
-      this.memorySnap = structuredClone(EMPTY);
-      this.memoryObjects?.clear();
+      this.releaseVolatile();
       return;
     }
     await this.write(structuredClone(EMPTY));
+  }
+
+  /**
+   * Drop schema rows and deposit bytes held in this process.
+   * A fresh empty buffer replaces them so the pinned schema stays off disk.
+   */
+  releaseVolatile(): void {
+    if (this.kind !== "memory") return;
+    const held = this.memoryObjects;
+    this.memorySnap = null;
+    this.memoryObjects = null;
+    held?.clear();
+    this.memorySnap = structuredClone(EMPTY);
+    this.memoryObjects = new Map();
   }
 }

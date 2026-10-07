@@ -60,6 +60,12 @@ export function resetEngineCacheForTests() {
   caches.clear();
 }
 
+/** Drop one environment's header-map and product-truth cache. */
+export function clearEngineCacheForVersion(version: string): void {
+  if (!isFrumaVersion(version)) return;
+  caches.delete(version);
+}
+
 /**
  * Load the latest active header maps and product-truth documents on the
  * client's search path into the in-memory engine cache.

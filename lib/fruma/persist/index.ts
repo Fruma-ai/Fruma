@@ -1,9 +1,10 @@
 import { join } from "node:path";
-import { isFrumaVersion, type FrumaVersion } from "../versions";
+import { FRUMA_VERSION_IDS, isFrumaVersion, type FrumaVersion } from "../versions";
 import { TEST_SURFACE } from "../surfaces";
 import { MissingConfigurationException } from "./configuration";
 import { FileSpineStore } from "./file-store";
 import { clearPostgresSpineStoresForTests, postgresSpineStore } from "./postgres-store";
+import { clearEngineCacheForVersion } from "./reload-engines";
 import type { SpineStore } from "./types";
 
 export type {
@@ -72,8 +73,36 @@ export function getSpineStore(surface: FrumaVersion = TEST_SURFACE): SpineStore 
   return store;
 }
 
+function releaseMemorySpine(store: SpineStore | undefined): void {
+  if (store instanceof FileSpineStore) store.releaseVolatile();
+}
+
+/**
+ * Drop the in-memory schema for one version when no Postgres URL is configured.
+ * A configured DATABASE_URL keeps the ledger on that schema's reset path.
+ */
+export async function clearVolatileTestSpine(version: string): Promise<void> {
+  if (process.env.DATABASE_URL !== undefined) return;
+  if (!isFrumaVersion(version)) return;
+  const pinned = schemaStores.get(version);
+  const cached = stores.get(`file:${version}`);
+  releaseMemorySpine(pinned);
+  if (cached !== pinned) releaseMemorySpine(cached);
+  clearEngineCacheForVersion(version);
+}
+
 /** Tests / wedge reset — swap the active store (all surfaces). */
 export function setSpineStoreForTests(store: SpineStore | null) {
+  if (!store && process.env.DATABASE_URL === undefined) {
+    releaseMemorySpine(testOverride ?? undefined);
+    for (const version of FRUMA_VERSION_IDS) {
+      const pinned = schemaStores.get(version);
+      const cached = stores.get(`file:${version}`);
+      if (pinned !== testOverride) releaseMemorySpine(pinned);
+      if (cached !== pinned && cached !== testOverride) releaseMemorySpine(cached);
+      clearEngineCacheForVersion(version);
+    }
+  }
   testOverride = store;
   if (!store) {
     stores.clear();

@@ -3,7 +3,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { FrumaVersion } from "../versions";
 import { FileSpineStore } from "./file-store";
-import { getSpineStore, setSchemaStoresForTests, setSpineStoreForTests } from "./index";
+import { clearVolatileTestSpine, getSpineStore, setSchemaStoresForTests, setSpineStoreForTests } from "./index";
 import type { SpineStore } from "./types";
 
 const SCHEMA_SURFACES = ["demo", "test"] as const satisfies readonly FrumaVersion[];
@@ -67,6 +67,8 @@ export function installDiskFreeSchemas(): DiskFreeSchemas {
     demo,
     test,
     close() {
+      void clearVolatileTestSpine("demo");
+      void clearVolatileTestSpine("test");
       setSpineStoreForTests(null);
     },
   };
