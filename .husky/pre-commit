@@ -1,5 +1,4 @@
 #!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
+# Husky 9+ modern execution wrapper — explicit script execution without sourcing deprecated husky.sh
 node scripts/guard-ledger-architecture.js
 npm test
