@@ -52,12 +52,34 @@ export type PersistedDepositPointer = {
   objectKey: string;
 };
 
+/** One immutable mill cell. Mapping never rewrites sourceValue. */
+export type PersistedSourceCell = {
+  id: string;
+  depositId: string;
+  sheetName: string;
+  rowIndex: number;
+  colIndex: number;
+  rawHeader: string;
+  sourceValue: string;
+};
+
+/** Named mill → brand grant. Insert-only. */
+export type PersistedNamedGrant = {
+  id: string;
+  millOrgId: string;
+  brandOrgId: string;
+  scopeClass: string;
+  createdAt: string;
+};
+
 export type SpineSnapshot = {
   headerMaps: PersistedHeaderMap[];
   requests: AnonymousMillRequest[];
   confirmations: MillConfirmation[];
   productTruth: ProductTruthRecord[];
   deposits: PersistedDepositPointer[];
+  sourceCells: PersistedSourceCell[];
+  namedGrants: PersistedNamedGrant[];
 };
 
 export type SpineStore = {
@@ -68,6 +90,8 @@ export type SpineStore = {
   saveConfirmation(confirmation: MillConfirmation): Promise<void>;
   saveProductTruth(record: ProductTruthRecord): Promise<void>;
   saveDepositPointer(pointer: PersistedDepositPointer, bytes: Uint8Array): Promise<void>;
+  saveSourceCells(cells: PersistedSourceCell[]): Promise<void>;
+  saveNamedGrant(grant: PersistedNamedGrant): Promise<void>;
   getDepositBytes(depositId: string): Promise<Uint8Array | null>;
   reset(): Promise<void>;
 };

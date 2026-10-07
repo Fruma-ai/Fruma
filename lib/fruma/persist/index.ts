@@ -10,11 +10,15 @@ export type {
   MillConfirmation,
   PersistedDepositPointer,
   PersistedHeaderMap,
+  PersistedNamedGrant,
+  PersistedSourceCell,
   SpineSnapshot,
   SpineStore,
 } from "./types";
 export { FileSpineStore } from "./file-store";
 export { PostgresSpineStore } from "./postgres-store";
+export { IdempotencyException, isIdempotencyException } from "./idempotency";
+export type { SurfaceEnvironment } from "./postgres-schema";
 
 const stores = new Map<string, SpineStore>();
 let testOverride: SpineStore | null = null;
@@ -27,8 +31,8 @@ function fileRootFor(surface: FrumaVersion): string {
 
 /**
  * File store by default (`.data/fruma-{surface}` or `FRUMA_DATA_DIR/{surface}`).
- * Set DATABASE_URL to use Postgres for the same spine shapes (shared tables,
- * surface carried on header-map rows / deposit pointers).
+ * Set DATABASE_URL to use Postgres. Every table is filtered by surface_environment
+ * (demo, test, or production). Deposit bytes are insert-only.
  */
 export function getSpineStore(surface: FrumaVersion = TEST_SURFACE): SpineStore {
   if (testOverride) return testOverride;
@@ -36,7 +40,7 @@ export function getSpineStore(surface: FrumaVersion = TEST_SURFACE): SpineStore 
   let store = stores.get(key);
   if (store) return store;
   if (process.env.DATABASE_URL?.trim()) {
-    store = new PostgresSpineStore();
+    store = new PostgresSpineStore(surface);
   } else {
     store = new FileSpineStore(fileRootFor(surface));
   }

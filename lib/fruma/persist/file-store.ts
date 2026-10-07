@@ -1,14 +1,21 @@
 import { mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import type { ProductTruthRecord } from "../product-truth";
+import {
+  conflictingDeposit,
+  depositIdempotencyException,
+  IdempotencyException,
+} from "./idempotency";
 import type {
   AnonymousMillRequest,
   MillConfirmation,
   PersistedDepositPointer,
   PersistedHeaderMap,
+  PersistedNamedGrant,
+  PersistedSourceCell,
   SpineSnapshot,
   SpineStore,
 } from "./types";
-import type { ProductTruthRecord } from "../product-truth";
 
 const EMPTY: SpineSnapshot = {
   headerMaps: [],
@@ -16,6 +23,8 @@ const EMPTY: SpineSnapshot = {
   confirmations: [],
   productTruth: [],
   deposits: [],
+  sourceCells: [],
+  namedGrants: [],
 };
 
 function defaultDataDir(): string {
@@ -45,6 +54,8 @@ export class FileSpineStore implements SpineStore {
       confirmations: parsed.confirmations ?? [],
       productTruth: parsed.productTruth ?? [],
       deposits: parsed.deposits ?? [],
+      sourceCells: parsed.sourceCells ?? [],
+      namedGrants: parsed.namedGrants ?? [],
     };
   }
 
@@ -88,13 +99,56 @@ export class FileSpineStore implements SpineStore {
   }
 
   async saveDepositPointer(pointer: PersistedDepositPointer, bytes: Uint8Array): Promise<void> {
+    const snap = await this.load();
+    const incoming = { id: pointer.depositId, byteHash: pointer.sha256 };
+    const conflict = conflictingDeposit(
+      snap.deposits.map((row) => ({ id: row.depositId, byteHash: row.sha256 })),
+      incoming,
+    );
+    if (conflict) throw depositIdempotencyException(conflict, incoming);
     const objectPath = join(this.objectsDir, pointer.objectKey);
     mkdirSync(join(objectPath, ".."), { recursive: true });
     writeFileSync(objectPath, bytes);
+    snap.deposits.push(pointer);
+    await this.write(snap);
+  }
+
+  async saveSourceCells(cells: PersistedSourceCell[]): Promise<void> {
+    if (!cells.length) return;
     const snap = await this.load();
-    const idx = snap.deposits.findIndex((d) => d.depositId === pointer.depositId);
-    if (idx === -1) snap.deposits.push(pointer);
-    else snap.deposits[idx] = pointer;
+    for (const cell of cells) {
+      const slotTaken = snap.sourceCells.some(
+        (row) =>
+          row.id === cell.id ||
+          (row.depositId === cell.depositId &&
+            row.sheetName === cell.sheetName &&
+            row.rowIndex === cell.rowIndex &&
+            row.colIndex === cell.colIndex),
+      );
+      if (slotTaken) {
+        throw new IdempotencyException(
+          "source_cell",
+          `Source cell ${cell.id} already exists. Source values are immutable.`,
+          { id: cell.id, depositId: cell.depositId },
+        );
+      }
+      const deposit = snap.deposits.find((row) => row.depositId === cell.depositId);
+      if (!deposit) throw new Error(`Deposit ${cell.depositId} is not in the spine.`);
+      snap.sourceCells.push(cell);
+    }
+    await this.write(snap);
+  }
+
+  async saveNamedGrant(grant: PersistedNamedGrant): Promise<void> {
+    const snap = await this.load();
+    if (snap.namedGrants.some((row) => row.id === grant.id)) {
+      throw new IdempotencyException(
+        "named_grant",
+        `Named grant ${grant.id} already exists. Grants are immutable.`,
+        { id: grant.id },
+      );
+    }
+    snap.namedGrants.push(grant);
     await this.write(snap);
   }
 
