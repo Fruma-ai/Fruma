@@ -8,7 +8,8 @@
     "start": "next start --port 43147 --hostname 0.0.0.0",
     "lint": "eslint",
     "test": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts lib/fruma/mill-deposit.test.ts lib/fruma/mill-ingest.test.ts lib/fruma/doors.test.ts lib/fruma/test-corpus/test-corpus.test.ts lib/fruma/surfaces.test.ts lib/fruma/intelligence/intelligence.test.ts lib/fruma/pilot/pilot.test.ts lib/fruma/wedge/wedge.test.ts",
-    "test:ingest": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts"
+    "test:ingest": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.3.3",
@@ -28,6 +29,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"
