@@ -76,7 +76,7 @@ describe("immutable postgres ledger schema", () => {
     assert.equal(ddl.includes("ON CONFLICT"), false);
     assert.equal(ddl.includes("pointer JSONB"), false);
     assert.equal(ddl.includes("surface_environment"), false);
-    assert.equal(ddl.match(/id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/g)?.length, 8);
+    assert.equal(ddl.match(/id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/g)?.length, 9);
     assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_factory_profiles/);
     assert.match(ddl, /mill_org_id TEXT NOT NULL/);
     assert.match(ddl, /facility_name TEXT NOT NULL/);
@@ -113,6 +113,31 @@ describe("immutable postgres ledger schema", () => {
     const telemetry = ddl.slice(ddl.indexOf("CREATE TABLE IF NOT EXISTS fruma_test.fruma_search_telemetry"));
     const telemetryBody = telemetry.slice(0, telemetry.indexOf(");"));
     assert.equal(/brand/i.test(telemetryBody), false);
+    const staged = ddl.slice(ddl.indexOf("CREATE TABLE IF NOT EXISTS fruma_test.fruma_staged_suggestions"));
+    const stagedBody = staged.slice(0, staged.indexOf(");"));
+    assert.match(stagedBody, /id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/);
+    assert.match(
+      stagedBody,
+      /deposit_id TEXT NOT NULL REFERENCES fruma_test\.fruma_deposits \(id\) ON DELETE CASCADE/,
+    );
+    assert.match(
+      stagedBody,
+      /source_cell_id TEXT NOT NULL REFERENCES fruma_test\.fruma_source_cells \(id\) ON DELETE CASCADE/,
+    );
+    assert.match(
+      stagedBody,
+      /target_field TEXT NOT NULL CHECK \(target_field IN \('article', 'construction', 'composition', 'weight', 'width', 'colour', 'moq', 'customer', 'cert'\)\)/,
+    );
+    assert.match(stagedBody, /suggested_value TEXT NOT NULL/);
+    assert.match(stagedBody, /derivation_source TEXT NOT NULL/);
+    assert.match(stagedBody, /confidence REAL NOT NULL/);
+    assert.match(stagedBody, /created_at TIMESTAMPTZ NOT NULL DEFAULT NOW\(\)/);
+    assert.equal(stagedBody.includes("document_type"), false);
+    const facts = ddl.slice(ddl.indexOf("CREATE TABLE IF NOT EXISTS fruma_test.fruma_product_truth_facts"));
+    const factsBody = facts.slice(0, facts.indexOf(");"));
+    assert.equal(factsBody.includes("fruma_staged_suggestions"), false);
+    const provenance = ddl.slice(ddl.indexOf("CREATE OR REPLACE VIEW fruma_test.fruma_product_truth_provenance"));
+    assert.equal(provenance.includes("fruma_staged_suggestions"), false);
     assert.match(ddl, /SET search_path TO public;\nCREATE EXTENSION IF NOT EXISTS vector;/);
     assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_material_embeddings/);
     assert.match(
@@ -149,7 +174,7 @@ describe("immutable postgres ledger schema", () => {
       assert.match(ddl, new RegExp(`CREATE SCHEMA IF NOT EXISTS ${schema}`));
       assert.match(ddl, new RegExp(`SET search_path TO ${schema}`));
       const tables = ddl.split("CREATE TABLE IF NOT EXISTS ").slice(1);
-      assert.equal(tables.length, 13);
+      assert.equal(tables.length, 14);
       for (const table of tables) {
         assert.match(table, new RegExp(`^${schema}\\.fruma_`));
         assert.equal(table.includes("surface_environment"), false);
