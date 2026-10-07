@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { uniformMaterialFromHit } from "@/lib/fruma/design/catalog-card";
 import { isStandardField } from "@/lib/fruma/ingest/types";
 import { uniformValue } from "@/lib/fruma/ingest/units";
+import { MaterialCatalogGrid } from "./MaterialCatalogGrid";
 
 export type SuggestionItem = {
   cellId: string;
@@ -23,7 +25,15 @@ export type DiscoverySearchHit = {
   millArticleCode: string;
   rank: number;
   cosineDistance: number;
+  score?: number;
   compliance_warning?: { message?: string };
+  colourways?: { id?: string; colourAsWritten?: string }[];
+  cells?: {
+    standardField?: string | null;
+    sourceValue?: string;
+    standardValue?: string | null;
+    normalizedValue?: string | null;
+  }[];
 };
 
 function shownValue(item: SuggestionItem): string {
@@ -42,6 +52,7 @@ export function DiscoveryCanvas({
   isAccepting,
   status,
   results,
+  onInspectMaterial,
 }: {
   onSearchExecute: (payload: DiscoverySearchPayload) => void;
   suggestions: SuggestionItem[];
@@ -50,6 +61,7 @@ export function DiscoveryCanvas({
   isAccepting: boolean;
   status: string | null;
   results: DiscoverySearchHit[];
+  onInspectMaterial: (id: string) => void;
 }) {
   const [prompt, setPrompt] = useState("");
   const [complianceTarget, setComplianceTarget] = useState<DiscoverySearchPayload["complianceTarget"]>(null);
@@ -117,26 +129,13 @@ export function DiscoveryCanvas({
         </p>
       ) : null}
 
-      {results.length > 0 ? (
-        <section className="space-y-2" aria-label="Search results">
-          <h3 className="font-mono text-[10px] uppercase tracking-widest text-[#6E7E91]">Closest materials</h3>
-          <ul className="space-y-2">
-            {results.map((hit) => (
-              <li key={hit.id} className="rounded-sm border border-[#1F1F23] bg-[#121214] px-3 py-2">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-mono text-xs text-[#F5F5F7]">{hit.millArticleCode}</span>
-                  <span className="font-mono text-[10px] text-[#6E7E91]">
-                    #{hit.rank} · distance {hit.cosineDistance.toFixed(4)}
-                  </span>
-                </div>
-                {hit.compliance_warning?.message ? (
-                  <p className="mt-1 font-mono text-[10px] text-amber-400">{hit.compliance_warning.message}</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <section className="space-y-2" aria-label="Material catalog">
+        <h3 className="font-mono text-[10px] uppercase tracking-widest text-[#6E7E91]">Material catalog</h3>
+        <MaterialCatalogGrid
+          materials={results.map((hit) => uniformMaterialFromHit(hit))}
+          onInspectMaterial={onInspectMaterial}
+        />
+      </section>
 
       <section className="space-y-3" aria-label="Staged suggestions">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

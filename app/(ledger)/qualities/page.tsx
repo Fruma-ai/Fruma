@@ -183,6 +183,13 @@ export default function QualitiesWorkspacePage() {
           isAccepting={isAccepting}
           status={status}
           results={searchResults}
+          onInspectMaterial={(id) => {
+            const hit = searchResults.find((row) => row.id === id);
+            if (!hit) return;
+            setCurrentDepositId(hit.depositId);
+            setStatus(`Loading design twin for ${hit.millArticleCode}.`);
+            void triggerSuggestionGeneration(hit.depositId);
+          }}
         />
       </div>
     </WorkspaceShell>
