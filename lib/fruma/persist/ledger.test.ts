@@ -76,7 +76,7 @@ describe("immutable postgres ledger schema", () => {
     assert.equal(ddl.includes("ON CONFLICT"), false);
     assert.equal(ddl.includes("pointer JSONB"), false);
     assert.equal(ddl.includes("surface_environment"), false);
-    assert.equal(ddl.match(/id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/g)?.length, 7);
+    assert.equal(ddl.match(/id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/g)?.length, 8);
     assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_factory_profiles/);
     assert.match(ddl, /mill_org_id TEXT NOT NULL/);
     assert.match(ddl, /facility_name TEXT NOT NULL/);
@@ -103,6 +103,16 @@ describe("immutable postgres ledger schema", () => {
       ddl,
       /CREATE INDEX IF NOT EXISTS fruma_loom_capabilities_profile_idx\s+ON fruma_test\.fruma_loom_capabilities \(factory_profile_id\)/,
     );
+    assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_search_telemetry/);
+    assert.match(ddl, /search_id TEXT NOT NULL/);
+    assert.match(ddl, /requested_gsm INTEGER NOT NULL/);
+    assert.match(ddl, /requested_width_cm INTEGER NOT NULL/);
+    assert.match(ddl, /requested_fibers JSONB NOT NULL/);
+    assert.match(ddl, /result_count INTEGER NOT NULL CHECK \(result_count >= 0\)/);
+    assert.match(ddl, /jsonb_typeof\(requested_fibers\) = 'array'/);
+    const telemetry = ddl.slice(ddl.indexOf("CREATE TABLE IF NOT EXISTS fruma_test.fruma_search_telemetry"));
+    const telemetryBody = telemetry.slice(0, telemetry.indexOf(");"));
+    assert.equal(/brand/i.test(telemetryBody), false);
     assert.match(ddl, /SET search_path TO public;\nCREATE EXTENSION IF NOT EXISTS vector;/);
     assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_material_embeddings/);
     assert.match(
@@ -139,7 +149,7 @@ describe("immutable postgres ledger schema", () => {
       assert.match(ddl, new RegExp(`CREATE SCHEMA IF NOT EXISTS ${schema}`));
       assert.match(ddl, new RegExp(`SET search_path TO ${schema}`));
       const tables = ddl.split("CREATE TABLE IF NOT EXISTS ").slice(1);
-      assert.equal(tables.length, 12);
+      assert.equal(tables.length, 13);
       for (const table of tables) {
         assert.match(table, new RegExp(`^${schema}\\.fruma_`));
         assert.equal(table.includes("surface_environment"), false);

@@ -67,6 +67,7 @@ export const LEDGER_TABLES = [
   "fruma_product_truth_facts",
   "fruma_factory_profiles",
   "fruma_loom_capabilities",
+  "fruma_search_telemetry",
 ] as const;
 
 /**
@@ -76,6 +77,7 @@ export const LEDGER_TABLES = [
  * and the business key is unique only together with `version`.
  * Active state is the greatest version for that key.
  * Factory profiles are versioned by mill. Loom capabilities belong to one profile row.
+ * `fruma_search_telemetry` records anonymized design searches. It has no brand column.
  * `fruma_deposits.bytes` is the raw file. Nothing in this script updates it.
  * Isolation is the schema (`fruma_demo`, `fruma_test`, `fruma_production`).
  */
@@ -240,6 +242,18 @@ CREATE TABLE IF NOT EXISTS ${rel("fruma_loom_capabilities")} (
 );
 CREATE INDEX IF NOT EXISTS fruma_loom_capabilities_profile_idx
   ON ${rel("fruma_loom_capabilities")} (factory_profile_id);
+CREATE TABLE IF NOT EXISTS ${rel("fruma_search_telemetry")} (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  search_id TEXT NOT NULL,
+  requested_gsm INTEGER NOT NULL,
+  requested_width_cm INTEGER NOT NULL,
+  requested_fibers JSONB NOT NULL,
+  result_count INTEGER NOT NULL CHECK (result_count >= 0),
+  searched_at TIMESTAMPTZ NOT NULL,
+  CONSTRAINT fruma_search_telemetry_fibers_chk CHECK (jsonb_typeof(requested_fibers) = 'array')
+);
+CREATE INDEX IF NOT EXISTS fruma_search_telemetry_zero_results_idx
+  ON ${rel("fruma_search_telemetry")} (result_count, requested_gsm, requested_width_cm);
 CREATE OR REPLACE VIEW ${rel("fruma_product_truth_provenance")} AS
 SELECT
   f.id AS fact_id,
