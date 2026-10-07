@@ -12,12 +12,6 @@ export function bootsLedgerOnThisProcess(stack = new Error().stack ?? ""): boole
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   const stack = new Error().stack ?? "";
-  const frames = stack
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith("at "))
-    .slice(0, 8);
-  console.error(`fruma register ledger=${bootsLedgerOnThisProcess(stack) ? "boot" : "skip"} ${frames.join(" | ")}`);
   if (!bootsLedgerOnThisProcess(stack)) return;
   const { bootstrapEnginesFromDatabase } = await import("./lib/fruma/persist/reload-engines");
   await bootstrapEnginesFromDatabase();
