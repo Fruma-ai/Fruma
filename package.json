@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --port 43147 --hostname 0.0.0.0",
     "lint": "eslint",
-    "db:initialize": "tsx scripts/initialize-cloud-database.ts",
+    "db:init": "npx tsx scripts/initialize-cloud-database.ts",
     "test": "tsx --test lib/fruma/ingest/units.test.ts lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts lib/fruma/ingest/deposits-audit.test.ts lib/fruma/ingest/qualities-route.test.ts lib/fruma/ingest/deterministic-suggestions.test.ts lib/fruma/ingest/accept-staged-suggestions.test.ts lib/fruma/ingest/suggest-route.test.ts lib/fruma/design/refusals-route.test.ts lib/fruma/design/search-route.test.ts lib/fruma/design/catalog-card.test.ts lib/fruma/design/visual-route.test.ts lib/fruma/design/demand-gap.test.ts lib/fruma/design/demand-gap-route.test.ts lib/fruma/ingest/test-ingest-route.test.ts lib/fruma/mill-deposit.test.ts lib/fruma/mill-ingest.test.ts lib/fruma/doors.test.ts lib/fruma/test-corpus/test-corpus.test.ts lib/fruma/surfaces.test.ts lib/fruma/intelligence/intelligence.test.ts lib/fruma/pilot/pilot.test.ts lib/fruma/wedge/wedge.test.ts lib/fruma/persist/ledger.test.ts lib/fruma/persist/ledger-lifecycle.test.ts lib/fruma/persist/disk-free-lifecycle.test.ts lib/fruma/persist/vector-search.test.ts lib/fruma/persist/factory-profile.test.ts lib/fruma/persist/reload-engines.test.ts lib/fruma/sourcing/handshake.test.ts lib/fruma/sourcing/handshake-lifecycle.test.ts lib/fruma/sourcing/handshake-route.test.ts lib/fruma/truth/lock.test.ts lib/fruma/workspace-proxy.test.ts scripts/initialize-cloud-database.test.ts",
     "test:ingest": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts"
   },
