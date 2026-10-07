@@ -104,6 +104,19 @@ export type JoinedSourceCell = {
   mutations: PersistedCellMutation[];
 };
 
+/** One stored sketch or brief vector. The id is a UUID; the cell id stays TEXT. */
+export type PersistedMaterialEmbedding = {
+  id: string;
+  sourceCellId: string;
+  embedding: number[];
+  updatedAt: string;
+};
+
+/** A source cell on a sheet row hit by a nearest embedding, with that row's cosine distance. */
+export type MaterialSearchHit = JoinedSourceCell & {
+  cosineDistance: number;
+};
+
 export type SpineStore = {
   kind: "file" | "postgres";
   load(): Promise<SpineSnapshot>;
@@ -130,5 +143,12 @@ export type SpineStore = {
   listDepositSourceCells(depositId: string): Promise<PersistedSourceCell[]>;
   /** Every deposit in the active schema, tracking columns only. */
   listDepositAudit(): Promise<DepositAuditRow[]>;
+  /** Insert one embedding. The source cell must already exist. */
+  saveMaterialEmbedding(row: PersistedMaterialEmbedding): Promise<void>;
+  /**
+   * Nearest embeddings by cosine distance, expanded to every cell on the hit sheet row.
+   * Mutations are LEFT JOINed and ordered by occurred_at ASC.
+   */
+  searchMaterialEmbeddings(embedding: readonly number[]): Promise<MaterialSearchHit[]>;
   reset(): Promise<void>;
 };

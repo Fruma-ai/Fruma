@@ -1,5 +1,6 @@
 import { isStandardField } from "../ingest/types";
 import type { ProductTruthRecord } from "../product-truth";
+import { assertEmbeddingVector, assertMaterialEmbedding, vectorLiteral } from "./embeddings";
 import {
   conflictingDeposit,
   depositIdempotencyException,
@@ -26,6 +27,8 @@ import type {
   PersistedHeaderMap,
   PersistedCellMutation,
   JoinedSourceCell,
+  MaterialSearchHit,
+  PersistedMaterialEmbedding,
   PersistedNamedGrant,
   PersistedSourceCell,
   SpineSnapshot,
@@ -118,7 +121,8 @@ export class PostgresSpineStore implements SpineStore {
           'fruma_source_cells',
           'fruma_named_grants',
           'fruma_cell_mutation_events',
-          'fruma_product_truth_facts'
+          'fruma_product_truth_facts',
+          'fruma_material_embeddings'
         )
     `;
     const columnsByTable = new Map<string, Set<string>>();
@@ -620,6 +624,102 @@ export class PostgresSpineStore implements SpineStore {
     }));
   }
 
+  async saveMaterialEmbedding(row: PersistedMaterialEmbedding): Promise<void> {
+    assertMaterialEmbedding(row);
+    const sql = await this.client();
+    const literal = vectorLiteral(row.embedding);
+    await sql.begin(async (tx) => {
+      const cell = await tx`
+        SELECT id FROM ${this.table(tx, "fruma_source_cells")}
+        WHERE id = ${row.sourceCellId}
+      `;
+      if (!cell.length) {
+        throw new Error(`Source cell ${row.sourceCellId} is not in schema ${this.schemaName}.`);
+      }
+      const existing = await tx`
+        SELECT id FROM ${this.table(tx, "fruma_material_embeddings")}
+        WHERE id = ${row.id}::uuid
+      `;
+      if (existing.length) {
+        throw new Error(`Material embedding ${row.id} already exists.`);
+      }
+      await tx`
+        INSERT INTO ${this.table(tx, "fruma_material_embeddings")} (
+          id, source_cell_id, embedding, updated_at
+        )
+        VALUES (
+          ${row.id}::uuid,
+          ${row.sourceCellId},
+          ${literal}::public.vector,
+          ${row.updatedAt}
+        )
+      `;
+    });
+  }
+
+  async searchMaterialEmbeddings(embedding: readonly number[]): Promise<MaterialSearchHit[]> {
+    assertEmbeddingVector(embedding);
+    const sql = await this.client();
+    const embeddings = this.table(sql, "fruma_material_embeddings");
+    const nearestCells = this.table(sql, "fruma_source_cells");
+    const cells = this.table(sql, "fruma_source_cells");
+    const deposits = this.table(sql, "fruma_deposits");
+    const events = this.table(sql, "fruma_cell_mutation_events");
+    const literal = vectorLiteral(embedding);
+    const rows = await sql`
+      WITH scored AS (
+        SELECT
+          source_cell_id,
+          (embedding OPERATOR(public.<=>) ${literal}::public.vector) AS distance
+        FROM ${embeddings}
+      ),
+      nearest AS (
+        SELECT source_cell_id, MIN(distance) AS distance
+        FROM scored
+        GROUP BY source_cell_id
+        ORDER BY MIN(distance) ASC
+        LIMIT 50
+      ),
+      hit_rows AS (
+        SELECT
+          c.deposit_id,
+          c.sheet_name,
+          c.row_index,
+          MIN(n.distance) AS distance
+        FROM nearest n
+        INNER JOIN ${nearestCells} c ON c.id = n.source_cell_id
+        GROUP BY c.deposit_id, c.sheet_name, c.row_index
+      )
+      SELECT
+        h.distance,
+        c.id,
+        c.deposit_id,
+        c.sheet_name,
+        c.row_index,
+        c.col_index,
+        c.raw_header,
+        c.source_value,
+        c.normalized_value,
+        d.supplier_org_id,
+        e.event_id,
+        e.operator_cookie,
+        e.action_type,
+        e.old_standard_value,
+        e.new_standard_value,
+        e.standard_field,
+        e.occurred_at
+      FROM hit_rows h
+      INNER JOIN ${cells} c
+        ON c.deposit_id = h.deposit_id
+       AND c.sheet_name = h.sheet_name
+       AND c.row_index = h.row_index
+      INNER JOIN ${deposits} d ON d.id = c.deposit_id
+      LEFT JOIN ${events} e ON e.source_cell_id = c.id
+      ORDER BY h.distance ASC, c.col_index ASC, e.occurred_at ASC
+    `;
+    return groupSearchRows(rows);
+  }
+
   async reset(): Promise<void> {
     const sql = await this.client();
     await sql.unsafe(dropSchemaStatement(this.surface));
@@ -719,6 +819,28 @@ function mutationFromRow(row: Record<string, unknown>): PersistedCellMutation {
     standardField: field == null ? null : (String(field) as PersistedCellMutation["standardField"]),
     occurredAt: new Date(row.occurred_at as string | Date).toISOString(),
   };
+}
+
+function groupSearchRows(rows: readonly Record<string, unknown>[]): MaterialSearchHit[] {
+  const byId = new Map<string, MaterialSearchHit>();
+  for (const row of rows) {
+    const id = String(row.id);
+    let group = byId.get(id);
+    if (!group) {
+      group = {
+        cell: cellFromRow(row),
+        supplierOrgId: String(row.supplier_org_id),
+        mutations: [],
+        cosineDistance: Number(row.distance),
+      };
+      byId.set(id, group);
+    }
+    if (row.event_id != null) group.mutations.push(mutationFromRow(row));
+  }
+  for (const group of byId.values()) {
+    group.mutations.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  }
+  return [...byId.values()];
 }
 
 function groupCellMutationRows(rows: readonly Record<string, unknown>[]): JoinedSourceCell[] {

@@ -3,6 +3,12 @@ import { join } from "node:path";
 import { isStandardField } from "../ingest/types";
 import type { ProductTruthRecord } from "../product-truth";
 import {
+  assertEmbeddingVector,
+  assertMaterialEmbedding,
+  cosineDistance,
+  MATERIAL_SEARCH_CANDIDATE_LIMIT,
+} from "./embeddings";
+import {
   conflictingDeposit,
   depositIdempotencyException,
   IdempotencyException,
@@ -15,6 +21,8 @@ import type {
   PersistedDepositPointer,
   PersistedHeaderMap,
   JoinedSourceCell,
+  MaterialSearchHit,
+  PersistedMaterialEmbedding,
   PersistedNamedGrant,
   PersistedSourceCell,
   SpineSnapshot,
@@ -34,6 +42,7 @@ type SpineFile = {
   sourceCells: PersistedSourceCell[];
   namedGrants: PersistedNamedGrant[];
   cellMutations: PersistedCellMutation[];
+  materialEmbeddings: PersistedMaterialEmbedding[];
 };
 
 const EMPTY: SpineFile = {
@@ -45,6 +54,7 @@ const EMPTY: SpineFile = {
   sourceCells: [],
   namedGrants: [],
   cellMutations: [],
+  materialEmbeddings: [],
 };
 
 function revisionOf(version: number | undefined): number {
@@ -85,11 +95,14 @@ export class FileSpineStore implements SpineStore {
   async load(): Promise<SpineSnapshot> {
     const snap = await this.readAll();
     return {
-      ...snap,
       headerMaps: latestBy(snap.headerMaps, (row) => row.surface),
       requests: latestBy(snap.requests, (row) => row.id),
       confirmations: latestBy(snap.confirmations, (row) => row.id),
       productTruth: latestBy(snap.productTruth, (row) => row.productId),
+      deposits: snap.deposits,
+      sourceCells: snap.sourceCells,
+      namedGrants: snap.namedGrants,
+      cellMutations: snap.cellMutations,
     };
   }
 
@@ -112,6 +125,7 @@ export class FileSpineStore implements SpineStore {
       })),
       namedGrants: parsed.namedGrants ?? [],
       cellMutations: parsed.cellMutations ?? [],
+      materialEmbeddings: parsed.materialEmbeddings ?? [],
     };
   }
 
@@ -304,6 +318,72 @@ export class FileSpineStore implements SpineStore {
         received_at: row.receivedAt,
       }))
       .sort((a, b) => a.received_at.localeCompare(b.received_at) || a.id.localeCompare(b.id));
+  }
+
+  async saveMaterialEmbedding(row: PersistedMaterialEmbedding): Promise<void> {
+    assertMaterialEmbedding(row);
+    const snap = await this.readAll();
+    if (!snap.sourceCells.some((cell) => cell.id === row.sourceCellId)) {
+      throw new Error(`Source cell ${row.sourceCellId} is not in the spine.`);
+    }
+    if (snap.materialEmbeddings.some((stored) => stored.id === row.id)) {
+      throw new Error(`Material embedding ${row.id} already exists.`);
+    }
+    snap.materialEmbeddings.push({
+      id: row.id,
+      sourceCellId: row.sourceCellId,
+      embedding: [...row.embedding],
+      updatedAt: row.updatedAt,
+    });
+    await this.write(snap);
+  }
+
+  async searchMaterialEmbeddings(embedding: readonly number[]): Promise<MaterialSearchHit[]> {
+    assertEmbeddingVector(embedding);
+    const snap = await this.readAll();
+    const bestByCell = new Map<string, number>();
+    for (const stored of snap.materialEmbeddings) {
+      const distance = cosineDistance(embedding, stored.embedding);
+      const previous = bestByCell.get(stored.sourceCellId);
+      if (previous == null || distance < previous) bestByCell.set(stored.sourceCellId, distance);
+    }
+    const nearest = [...bestByCell.entries()]
+      .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
+      .slice(0, MATERIAL_SEARCH_CANDIDATE_LIMIT);
+    const cellById = new Map(snap.sourceCells.map((cell) => [cell.id, cell]));
+    const rowDistance = new Map<string, number>();
+    for (const [cellId, distance] of nearest) {
+      const cell = cellById.get(cellId);
+      if (!cell) continue;
+      const key = `${cell.depositId}\0${cell.sheetName}\0${cell.rowIndex}`;
+      const previous = rowDistance.get(key);
+      if (previous == null || distance < previous) rowDistance.set(key, distance);
+    }
+    const hits: MaterialSearchHit[] = [];
+    const rows = [...rowDistance.entries()].sort(
+      (a, b) => a[1] - b[1] || a[0].localeCompare(b[0]),
+    );
+    for (const [key, distance] of rows) {
+      const [depositId, sheetName, rowIndexRaw] = key.split("\0");
+      const rowIndex = Number(rowIndexRaw);
+      const supplierOrgId =
+        snap.deposits.find((deposit) => deposit.depositId === depositId)?.supplierOrgId ?? "";
+      const rowCells = snap.sourceCells
+        .filter(
+          (cell) =>
+            cell.depositId === depositId &&
+            cell.sheetName === sheetName &&
+            cell.rowIndex === rowIndex,
+        )
+        .sort((a, b) => a.colIndex - b.colIndex);
+      for (const cell of rowCells) {
+        const mutations = snap.cellMutations
+          .filter((event) => event.sourceCellId === cell.id)
+          .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+        hits.push({ cell, supplierOrgId, mutations, cosineDistance: distance });
+      }
+    }
+    return hits;
   }
 
   async reset(): Promise<void> {

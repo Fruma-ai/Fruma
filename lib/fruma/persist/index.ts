@@ -13,6 +13,8 @@ export type {
   PersistedDepositPointer,
   PersistedHeaderMap,
   JoinedSourceCell,
+  MaterialSearchHit,
+  PersistedMaterialEmbedding,
   PersistedNamedGrant,
   PersistedSourceCell,
   SpineSnapshot,
