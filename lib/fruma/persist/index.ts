@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { isFrumaVersion, type FrumaVersion } from "../versions";
 import { TEST_SURFACE } from "../surfaces";
 import { FileSpineStore } from "./file-store";
-import { PostgresSpineStore } from "./postgres-store";
+import { clearPostgresSpineStoresForTests, postgresSpineStore } from "./postgres-store";
 import type { SpineStore } from "./types";
 
 export type {
@@ -47,7 +47,7 @@ export function getSpineStore(surface: FrumaVersion = TEST_SURFACE): SpineStore 
   let store = stores.get(key);
   if (store) return store;
   if (process.env.DATABASE_URL?.trim()) {
-    store = new PostgresSpineStore(surface);
+    store = postgresSpineStore(surface);
   } else {
     store = new FileSpineStore(fileRootFor(surface));
   }
@@ -58,7 +58,10 @@ export function getSpineStore(surface: FrumaVersion = TEST_SURFACE): SpineStore 
 /** Tests / wedge reset — swap the active store (all surfaces). */
 export function setSpineStoreForTests(store: SpineStore | null) {
   testOverride = store;
-  if (!store) stores.clear();
+  if (!store) {
+    stores.clear();
+    clearPostgresSpineStoresForTests();
+  }
 }
 
 export function spineBackendKind(): "file" | "postgres" {

@@ -18,7 +18,7 @@ import {
   type SurfaceEnvironment,
   LEDGER_TABLES,
 } from "./postgres-schema";
-import { reloadEnginesFromDatabase } from "./reload-engines";
+import { reloadEnginesFromDatabase, type Client } from "./reload-engines";
 import type {
   AnonymousMillRequest,
   MillConfirmation,
@@ -39,6 +39,15 @@ import type {
 
 type Sql = ReturnType<typeof import("postgres")>;
 type LedgerTable = (typeof LEDGER_TABLES)[number];
+
+/** One connection already running SET search_path for its environment schema. */
+export type PinnedLedgerClient = Client & {
+  release(): void;
+};
+
+export type PostgresPool = {
+  connect(): Promise<PinnedLedgerClient>;
+};
 
 /** Matches `postgres({ max })`. Every slot runs SET search_path before use. */
 const POOL_MAX = 4;
@@ -752,6 +761,27 @@ export class PostgresSpineStore implements SpineStore {
     return groupProductTruthEvidence(rows);
   }
 
+  /**
+   * Reserve one pooled connection and pin it with SET search_path before it is used.
+   * The caller releases it. Handshake reads current_schema() from this connection.
+   */
+  async connectPinned(): Promise<PinnedLedgerClient> {
+    const sql = await this.client();
+    const reserved = await sql.reserve();
+    await reserved.unsafe(searchPathStatement(this.surface));
+    return {
+      unsafe(query: string, parameters?: readonly unknown[]) {
+        if (parameters && parameters.length > 0) {
+          return reserved.unsafe(query, parameters as never[]);
+        }
+        return reserved.unsafe(query);
+      },
+      release() {
+        reserved.release();
+      },
+    };
+  }
+
   async reset(): Promise<void> {
     const sql = await this.client();
     await sql.unsafe(dropSchemaStatement(this.surface));
@@ -1005,5 +1035,47 @@ function grantFromRow(row: Record<string, unknown>): PersistedNamedGrant {
     brandOrgId: String(row.brand_org_id),
     scopeClass: String(row.scope_class),
     createdAt: new Date(row.created_at as string | Date).toISOString(),
+  };
+}
+
+const spineStores = new Map<SurfaceEnvironment, PostgresSpineStore>();
+const poolOverrides = new Map<SurfaceEnvironment, PostgresPool>();
+
+/** One Postgres spine per environment, shared with getSpineStore when DATABASE_URL is set. */
+export function postgresSpineStore(surface: SurfaceEnvironment): PostgresSpineStore {
+  let store = spineStores.get(surface);
+  if (!store) {
+    store = new PostgresSpineStore(surface);
+    spineStores.set(surface, store);
+  }
+  return store;
+}
+
+export function clearPostgresSpineStoresForTests(): void {
+  spineStores.clear();
+}
+
+/** Tests supply a pool per environment. Pass null to remove that override. */
+export function setPostgresPoolForTests(version: SurfaceEnvironment, pool: PostgresPool | null): void {
+  if (pool) poolOverrides.set(version, pool);
+  else poolOverrides.delete(version);
+}
+
+/**
+ * Pool for `fruma_${version}`. connect() returns a client whose search_path is that schema.
+ * The version must already be demo, test, or production.
+ */
+export function getPostgresPool(version: string): PostgresPool {
+  if (!isSurfaceEnvironment(version)) {
+    throw new Error("version must be demo, test, or production");
+  }
+  const override = poolOverrides.get(version);
+  if (override) return override;
+  if (!process.env.DATABASE_URL?.trim()) {
+    throw new Error("DATABASE_URL is required for the Postgres pool");
+  }
+  const store = postgresSpineStore(version);
+  return {
+    connect: () => store.connectPinned(),
   };
 }
