@@ -22,6 +22,12 @@ export type CatalogColorway = {
   hex: string;
 };
 
+export type HistoricalProductMatch = {
+  productName: string;
+  seasonCode: string;
+  warehouseLocation: string;
+};
+
 export type UniformMaterialCard = {
   id: string;
   articleCode: string;
@@ -32,6 +38,7 @@ export type UniformMaterialCard = {
   colorways: CatalogColorway[];
   hasDppProof: boolean;
   complianceWarning?: string;
+  historicalProductMatch?: HistoricalProductMatch | null;
 };
 
 export type CatalogSearchCell = {
