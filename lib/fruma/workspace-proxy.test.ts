@@ -61,7 +61,13 @@ describe("workspace proxy gate", () => {
     const proxyStack = [
       "Error",
       "    at register (/var/task/.next/server/instrumentation.js:4:20)",
+      "    at registerInstrumentation (/var/task/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js:63:11)",
       "    at internalHandler (/var/task/.next/server/middleware.js:137:11)",
+    ].join("\n");
+    const opaqueProxyStack = [
+      "Error",
+      "    at register (/var/task/.next/server/instrumentation.js:4:20)",
+      "    at registerInstrumentation (/var/task/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js:63:11)",
     ].join("\n");
     const serverStack = [
       "Error",
@@ -69,6 +75,7 @@ describe("workspace proxy gate", () => {
       "    at NextNodeServer.prepareImpl (/var/task/node_modules/next/dist/server/next-server.js:575:5)",
     ].join("\n");
     assert.equal(bootsLedgerOnThisProcess(proxyStack), false);
+    assert.equal(bootsLedgerOnThisProcess(opaqueProxyStack), false);
     assert.equal(bootsLedgerOnThisProcess(serverStack), true);
   });
 });
