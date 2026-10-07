@@ -68,6 +68,7 @@ export const LEDGER_TABLES = [
   "fruma_factory_profiles",
   "fruma_loom_capabilities",
   "fruma_search_telemetry",
+  "fruma_staged_suggestions",
 ] as const;
 
 /**
@@ -78,6 +79,8 @@ export const LEDGER_TABLES = [
  * Active state is the greatest version for that key.
  * Factory profiles are versioned by mill. Loom capabilities belong to one profile row.
  * `fruma_search_telemetry` records anonymized design searches. It has no brand column.
+ * `fruma_staged_suggestions` is the proposal buffer for the deterministic engine.
+ * It lives in the same schema and is not a product-truth fact.
  * `fruma_deposits.bytes` is the raw file. Nothing in this script updates it.
  * Isolation is the schema (`fruma_demo`, `fruma_test`, `fruma_production`).
  */
@@ -254,6 +257,16 @@ CREATE TABLE IF NOT EXISTS ${rel("fruma_search_telemetry")} (
 );
 CREATE INDEX IF NOT EXISTS fruma_search_telemetry_zero_results_idx
   ON ${rel("fruma_search_telemetry")} (result_count, requested_gsm, requested_width_cm);
+CREATE TABLE IF NOT EXISTS ${rel("fruma_staged_suggestions")} (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deposit_id TEXT NOT NULL REFERENCES ${rel("fruma_deposits")} (id) ON DELETE CASCADE,
+  source_cell_id TEXT NOT NULL REFERENCES ${rel("fruma_source_cells")} (id) ON DELETE CASCADE,
+  target_field TEXT NOT NULL CHECK (target_field IN (${STANDARD_FIELD_SQL})),
+  suggested_value TEXT NOT NULL,
+  derivation_source TEXT NOT NULL,
+  confidence REAL NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 CREATE OR REPLACE VIEW ${rel("fruma_product_truth_provenance")} AS
 SELECT
   f.id AS fact_id,
