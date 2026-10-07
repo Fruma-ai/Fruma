@@ -11,6 +11,7 @@ import {
   assertCloudLedgerProvisioned,
   assertLiveDatabaseUrl,
   describeDatabaseUrl,
+  describeInitFailure,
   loadCloudDatabaseEnv,
   provisionLedgerSchemas,
   PUBLIC_VECTOR_EXTENSION_SQL,
@@ -172,5 +173,17 @@ describe("initialize cloud database", () => {
       },
     };
     await assert.rejects(() => assertCloudLedgerProvisioned(missingIndex), /HNSW cosine index is missing/);
+  });
+
+  it("reports a connection timeout when the aggregate error message is empty", () => {
+    const err = new AggregateError([
+      Object.assign(new Error("connect ETIMEDOUT 35.177.127.187:6543"), { code: "ETIMEDOUT" }),
+      Object.assign(new Error("connect ETIMEDOUT 13.43.29.36:6543"), { code: "ETIMEDOUT" }),
+    ]);
+    err.message = "";
+    const described = describeInitFailure(err);
+    assert.match(described, /connect ETIMEDOUT 35\.177\.127\.187:6543/);
+    assert.match(described, /connect ETIMEDOUT 13\.43\.29\.36:6543/);
+    assert.equal(described.includes("postgresql://"), false);
   });
 });

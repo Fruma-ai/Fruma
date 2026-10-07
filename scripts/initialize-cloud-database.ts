@@ -165,11 +165,28 @@ function invokedDirectly(): boolean {
   return import.meta.url === pathToFileURL(entry).href;
 }
 
+/** AggregateError from a failed connect often has an empty message. Keep the URL out of the log. */
+export function describeInitFailure(err: unknown): string {
+  const lines: string[] = [];
+  const visit = (value: unknown) => {
+    if (!value || typeof value !== "object") return;
+    if (value instanceof AggregateError) {
+      for (const nested of value.errors) visit(nested);
+      return;
+    }
+    if (value instanceof Error && value.message) lines.push(value.message);
+  };
+  visit(err);
+  const unique = [...new Set(lines.map((line) => line.replace(/postgres(?:ql)?:\/\/\S+/gi, "[redacted-url]")))];
+  if (unique.length > 0) return unique.join("; ");
+  if (err instanceof Error && err.message) return err.message;
+  return "Neon ledger initialization failed.";
+}
+
 if (invokedDirectly()) {
   loadCloudDatabaseEnv();
   initializeCloudDatabase().catch((err: unknown) => {
-    const message = err instanceof Error ? err.message : "Neon ledger initialization failed.";
-    console.error(message);
+    console.error(describeInitFailure(err));
     process.exitCode = 1;
   });
 }
