@@ -74,9 +74,28 @@ CREATE TABLE IF NOT EXISTS fruma_named_grants (
   created_at TIMESTAMPTZ NOT NULL,
   surface_environment ${SURFACE_SQL}
 );
+CREATE TABLE IF NOT EXISTS fruma_cell_mutation_events (
+  event_id TEXT PRIMARY KEY,
+  source_cell_id TEXT NOT NULL REFERENCES fruma_source_cells (id),
+  operator_cookie TEXT NOT NULL,
+  action_type TEXT NOT NULL CHECK (action_type IN ('map', 'confirm')),
+  old_standard_value TEXT,
+  new_standard_value TEXT,
+  standard_field TEXT CHECK (
+    standard_field IS NULL OR standard_field IN (
+      'article', 'construction', 'composition', 'weight', 'width', 'colour', 'moq', 'customer', 'cert'
+    )
+  ),
+  occurred_at TIMESTAMPTZ NOT NULL,
+  surface_environment ${SURFACE_SQL}
+);
 CREATE INDEX IF NOT EXISTS fruma_deposits_surface_idx ON fruma_deposits (surface_environment);
 CREATE INDEX IF NOT EXISTS fruma_source_cells_surface_idx ON fruma_source_cells (surface_environment);
 CREATE INDEX IF NOT EXISTS fruma_named_grants_surface_idx ON fruma_named_grants (surface_environment);
+CREATE INDEX IF NOT EXISTS fruma_cell_mutation_events_cell_idx
+  ON fruma_cell_mutation_events (source_cell_id, occurred_at);
+CREATE INDEX IF NOT EXISTS fruma_cell_mutation_events_surface_idx
+  ON fruma_cell_mutation_events (surface_environment);
 `;
 
 const LEDGER_TABLES = [
@@ -87,6 +106,7 @@ const LEDGER_TABLES = [
   "fruma_deposits",
   "fruma_source_cells",
   "fruma_named_grants",
+  "fruma_cell_mutation_events",
 ] as const;
 
 /**

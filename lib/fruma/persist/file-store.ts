@@ -9,6 +9,7 @@ import {
 import type {
   AnonymousMillRequest,
   MillConfirmation,
+  PersistedCellMutation,
   PersistedDepositPointer,
   PersistedHeaderMap,
   PersistedNamedGrant,
@@ -25,6 +26,7 @@ const EMPTY: SpineSnapshot = {
   deposits: [],
   sourceCells: [],
   namedGrants: [],
+  cellMutations: [],
 };
 
 function defaultDataDir(): string {
@@ -56,6 +58,7 @@ export class FileSpineStore implements SpineStore {
       deposits: parsed.deposits ?? [],
       sourceCells: parsed.sourceCells ?? [],
       namedGrants: parsed.namedGrants ?? [],
+      cellMutations: parsed.cellMutations ?? [],
     };
   }
 
@@ -149,6 +152,22 @@ export class FileSpineStore implements SpineStore {
       );
     }
     snap.namedGrants.push(grant);
+    await this.write(snap);
+  }
+
+  async appendCellMutation(event: PersistedCellMutation): Promise<void> {
+    const snap = await this.load();
+    if (snap.cellMutations.some((row) => row.eventId === event.eventId)) {
+      throw new IdempotencyException(
+        "cell_mutation",
+        `Cell mutation ${event.eventId} already exists. Mutations are append-only.`,
+        { eventId: event.eventId },
+      );
+    }
+    if (!snap.sourceCells.some((cell) => cell.id === event.sourceCellId)) {
+      throw new Error(`Source cell ${event.sourceCellId} is not in the spine.`);
+    }
+    snap.cellMutations.push(event);
     await this.write(snap);
   }
 

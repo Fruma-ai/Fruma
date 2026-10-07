@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, it } from "node:test";
+import { resolveActiveCell } from "../ingest/cell-mutations";
 import { FileSpineStore } from "./file-store";
 import { IdempotencyException, conflictingDeposit } from "./idempotency";
 import { legacyLedgerMessage, POSTGRES_LEDGER_SCHEMA } from "./postgres-schema";
@@ -19,7 +20,12 @@ function methodBody(name: string, next: string): string {
 describe("immutable postgres ledger schema", () => {
   it("defines relational deposits, source cells, and named grants", () => {
     assert.match(storeSrc, /POSTGRES_LEDGER_SCHEMA/);
-    for (const table of ["fruma_deposits", "fruma_source_cells", "fruma_named_grants"]) {
+    for (const table of [
+      "fruma_deposits",
+      "fruma_source_cells",
+      "fruma_named_grants",
+      "fruma_cell_mutation_events",
+    ]) {
       assert.match(POSTGRES_LEDGER_SCHEMA, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
     }
     assert.match(POSTGRES_LEDGER_SCHEMA, /byte_hash TEXT NOT NULL/);
@@ -32,13 +38,20 @@ describe("immutable postgres ledger schema", () => {
     assert.match(POSTGRES_LEDGER_SCHEMA, /mill_org_id TEXT NOT NULL/);
     assert.match(POSTGRES_LEDGER_SCHEMA, /brand_org_id TEXT NOT NULL/);
     assert.match(POSTGRES_LEDGER_SCHEMA, /scope_class TEXT NOT NULL/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /event_id TEXT PRIMARY KEY/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /source_cell_id TEXT NOT NULL/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /operator_cookie TEXT NOT NULL/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /action_type TEXT NOT NULL CHECK \(action_type IN \('map', 'confirm'\)\)/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /old_standard_value TEXT/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /new_standard_value TEXT/);
+    assert.match(POSTGRES_LEDGER_SCHEMA, /occurred_at TIMESTAMPTZ NOT NULL/);
     assert.equal(POSTGRES_LEDGER_SCHEMA.includes("ON CONFLICT"), false);
     assert.equal(POSTGRES_LEDGER_SCHEMA.includes("pointer JSONB"), false);
   });
 
   it("requires surface_environment on every table", () => {
     const tables = POSTGRES_LEDGER_SCHEMA.split("CREATE TABLE IF NOT EXISTS ").slice(1);
-    assert.equal(tables.length, 7);
+    assert.equal(tables.length, 8);
     for (const table of tables) {
       assert.match(table, /surface_environment TEXT NOT NULL CHECK \(surface_environment IN \('demo', 'test', 'production'\)\)/);
     }
@@ -48,7 +61,8 @@ describe("immutable postgres ledger schema", () => {
     for (const [name, next] of [
       ["saveDepositPointer", "saveSourceCells"],
       ["saveSourceCells", "saveNamedGrant"],
-      ["saveNamedGrant", "getDepositBytes"],
+      ["saveNamedGrant", "appendCellMutation"],
+      ["appendCellMutation", "getDepositBytes"],
     ] as const) {
       const body = methodBody(name, next);
       assert.equal(body.includes("ON CONFLICT"), false, name);
@@ -164,5 +178,56 @@ describe("file spine deposit immutability", () => {
         }),
       (err: unknown) => err instanceof IdempotencyException && err.conflict === "named_grant",
     );
+
+    await store.appendCellMutation({
+      eventId: "evt-map",
+      sourceCellId: "cell-1",
+      operatorCookie: "founder=owen",
+      actionType: "map",
+      oldStandardValue: null,
+      newStandardValue: "mesh",
+      standardField: "construction",
+      occurredAt: "2026-10-07T00:01:00.000Z",
+    });
+    await store.appendCellMutation({
+      eventId: "evt-confirm",
+      sourceCellId: "cell-1",
+      operatorCookie: "founder=owen",
+      actionType: "confirm",
+      oldStandardValue: "mesh",
+      newStandardValue: "mesh",
+      standardField: null,
+      occurredAt: "2026-10-07T00:02:00.000Z",
+    });
+    await assert.rejects(
+      () =>
+        store.appendCellMutation({
+          eventId: "evt-map",
+          sourceCellId: "cell-1",
+          operatorCookie: "founder=owen",
+          actionType: "map",
+          oldStandardValue: "mesh",
+          newStandardValue: "pique",
+          standardField: "construction",
+          occurredAt: "2026-10-07T00:03:00.000Z",
+        }),
+      (err: unknown) => err instanceof IdempotencyException && err.conflict === "cell_mutation",
+    );
+
+    const after = await store.load();
+    assert.equal(after.sourceCells[0]?.sourceValue, "Q75");
+    assert.equal(after.cellMutations.length, 2);
+    const active = resolveActiveCell(
+      {
+        pointer: { sheet: "book.csv", row: 2, column: "A" },
+        sourceValue: after.sourceCells[0]!.sourceValue,
+        header: "Fabric No",
+      },
+      after.cellMutations,
+    );
+    assert.equal(active.sourceValue, "Q75");
+    assert.equal(active.standardField, "construction");
+    assert.equal(active.standardValue, "mesh");
+    assert.equal(active.confirmed, true);
   });
 });

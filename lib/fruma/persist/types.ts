@@ -1,3 +1,4 @@
+import type { CellMutationEvent } from "../ingest/cell-mutations";
 import type { StandardField } from "../ingest/types";
 import type { ProductTruthRecord } from "../product-truth";
 
@@ -72,6 +73,8 @@ export type PersistedNamedGrant = {
   createdAt: string;
 };
 
+export type PersistedCellMutation = CellMutationEvent;
+
 export type SpineSnapshot = {
   headerMaps: PersistedHeaderMap[];
   requests: AnonymousMillRequest[];
@@ -80,6 +83,7 @@ export type SpineSnapshot = {
   deposits: PersistedDepositPointer[];
   sourceCells: PersistedSourceCell[];
   namedGrants: PersistedNamedGrant[];
+  cellMutations: PersistedCellMutation[];
 };
 
 export type SpineStore = {
@@ -92,6 +96,7 @@ export type SpineStore = {
   saveDepositPointer(pointer: PersistedDepositPointer, bytes: Uint8Array): Promise<void>;
   saveSourceCells(cells: PersistedSourceCell[]): Promise<void>;
   saveNamedGrant(grant: PersistedNamedGrant): Promise<void>;
+  appendCellMutation(event: PersistedCellMutation): Promise<void>;
   getDepositBytes(depositId: string): Promise<Uint8Array | null>;
   reset(): Promise<void>;
 };

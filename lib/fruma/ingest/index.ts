@@ -3,6 +3,8 @@
  * Do not import this module from client components or the catalogue reducer.
  */
 export { IngestEngine } from "./engine";
+export { resolveActiveCell, sourceCellId } from "./cell-mutations";
+export type { CellMutationEvent } from "./cell-mutations";
 export { IngestException, isIngestException } from "./exceptions";
 export { handleMillDepositRequest, SYNTHETIC_MILL_ORG_ID, millIngestEngineFor, resetMillIngestEnginesForTests } from "./deposits-http";
 export type { MillDepositHttpResult } from "./deposits-http";

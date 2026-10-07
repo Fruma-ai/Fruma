@@ -1,6 +1,11 @@
 /** Raised when a write would replace an existing ledger row. Callers must not retry by overwriting. */
 
-export type IdempotencyConflict = "deposit_id" | "byte_hash" | "source_cell" | "named_grant";
+export type IdempotencyConflict =
+  | "deposit_id"
+  | "byte_hash"
+  | "source_cell"
+  | "named_grant"
+  | "cell_mutation";
 
 export class IdempotencyException extends Error {
   readonly conflict: IdempotencyConflict;
@@ -76,6 +81,13 @@ export function idempotencyFromUniqueViolation(
     return new IdempotencyException(
       "source_cell",
       "Source cell already exists. Source values are immutable.",
+      { constraint },
+    );
+  }
+  if (table === "fruma_cell_mutation_events" || constraint.includes("cell_mutation")) {
+    return new IdempotencyException(
+      "cell_mutation",
+      "Cell mutation event already exists. Mutations are append-only.",
       { constraint },
     );
   }

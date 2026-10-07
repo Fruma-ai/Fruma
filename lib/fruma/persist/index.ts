@@ -8,6 +8,7 @@ import type { SpineStore } from "./types";
 export type {
   AnonymousMillRequest,
   MillConfirmation,
+  PersistedCellMutation,
   PersistedDepositPointer,
   PersistedHeaderMap,
   PersistedNamedGrant,

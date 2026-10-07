@@ -16,6 +16,7 @@ import type {
   MillConfirmation,
   PersistedDepositPointer,
   PersistedHeaderMap,
+  PersistedCellMutation,
   PersistedNamedGrant,
   PersistedSourceCell,
   SpineSnapshot,
@@ -69,7 +70,8 @@ export class PostgresSpineStore implements SpineStore {
           'fruma_product_truth',
           'fruma_deposits',
           'fruma_source_cells',
-          'fruma_named_grants'
+          'fruma_named_grants',
+          'fruma_cell_mutation_events'
         )
     `;
     const columnsByTable = new Map<string, Set<string>>();
@@ -86,7 +88,7 @@ export class PostgresSpineStore implements SpineStore {
   async load(): Promise<SpineSnapshot> {
     const sql = await this.client();
     const surface = this.surface;
-    const [maps, requests, confirmations, truth, deposits, cells, grants] = await Promise.all([
+    const [maps, requests, confirmations, truth, deposits, cells, grants, mutations] = await Promise.all([
       sql`
         SELECT surface, overlays, updated_at
         FROM fruma_header_maps
@@ -110,6 +112,13 @@ export class PostgresSpineStore implements SpineStore {
         FROM fruma_named_grants
         WHERE surface_environment = ${surface}
       `,
+      sql`
+        SELECT event_id, source_cell_id, operator_cookie, action_type,
+               old_standard_value, new_standard_value, standard_field, occurred_at
+        FROM fruma_cell_mutation_events
+        WHERE surface_environment = ${surface}
+        ORDER BY occurred_at, event_id
+      `,
     ]);
     return {
       headerMaps: maps.map((row) => ({
@@ -123,6 +132,7 @@ export class PostgresSpineStore implements SpineStore {
       deposits: deposits.map((row) => depositFromRow(row)),
       sourceCells: cells.map((row) => cellFromRow(row)),
       namedGrants: grants.map((row) => grantFromRow(row)),
+      cellMutations: mutations.map((row) => mutationFromRow(row)),
     };
   }
 
@@ -292,6 +302,58 @@ export class PostgresSpineStore implements SpineStore {
     }
   }
 
+  async appendCellMutation(event: PersistedCellMutation): Promise<void> {
+    if (event.actionType !== "map" && event.actionType !== "confirm") {
+      throw new Error("action_type must be map or confirm.");
+    }
+    const sql = await this.client();
+    try {
+      await sql.begin(async (tx) => {
+        const cell = await tx`
+          SELECT id FROM fruma_source_cells
+          WHERE id = ${event.sourceCellId} AND surface_environment = ${this.surface}
+        `;
+        if (!cell.length) {
+          throw new Error(
+            `Source cell ${event.sourceCellId} is not in surface ${this.surface}.`,
+          );
+        }
+        const existing = await tx`
+          SELECT event_id FROM fruma_cell_mutation_events WHERE event_id = ${event.eventId}
+        `;
+        if (existing.length) {
+          throw new IdempotencyException(
+            "cell_mutation",
+            `Cell mutation ${event.eventId} already exists. Mutations are append-only.`,
+            { eventId: event.eventId },
+          );
+        }
+        await tx`
+          INSERT INTO fruma_cell_mutation_events (
+            event_id, source_cell_id, operator_cookie, action_type,
+            old_standard_value, new_standard_value, standard_field, occurred_at, surface_environment
+          )
+          VALUES (
+            ${event.eventId},
+            ${event.sourceCellId},
+            ${event.operatorCookie},
+            ${event.actionType},
+            ${event.oldStandardValue},
+            ${event.newStandardValue},
+            ${event.standardField},
+            ${event.occurredAt},
+            ${this.surface}
+          )
+        `;
+      });
+    } catch (err) {
+      if (err instanceof IdempotencyException) throw err;
+      const mapped = idempotencyFromUniqueViolation(err);
+      if (mapped) throw mapped;
+      throw err;
+    }
+  }
+
   async getDepositBytes(depositId: string): Promise<Uint8Array | null> {
     const sql = await this.client();
     const rows = await sql`
@@ -307,6 +369,7 @@ export class PostgresSpineStore implements SpineStore {
     const sql = await this.client();
     const surface = this.surface;
     await sql.begin(async (tx) => {
+      await tx`DELETE FROM fruma_cell_mutation_events WHERE surface_environment = ${surface}`;
       await tx`DELETE FROM fruma_source_cells WHERE surface_environment = ${surface}`;
       await tx`DELETE FROM fruma_named_grants WHERE surface_environment = ${surface}`;
       await tx`DELETE FROM fruma_deposits WHERE surface_environment = ${surface}`;
@@ -360,6 +423,20 @@ function cellFromRow(row: Record<string, unknown>): PersistedSourceCell {
     colIndex: Number(row.col_index),
     rawHeader: String(row.raw_header),
     sourceValue: String(row.source_value),
+  };
+}
+
+function mutationFromRow(row: Record<string, unknown>): PersistedCellMutation {
+  const field = row.standard_field;
+  return {
+    eventId: String(row.event_id),
+    sourceCellId: String(row.source_cell_id),
+    operatorCookie: String(row.operator_cookie),
+    actionType: row.action_type === "confirm" ? "confirm" : "map",
+    oldStandardValue: row.old_standard_value == null ? null : String(row.old_standard_value),
+    newStandardValue: row.new_standard_value == null ? null : String(row.new_standard_value),
+    standardField: field == null ? null : (String(field) as PersistedCellMutation["standardField"]),
+    occurredAt: new Date(row.occurred_at as string | Date).toISOString(),
   };
 }
 
