@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { assertFileSpineRootAllowed } from "./configuration";
 import { isStandardField } from "../ingest/types";
@@ -415,7 +415,6 @@ export class FileSpineStore implements SpineStore {
   }
 
   async reset(): Promise<void> {
-    if (existsSync(this.root)) rmSync(this.root, { recursive: true, force: true });
-    mkdirSync(this.objectsDir, { recursive: true });
+    await this.write(structuredClone(EMPTY));
   }
 }

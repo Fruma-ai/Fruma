@@ -250,10 +250,19 @@ describe("immutable postgres ledger schema", () => {
     const end = storeSrc.indexOf("private assertSameSurface");
     assert.ok(start >= 0 && end > start);
     const body = storeSrc.slice(start, end);
-    assert.match(body, /dropSchemaStatement\(this\.surface\)/);
-    assert.match(body, /postgresLedgerSchema\(this\.schemaName\)/);
+    const dropAt = body.indexOf("dropSchemaStatement(this.surface)");
+    const initAt = body.indexOf("postgresLedgerSchema(this.schemaName)");
+    assert.ok(dropAt >= 0 && initAt > dropAt);
+    assert.match(body, /sql\.unsafe\(`\$\{dropSchemaStatement\(this\.surface\)\}/);
     assert.equal(body.includes("DELETE FROM"), false);
     assert.equal(body.includes("surface_environment"), false);
+    assert.equal(body.includes("rmSync"), false);
+    assert.equal(body.includes("deleteDirectory"), false);
+    const fileReset = readFileSync(join(import.meta.dirname, "file-store.ts"), "utf8");
+    const fileStart = fileReset.indexOf("async reset()");
+    const fileBody = fileReset.slice(fileStart, fileStart + 180);
+    assert.equal(fileBody.includes("rmSync"), false);
+    assert.equal(fileBody.includes("deleteDirectory"), false);
   });
 
   it("inserts deposits, cells, grants, and versioned documents with no ON CONFLICT DO UPDATE", () => {

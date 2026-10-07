@@ -784,8 +784,8 @@ export class PostgresSpineStore implements SpineStore {
 
   async reset(): Promise<void> {
     const sql = await this.client();
-    await sql.unsafe(dropSchemaStatement(this.surface));
-    await sql.unsafe(postgresLedgerSchema(this.schemaName));
+    await sql.unsafe(`${dropSchemaStatement(this.surface)}
+${postgresLedgerSchema(this.schemaName)}`);
     await this.applySearchPath(sql, searchPathStatement(this.surface));
   }
 
