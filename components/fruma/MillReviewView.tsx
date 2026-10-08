@@ -202,7 +202,7 @@ export function MillReviewView() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search articles, construction, fibre…"
             aria-label="Search qualities"
-            className="mb-4 h-9 w-full border border-line bg-transparent px-3 text-[13px] text-chalk placeholder:text-mute"
+            className="obsidian-boundary obsidian-focus mb-4 h-9 w-full bg-transparent px-3 text-[13px] text-zinc-100 placeholder:text-zinc-400"
           />
           <div className="overflow-x-auto mill-card register-seeded">
             <table className="data-table min-w-[920px]">

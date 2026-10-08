@@ -104,7 +104,7 @@ function BrandsPanel({
       <article className="tc-card">
         <p className="tc-kicker">Factory relationships · {brand.name}</p>
         <div className="tc-table-wrap">
-          <table>
+          <table className="data-table">
             <thead>
               <tr>
                 <th>Factory</th>
@@ -340,7 +340,7 @@ function LabPanel({
           {unmapped.length > 0 ? (
             <div className="tc-lab-exceptions">
               <p className="tc-kicker">Unknown headers (mapping work)</p>
-              <ul>
+              <ul className="factory-exception border border-dashed border-amber-500/80 bg-amber-500/5 px-3 py-2">
                 {unmapped.map((header) => (
                   <li key={header}><code>{header}</code></li>
                 ))}
@@ -350,7 +350,7 @@ function LabPanel({
           {mappingExceptions.length > 0 ? (
             <div className="tc-lab-exceptions">
               <p className="tc-kicker">Mapping exceptions</p>
-              <ul>
+              <ul className="factory-exception border border-dashed border-amber-500/80 bg-amber-500/5 px-3 py-2">
                 {mappingExceptions.map((e, i) => (
                   <li key={`${e.code}-${i}`}>
                     <code>{e.code}</code> {e.message}
@@ -362,7 +362,7 @@ function LabPanel({
           {rowExceptions.length > 0 ? (
             <div className="tc-lab-exceptions">
               <p className="tc-kicker">Row exceptions</p>
-              <ul>
+              <ul className="factory-exception border border-dashed border-amber-500/80 bg-amber-500/5 px-3 py-2">
                 {rowExceptions.slice(0, 8).map((e, i) => (
                   <li key={`${e.code}-${i}`}>
                     <code>{e.code}</code> {e.message}
@@ -468,7 +468,7 @@ export function TestCorpusPlatform() {
   }
 
   return (
-    <div className="tc-shell">
+    <div data-mode="mill" className="tc-shell bg-[#0B0C0E] text-zinc-100">
       <VersionBanner version="test" />
       <header className="tc-top">
         <div>

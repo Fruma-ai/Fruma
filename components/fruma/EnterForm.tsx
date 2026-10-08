@@ -49,7 +49,7 @@ export function EnterForm() {
       <label className="block">
         <span className="ui-label">Email</span>
         <Input
-          className="mt-1.5 border-white/15 text-white"
+          className="obsidian-boundary obsidian-focus mt-1.5 text-zinc-100"
           type="email"
           name="email"
           autoComplete="username"
@@ -64,7 +64,7 @@ export function EnterForm() {
       <label className="mt-4 block">
         <span className="ui-label">Password</span>
         <Input
-          className="mt-1.5 border-white/15 text-white"
+          className="obsidian-boundary obsidian-focus mt-1.5 text-zinc-100"
           type="password"
           name="password"
           autoComplete="current-password"

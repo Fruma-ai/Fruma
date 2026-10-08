@@ -64,7 +64,10 @@ export function MillUploadView() {
       />
 
       {millDepositError ? (
-        <section className="mill-card mb-6 p-5" role="alert">
+        <section
+          className="factory-exception mb-6 border border-dashed border-amber-500/80 bg-amber-500/5 p-5"
+          role="alert"
+        >
           <p className="ui-label">{millDepositError.code}</p>
           <p className="mt-3 text-[15px] font-medium text-chalk">
             {formatMillDepositException(millDepositError)}
@@ -128,7 +131,7 @@ export function MillUploadView() {
           <div>
             <button
               type="button"
-              className="mill-drop w-full"
+              className="mill-drop obsidian-focus w-full"
               disabled={millDepositPosting}
               onClick={() => inputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
@@ -153,11 +156,11 @@ export function MillUploadView() {
 
             <button
               type="button"
-              className="mt-3 w-full mill-card px-4 py-3 text-left hover:border-line"
+              className="mill-card obsidian-boundary obsidian-focus mt-3 w-full px-4 py-3 text-left"
               disabled={millDepositPosting}
               onClick={() => attachMillFile()}
             >
-              <p className="text-[13.5px] font-medium text-chalk">
+              <p className="type-body font-medium">
                 Seeded · {DEMO_MILL_FILE.name}
               </p>
               <p className="mt-0.5 spec text-[12px] text-mute">

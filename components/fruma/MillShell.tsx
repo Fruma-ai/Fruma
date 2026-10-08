@@ -89,19 +89,19 @@ export function MillShell({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div data-mode="mill" className="min-h-dvh bg-black text-white">
+    <div data-mode="mill" className="min-h-dvh bg-[#0B0C0E] text-zinc-100">
       <header className="mill-wizard">
         <div className="mill-wizard-top">
           <button
             type="button"
-            className="shrink-0"
+            className="obsidian-focus shrink-0"
             aria-label="Fruma workshop"
             onClick={() => setMillRoom("profile")}
           >
             <Wordmark size="sm" />
           </button>
           <span className="chrome-rule" aria-hidden />
-          <span className="text-[11px] uppercase tracking-[0.22em] text-white/55">
+          <span className="type-kicker">
             Workshop
           </span>
           <div className="ml-auto flex items-center gap-3">
