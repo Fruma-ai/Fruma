@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start --port 43147 --hostname 0.0.0.0",
     "lint": "eslint",
-    "test": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts lib/fruma/mill-deposit.test.ts lib/fruma/mill-ingest.test.ts lib/fruma/doors.test.ts lib/fruma/test-corpus/test-corpus.test.ts lib/fruma/surfaces.test.ts lib/fruma/intelligence/intelligence.test.ts lib/fruma/pilot/pilot.test.ts lib/fruma/wedge/wedge.test.ts",
+    "test": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts lib/fruma/mill-deposit.test.ts lib/fruma/mill-ingest.test.ts lib/fruma/doors.test.ts lib/fruma/test-corpus/test-corpus.test.ts lib/fruma/surfaces.test.ts lib/fruma/intelligence/intelligence.test.ts lib/fruma/pilot/pilot.test.ts lib/fruma/wedge/wedge.test.ts lib/fruma/persist/tenant-query.test.ts scripts/migrations/create-sourcing-ledger.test.ts lib/fruma/persist/sourcing-message.test.ts lib/fruma/persist/sourcing-inbox.test.ts",
+    "migrate:sourcing": "tsx scripts/migrations/create-sourcing-ledger.ts",
     "test:ingest": "tsx --test lib/fruma/ingest/ingest.test.ts lib/fruma/ingest/deposits-route.test.ts"
   },
   "dependencies": {
