@@ -1,17 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Layers, RefreshCw } from "lucide-react";
+import { AlertTriangle, Layers } from "lucide-react";
 import {
   DiscoveryCanvas,
   type DiscoverySearchHit,
   type DiscoverySearchPayload,
   type SuggestionItem,
 } from "@/components/fruma/DiscoveryCanvas";
-import { MaterialCatalogGrid } from "@/components/fruma/MaterialCatalogGrid";
+import { StudioCarousel, type StudioSearchRequest } from "@/components/fruma/StudioCarousel";
 import { WorkspaceShell } from "@/components/fruma/WorkspaceShell";
-import { uniformMaterialFromHit, type UniformMaterialCard } from "@/lib/fruma/design/catalog-card";
-import { briefEmbedding } from "@/lib/fruma/persist/embeddings";
 
 type SchemaName = "demo" | "test" | "production";
 
@@ -24,18 +22,6 @@ function isSuggestion(value: unknown): value is SuggestionItem {
     typeof row.rawMillText === "string" &&
     typeof row.aiSuggestedValue === "string" &&
     typeof row.confidence === "number"
-  );
-}
-
-function isSearchHit(value: unknown): value is DiscoverySearchHit {
-  if (!value || typeof value !== "object") return false;
-  const row = value as DiscoverySearchHit;
-  return (
-    typeof row.id === "string" &&
-    typeof row.depositId === "string" &&
-    typeof row.millArticleCode === "string" &&
-    typeof row.rank === "number" &&
-    typeof row.cosineDistance === "number"
   );
 }
 
@@ -54,7 +40,7 @@ export default function MaterialDiscoveryStudioPage() {
   const [activeSchema, setActiveSchema] = useState<SchemaName>("demo");
   const [isSearching, setIsSearching] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
-  const [matchedMaterials, setMatchedMaterials] = useState<UniformMaterialCard[]>([]);
+  const [searchRequest, setSearchRequest] = useState<StudioSearchRequest | null>(null);
   const [searchHits, setSearchHits] = useState<DiscoverySearchHit[]>([]);
   const [stagedSuggestions, setStagedSuggestions] = useState<SuggestionItem[]>([]);
   const [currentDepositId, setCurrentDepositId] = useState<string | null>(null);
@@ -63,7 +49,8 @@ export default function MaterialDiscoveryStudioPage() {
 
   function selectSchema(next: SchemaName) {
     setActiveSchema(next);
-    setMatchedMaterials([]);
+    setSearchRequest(null);
+    setIsSearching(false);
     setSearchHits([]);
     setStagedSuggestions([]);
     setCurrentDepositId(null);
@@ -92,46 +79,32 @@ export default function MaterialDiscoveryStudioPage() {
     );
   }
 
-  async function handleTechPackSearch(payload: DiscoverySearchPayload) {
+  function handleSearchExecute(payload: DiscoverySearchPayload) {
     setIsSearching(true);
     setErrorStatus(null);
     setStatus(null);
-    try {
-      const embedding = await briefEmbedding(payload.prompt);
-      const response = await fetch("/api/design/search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-fruma-version": activeSchema,
-        },
-        body: JSON.stringify({ embedding, complianceTarget: payload.complianceTarget }),
-      });
-      if (!response.ok) {
-        setMatchedMaterials([]);
-        setSearchHits([]);
-        setCurrentDepositId(null);
-        setStagedSuggestions([]);
-        setErrorStatus(await errorMessage(response, "Search failed."));
-        return;
-      }
-      const data: unknown = await response.json();
-      const hits = Array.isArray(data) ? data.filter(isSearchHit) : [];
-      setSearchHits(hits);
-      setMatchedMaterials(hits.map((hit) => uniformMaterialFromHit(hit)));
-      const depositId = hits[0]?.depositId ?? null;
-      setCurrentDepositId(depositId);
-      if (!depositId) {
-        setStagedSuggestions([]);
-        setStatus("No materials matched that search.");
-        return;
-      }
-      await triggerSuggestionPass(depositId);
-    } catch (err) {
-      console.error("Material discovery search failed:", err);
-      setErrorStatus("Search failed.");
-    } finally {
-      setIsSearching(false);
+    setSearchRequest({ ...payload, submittedAt: Date.now() });
+  }
+
+  function handleSearchResolved(hits: DiscoverySearchHit[], error: string | null) {
+    setIsSearching(false);
+    setSearchHits(hits);
+    if (error) {
+      setCurrentDepositId(null);
+      setStagedSuggestions([]);
+      setStatus(null);
+      setErrorStatus(error);
+      return;
     }
+    setErrorStatus(null);
+    const depositId = hits[0]?.depositId ?? null;
+    setCurrentDepositId(depositId);
+    if (!depositId) {
+      setStagedSuggestions([]);
+      setStatus("No materials matched that search.");
+      return;
+    }
+    void triggerSuggestionPass(depositId);
   }
 
   async function handleAcceptSuggestions(selectedIds: string[]) {
@@ -222,9 +195,7 @@ export default function MaterialDiscoveryStudioPage() {
         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
           <div className="xl:col-span-5">
             <DiscoveryCanvas
-              onSearchExecute={(payload) => {
-                void handleTechPackSearch(payload);
-              }}
+              onSearchExecute={handleSearchExecute}
               suggestions={stagedSuggestions}
               onAcceptSuggestions={(ids) => {
                 void handleAcceptSuggestions(ids);
@@ -244,14 +215,12 @@ export default function MaterialDiscoveryStudioPage() {
                 </h3>
               </div>
 
-              {isSearching ? (
-                <div className="space-y-3 py-20 text-center font-mono text-xs text-[#6E7E91]">
-                  <RefreshCw className="mx-auto h-5 w-5 animate-spin text-[#3B82F6]" />
-                  <p>Searching fruma_{activeSchema}…</p>
-                </div>
-              ) : (
-                <MaterialCatalogGrid materials={matchedMaterials} onInspectMaterial={handleInspectMaterial} />
-              )}
+              <StudioCarousel
+                activeSchema={activeSchema}
+                searchRequest={searchRequest}
+                onInspectMaterial={handleInspectMaterial}
+                onResolved={handleSearchResolved}
+              />
             </div>
           </div>
         </div>

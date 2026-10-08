@@ -22,6 +22,12 @@ export type CatalogColorway = {
   hex: string;
 };
 
+export type HistoricalProductMatch = {
+  productName: string;
+  seasonCode: string;
+  warehouseLocation: string;
+};
+
 export type UniformMaterialCard = {
   id: string;
   articleCode: string;
@@ -32,6 +38,7 @@ export type UniformMaterialCard = {
   colorways: CatalogColorway[];
   hasDppProof: boolean;
   complianceWarning?: string;
+  historicalProductMatch?: HistoricalProductMatch | null;
 };
 
 export type CatalogSearchCell = {
@@ -54,7 +61,19 @@ export type CatalogSearchHit = {
   compliance_warning?: { message?: string };
   cells?: CatalogSearchCell[];
   colourways?: CatalogSearchColourway[];
+  historicalProductMatch?: HistoricalProductMatch | null;
 };
+
+function historicalMatch(
+  value: HistoricalProductMatch | null | undefined,
+): HistoricalProductMatch | null | undefined {
+  if (value == null) return value;
+  const productName = value.productName.trim();
+  const seasonCode = value.seasonCode.trim();
+  const warehouseLocation = value.warehouseLocation.trim();
+  if (!productName || !seasonCode || !warehouseLocation) return undefined;
+  return { productName, seasonCode, warehouseLocation };
+}
 
 function fieldValue(cells: CatalogSearchCell[] | undefined, field: string): string {
   const cell = cells?.find((row) => row.standardField === field);
@@ -97,6 +116,7 @@ export function uniformMaterialFromHit(hit: CatalogSearchHit): UniformMaterialCa
     composition: fieldValue(hit.cells, "composition"),
     colorways,
     hasDppProof: hasEuDppPass(hit),
+    historicalProductMatch: historicalMatch(hit.historicalProductMatch),
     ...(hit.compliance_warning?.message?.trim()
       ? { complianceWarning: hit.compliance_warning.message.trim() }
       : {}),

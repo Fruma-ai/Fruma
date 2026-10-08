@@ -33,7 +33,31 @@ describe("uniform material cards", () => {
       { name: "Ecru", dyeLot: "cw:ecru", hex: "#F2E8D5" },
     ]);
     assert.equal(card.hasDppProof, false);
+    assert.equal(card.historicalProductMatch, undefined);
     assert.equal(swatchHex("unknown glaze"), swatchHex("unknown glaze"));
+  });
+
+  it("copies a complete in-house swatch and drops an incomplete one", () => {
+    const card = uniformMaterialFromHit({
+      ...HIT,
+      historicalProductMatch: {
+        productName: " Harbor Coat ",
+        seasonCode: "AW26",
+        warehouseLocation: "A-12",
+      },
+    });
+    assert.deepEqual(card.historicalProductMatch, {
+      productName: "Harbor Coat",
+      seasonCode: "AW26",
+      warehouseLocation: "A-12",
+    });
+    assert.equal(
+      uniformMaterialFromHit({
+        ...HIT,
+        historicalProductMatch: { productName: "Coat", seasonCode: "", warehouseLocation: "A-12" },
+      }).historicalProductMatch,
+      undefined,
+    );
   });
 
   it("marks EU DPP pass only when the rerank boost is present and the warning is absent", () => {
