@@ -49,6 +49,9 @@ export function DiscoveryCanvas({
   isSearching,
   isAccepting,
   status,
+  initialPrompt = "",
+  initialCompliance = null,
+  showSuggestions = true,
 }: {
   onSearchExecute: (payload: DiscoverySearchPayload) => void;
   suggestions: SuggestionItem[];
@@ -56,9 +59,13 @@ export function DiscoveryCanvas({
   isSearching: boolean;
   isAccepting: boolean;
   status: string | null;
+  initialPrompt?: string;
+  initialCompliance?: DiscoverySearchPayload["complianceTarget"];
+  showSuggestions?: boolean;
 }) {
-  const [prompt, setPrompt] = useState("");
-  const [complianceTarget, setComplianceTarget] = useState<DiscoverySearchPayload["complianceTarget"]>(null);
+  const [prompt, setPrompt] = useState(initialPrompt);
+  const [complianceTarget, setComplianceTarget] =
+    useState<DiscoverySearchPayload["complianceTarget"]>(initialCompliance);
   const [selected, setSelected] = useState<string[]>([]);
   const busy = isSearching || isAccepting;
   const visibleSelected = selected.filter((id) => suggestions.some((item) => item.cellId === id));
@@ -123,6 +130,7 @@ export function DiscoveryCanvas({
         </p>
       ) : null}
 
+      {showSuggestions ? (
       <section className="space-y-3" aria-label="Staged suggestions">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="font-mono text-[10px] uppercase tracking-widest text-[#6E7E91]">
@@ -176,6 +184,7 @@ export function DiscoveryCanvas({
           </ul>
         )}
       </section>
+      ) : null}
     </div>
   );
 }

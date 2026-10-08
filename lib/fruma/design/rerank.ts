@@ -78,8 +78,9 @@ export function isComplianceReady(result: SearchResult, complianceTarget: string
 /**
  * Reorders the closest index rows. Does not open a database connection:
  * `certificates` must already have been read inside the active schema.
- * The coefficient is applied only to the closest `DESIGN_SEARCH_RESULT_LIMIT`
- * rows (the HNSW window). Anything farther never receives the boost.
+ * `COMPLIANCE_READY_COEFFICIENT` (1.25) multiplies similarity only inside the
+ * index-returned 50-row materialized HNSW window (`DESIGN_SEARCH_RESULT_LIMIT`).
+ * Anything farther never receives the boost.
  */
 export function rerankByComplianceReadiness<T extends SearchResult>(
   results: T[],
