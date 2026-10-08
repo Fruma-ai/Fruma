@@ -5,7 +5,9 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, it } from "node:test";
 import { DEMO_COOKIE, sessionToken } from "../../gate";
+import { PriorDevelopmentBadge } from "../../../components/fruma/PriorDevelopmentBadge";
 import { StudioCarousel } from "../../../components/fruma/StudioCarousel";
+import { TactileCompass } from "../../../components/fruma/TactileCompass";
 import type { MaterialSearchHit } from "../persist";
 import { MATERIAL_EMBEDDING_DIMENSIONS } from "../persist/embeddings";
 import { COMPLIANCE_READY_COEFFICIENT, DESIGN_SEARCH_RESULT_LIMIT } from "./rerank";
@@ -146,12 +148,53 @@ describe("qualities page source", () => {
     assert.match(page, /sessionFounder/);
     assert.match(page, /loadStudioVectorSearch/);
     assert.match(page, /searchMaterialEmbeddings/);
+    assert.match(page, /priorDevelopmentsFor\(historyById\.get\(card\.id\)\)/);
+    assert.match(page, /historicalArticles/);
+    const badge = readFileSync(join(process.cwd(), "components/fruma/PriorDevelopmentBadge.tsx"), "utf8");
+    assert.match(badge, /Prior Development: \{articleCode\}/);
+    assert.match(badge, /text-zinc-400/);
+    assert.match(badge, /border-zinc-800\/60/);
+    assert.match(badge, /text-\[11px\]/);
+    assert.match(badge, /uppercase/);
+    const marked = renderToStaticMarkup(
+      createElement(TactileCompass, {
+        item: {
+          id: "bq:org_mill:HX-100",
+          articleCode: "HX-100",
+          construction: "jersey",
+          normalizedGsm: "240",
+          normalizedWidth: "150",
+          composition: "100% Cotton Mesh",
+          colorways: [],
+          hasDppProof: false,
+          priorDevelopments: [
+            { article_code: "JK-2026", last_ordered_at: "2026-01-15T00:00:00.000Z" },
+          ],
+        },
+        onInspectMaterial: () => {},
+      }),
+    );
+    assert.match(marked, /Prior Development: JK-2026/);
+    assert.match(marked, /text-zinc-400/);
+    assert.match(marked, /border-zinc-800\/60/);
+    assert.match(marked, /data-last-ordered-at="2026-01-15T00:00:00.000Z"/);
+    const plain = renderToStaticMarkup(
+      createElement(PriorDevelopmentBadge, { article_code: "  ", last_ordered_at: "2026-01-15T00:00:00.000Z" }),
+    );
+    assert.equal(plain, "");
+    assert.equal(marked.includes("UPDATE"), false);
     assert.match(loader, /briefEmbedding/);
     assert.match(loader, /rerankByComplianceReadiness/);
     assert.match(loader, /MATERIAL_EMBEDDING_DIMENSIONS/);
     assert.match(rerank, /COMPLIANCE_READY_COEFFICIENT = 1\.25/);
     assert.match(rerank, /DESIGN_SEARCH_RESULT_LIMIT/);
-    const sources = [page, loader, readFileSync(join(process.cwd(), "components/fruma/StudioCarousel.tsx"), "utf8")];
+    const sources = [
+      page,
+      loader,
+      badge,
+      readFileSync(join(process.cwd(), "components/fruma/TactileCompass.tsx"), "utf8"),
+      readFileSync(join(process.cwd(), "components/fruma/StudioCarousel.tsx"), "utf8"),
+    ];
     for (const source of sources) {
       assert.equal(/\b(?:UPDATE|DELETE|DROP)\b/.test(source), false);
     }
