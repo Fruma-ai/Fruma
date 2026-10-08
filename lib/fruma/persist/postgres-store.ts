@@ -671,38 +671,21 @@ export class PostgresSpineStore implements SpineStore {
   async searchMaterialEmbeddings(embedding: readonly number[]): Promise<MaterialSearchHit[]> {
     assertEmbeddingVector(embedding);
     const sql = await this.client();
-    const embeddings = this.table(sql, "fruma_material_embeddings");
-    const nearestCells = this.table(sql, "fruma_source_cells");
-    const cells = this.table(sql, "fruma_source_cells");
-    const deposits = this.table(sql, "fruma_deposits");
-    const events = this.table(sql, "fruma_cell_mutation_events");
-    const literal = vectorLiteral(embedding);
-    const rows = await sql`
-      WITH scored AS (
+    const vector = vectorLiteral(embedding);
+    const schema = `"${this.schemaName}"`;
+    // $vector is bound once as $1. MATERIALIZED stops later joins from rewriting this scan.
+    const rows = await sql.unsafe(
+      `
+      WITH nearest AS MATERIALIZED (
         SELECT
-          source_cell_id,
-          (embedding OPERATOR(public.<=>) ${literal}::public.vector) AS distance
-        FROM ${embeddings}
-      ),
-      nearest AS (
-        SELECT source_cell_id, MIN(distance) AS distance
-        FROM scored
-        GROUP BY source_cell_id
-        ORDER BY MIN(distance) ASC
+          emb.source_cell_id,
+          (emb.embedding OPERATOR(public.<=>) $vector::public.vector) AS cosine_distance
+        FROM ${schema}."fruma_material_embeddings" emb
+        ORDER BY emb.embedding OPERATOR(public.<=>) $vector::public.vector ASC
         LIMIT 50
-      ),
-      hit_rows AS (
-        SELECT
-          c.deposit_id,
-          c.sheet_name,
-          c.row_index,
-          MIN(n.distance) AS distance
-        FROM nearest n
-        INNER JOIN ${nearestCells} c ON c.id = n.source_cell_id
-        GROUP BY c.deposit_id, c.sheet_name, c.row_index
       )
       SELECT
-        h.distance,
+        n.cosine_distance AS distance,
         c.id,
         c.deposit_id,
         c.sheet_name,
@@ -719,15 +702,18 @@ export class PostgresSpineStore implements SpineStore {
         e.new_standard_value,
         e.standard_field,
         e.occurred_at
-      FROM hit_rows h
-      INNER JOIN ${cells} c
-        ON c.deposit_id = h.deposit_id
-       AND c.sheet_name = h.sheet_name
-       AND c.row_index = h.row_index
-      INNER JOIN ${deposits} d ON d.id = c.deposit_id
-      LEFT JOIN ${events} e ON e.source_cell_id = c.id
-      ORDER BY h.distance ASC, c.col_index ASC, e.occurred_at ASC
-    `;
+      FROM nearest n
+      INNER JOIN ${schema}."fruma_source_cells" anchor ON anchor.id = n.source_cell_id
+      INNER JOIN ${schema}."fruma_source_cells" c
+        ON c.deposit_id = anchor.deposit_id
+       AND c.sheet_name = anchor.sheet_name
+       AND c.row_index = anchor.row_index
+      INNER JOIN ${schema}."fruma_deposits" d ON d.id = c.deposit_id
+      LEFT JOIN ${schema}."fruma_cell_mutation_events" e ON e.source_cell_id = c.id
+      ORDER BY n.cosine_distance ASC, c.col_index ASC, e.occurred_at ASC
+      `.replaceAll("$vector", "$1"),
+      [vector],
+    );
     return groupSearchRows(rows);
   }
 

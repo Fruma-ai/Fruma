@@ -149,6 +149,24 @@ describe("initialize cloud database", () => {
         /CREATE INDEX IF NOT EXISTS material_embedding_hnsw_idx\s+ON fruma_(demo|test|production)\.fruma_material_embeddings\s+USING hnsw \(embedding public\.vector_cosine_ops\)/,
       );
       assert.equal(query.includes("ON CONFLICT"), false);
+      assert.equal(
+        /source_cell_id TEXT NOT NULL REFERENCES fruma_(demo|test|production)\.fruma_source_cells \(id\) ON DELETE CASCADE/.test(
+          query,
+        ),
+        false,
+      );
+      assert.match(
+        query,
+        /ALTER TABLE fruma_(demo|test|production)\.fruma_material_embeddings\s+DROP CONSTRAINT fruma_material_embeddings_source_cell_id_fkey,\s+ADD CONSTRAINT fruma_material_embeddings_source_cell_id_fkey\s+FOREIGN KEY \(source_cell_id\) REFERENCES fruma_(demo|test|production)\.fruma_source_cells \(id\) ON DELETE RESTRICT/,
+      );
+      assert.match(
+        query,
+        /ALTER TABLE fruma_(demo|test|production)\.fruma_staged_suggestions\s+DROP CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey,\s+ADD CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey\s+FOREIGN KEY \(source_cell_id\) REFERENCES fruma_(demo|test|production)\.fruma_source_cells \(id\) ON DELETE RESTRICT/,
+      );
+      assert.match(
+        query,
+        /FROM pg_constraint c[\s\S]*c\.confdeltype = 'c'[\s\S]*RAISE EXCEPTION 'ON DELETE CASCADE is still set on %', cascading;/,
+      );
       assert.equal(query, postgresLedgerSchema(query.match(/CREATE SCHEMA IF NOT EXISTS (fruma_[a-z]+)/)![1]!));
     }
     assert.equal(LEDGER_TABLES.length, 14);
@@ -161,6 +179,20 @@ describe("initialize cloud database", () => {
         if (query.includes("pg_extension")) return [{ schema: "public" }];
         if (query.includes("information_schema.tables")) {
           return schemas.flatMap((schema) => LEDGER_TABLES.map((table) => ({ schema, table_name: table })));
+        }
+        if (query.includes("pg_constraint")) {
+          return schemas.flatMap((schema) => [
+            {
+              schema,
+              constraint_name: "fruma_material_embeddings_source_cell_id_fkey",
+              delete_action: "r",
+            },
+            {
+              schema,
+              constraint_name: "fruma_staged_suggestions_source_cell_id_fkey",
+              delete_action: "r",
+            },
+          ]);
         }
         return schemas.map((schema) => ({
           schema,
@@ -187,6 +219,41 @@ describe("initialize cloud database", () => {
       },
     };
     await assert.rejects(() => assertCloudLedgerProvisioned(missingIndex), /HNSW cosine index is missing/);
+
+    const cascading: CloudSql = {
+      async unsafe(query: string) {
+        if (query.includes("pg_extension")) return [{ schema: "public" }];
+        if (query.includes("information_schema.tables")) {
+          return schemas.flatMap((schema) => LEDGER_TABLES.map((table) => ({ schema, table_name: table })));
+        }
+        if (query.includes("pg_constraint")) {
+          return [
+            {
+              schema: "fruma_test",
+              constraint_name: "fruma_material_embeddings_source_cell_id_fkey",
+              delete_action: "c",
+            },
+            {
+              schema: "fruma_test",
+              constraint_name: "fruma_staged_suggestions_source_cell_id_fkey",
+              delete_action: "r",
+            },
+          ];
+        }
+        return schemas.map((schema) => ({
+          schema,
+          access_method: "hnsw",
+          operator_class: "vector_cosine_ops",
+        }));
+      },
+      async begin() {
+        throw new Error("verification does not open a transaction");
+      },
+    };
+    await assert.rejects(
+      () => assertCloudLedgerProvisioned(cascading),
+      /ON DELETE CASCADE is still set on fruma_test\.fruma_material_embeddings_source_cell_id_fkey/,
+    );
   });
 
   it("reports a connection timeout when the aggregate error message is empty", () => {

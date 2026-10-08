@@ -1,7 +1,11 @@
 import type { CertificateReading, ComplianceWarning } from "./compliance";
+import { MATERIAL_SEARCH_CANDIDATE_LIMIT } from "../persist/embeddings";
 
-/** The vector shortlist. Reranking never looks past these ten matches. */
-export const DESIGN_SEARCH_RESULT_LIMIT = 10;
+/**
+ * Closest rows returned by the HNSW scan.
+ * The compliance coefficient is applied to this window, then the rows are reordered.
+ */
+export const DESIGN_SEARCH_RESULT_LIMIT = MATERIAL_SEARCH_CANDIDATE_LIMIT;
 
 /**
  * Multiplies similarity when a quality's certificates are fully evidenced,
@@ -72,15 +76,22 @@ export function isComplianceReady(result: SearchResult, complianceTarget: string
 }
 
 /**
- * Reorders the ten closest matches. Does not open a database connection:
+ * Reorders the closest index rows. Does not open a database connection:
  * `certificates` must already have been read inside the active schema.
+ * The coefficient is applied only to the closest `DESIGN_SEARCH_RESULT_LIMIT`
+ * rows (the HNSW window). Anything farther never receives the boost.
  */
 export function rerankByComplianceReadiness<T extends SearchResult>(
   results: T[],
   complianceTarget: string,
   at = new Date(),
 ): T[] {
-  const shortlist = results.slice(0, DESIGN_SEARCH_RESULT_LIMIT);
+  const shortlist = [...results]
+    .sort(
+      (a, b) =>
+        a.cosineDistance - b.cosineDistance || a.rank - b.rank || a.id.localeCompare(b.id),
+    )
+    .slice(0, DESIGN_SEARCH_RESULT_LIMIT);
   const weighted = shortlist.map((result) => {
     const similarity = 1 - result.cosineDistance;
     const ready = isComplianceReady(result, complianceTarget, at);

@@ -97,6 +97,9 @@ export function toDirectComputeUrl(rawUrl: string): string {
  * Install public.vector, then create fruma_demo, fruma_test, and fruma_production
  * in one transaction. Each schema uses postgresLedgerSchema, including the HNSW
  * cosine index on fruma_material_embeddings.
+ * source_cell_id on fruma_material_embeddings and fruma_staged_suggestions is
+ * ON DELETE RESTRICT. The schema SQL drops and recreates those foreign keys so
+ * an earlier ON DELETE CASCADE cannot survive initialization.
  */
 export async function provisionLedgerSchemas(sql: CloudSql): Promise<void> {
   await sql.begin(async (tx) => {
@@ -153,6 +156,45 @@ export async function assertCloudLedgerProvisioned(sql: CloudSql): Promise<void>
   const missingIndexes = LEDGER_SCHEMA_NAMES.filter((schema) => !ready.has(schema));
   if (missingIndexes.length > 0) {
     throw new Error(`HNSW cosine index is missing from ${missingIndexes.join(", ")}.`);
+  }
+
+  const foreignKeys = await sql.unsafe(`
+    SELECT n.nspname AS schema, con.conname AS constraint_name, con.confdeltype AS delete_action
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_namespace n ON n.oid = rel.relnamespace
+    WHERE con.contype = 'f'
+      AND con.conname IN (
+        'fruma_material_embeddings_source_cell_id_fkey',
+        'fruma_staged_suggestions_source_cell_id_fkey'
+      )
+      AND n.nspname IN (${schemaList})
+  `);
+  const cascading = foreignKeys.filter((row) => row.delete_action === "c");
+  if (cascading.length > 0) {
+    throw new Error(
+      `ON DELETE CASCADE is still set on ${cascading
+        .map((row) => `${row.schema}.${row.constraint_name}`)
+        .join(", ")}.`,
+    );
+  }
+  const restrict = new Set(
+    foreignKeys
+      .filter((row) => row.delete_action === "r")
+      .map((row) => `${row.schema}.${row.constraint_name}`),
+  );
+  const missingForeignKeys = LEDGER_SCHEMA_NAMES.flatMap((schema) =>
+    [
+      "fruma_material_embeddings_source_cell_id_fkey",
+      "fruma_staged_suggestions_source_cell_id_fkey",
+    ]
+      .filter((name) => !restrict.has(`${schema}.${name}`))
+      .map((name) => `${schema}.${name}`),
+  );
+  if (missingForeignKeys.length > 0) {
+    throw new Error(
+      `source_cell_id foreign key is not ON DELETE RESTRICT on ${missingForeignKeys.join(", ")}.`,
+    );
   }
 }
 

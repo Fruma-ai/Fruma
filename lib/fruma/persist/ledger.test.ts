@@ -123,8 +123,9 @@ describe("immutable postgres ledger schema", () => {
     );
     assert.match(
       stagedBody,
-      /source_cell_id TEXT NOT NULL REFERENCES fruma_test\.fruma_source_cells \(id\) ON DELETE CASCADE/,
+      /source_cell_id TEXT NOT NULL REFERENCES fruma_test\.fruma_source_cells \(id\) ON DELETE RESTRICT/,
     );
+    assert.equal(/source_cell_id TEXT NOT NULL REFERENCES[^\n]*ON DELETE CASCADE/.test(stagedBody), false);
     assert.match(
       stagedBody,
       /target_field TEXT NOT NULL CHECK \(target_field IN \('article', 'construction', 'composition', 'weight', 'width', 'colour', 'moq', 'customer', 'cert'\)\)/,
@@ -141,9 +142,24 @@ describe("immutable postgres ledger schema", () => {
     assert.equal(provenance.includes("fruma_staged_suggestions"), false);
     assert.match(ddl, /SET search_path TO public;\nCREATE EXTENSION IF NOT EXISTS vector;/);
     assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_material_embeddings/);
+    const embeddings = ddl.slice(ddl.indexOf("CREATE TABLE IF NOT EXISTS fruma_test.fruma_material_embeddings"));
+    const embeddingsBody = embeddings.slice(0, embeddings.indexOf(");"));
+    assert.match(
+      embeddingsBody,
+      /source_cell_id TEXT NOT NULL REFERENCES fruma_test\.fruma_source_cells \(id\) ON DELETE RESTRICT/,
+    );
+    assert.equal(embeddingsBody.includes("ON DELETE CASCADE"), false);
     assert.match(
       ddl,
-      /source_cell_id TEXT NOT NULL REFERENCES fruma_test\.fruma_source_cells \(id\) ON DELETE CASCADE/,
+      /ALTER TABLE fruma_test\.fruma_material_embeddings\s+DROP CONSTRAINT fruma_material_embeddings_source_cell_id_fkey,\s+ADD CONSTRAINT fruma_material_embeddings_source_cell_id_fkey\s+FOREIGN KEY \(source_cell_id\) REFERENCES fruma_test\.fruma_source_cells \(id\) ON DELETE RESTRICT/,
+    );
+    assert.match(
+      ddl,
+      /ALTER TABLE fruma_test\.fruma_staged_suggestions\s+DROP CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey,\s+ADD CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey\s+FOREIGN KEY \(source_cell_id\) REFERENCES fruma_test\.fruma_source_cells \(id\) ON DELETE RESTRICT/,
+    );
+    assert.match(
+      ddl,
+      /FROM pg_constraint c[\s\S]*c\.confdeltype = 'c'[\s\S]*n\.nspname = 'fruma_test'[\s\S]*'fruma_material_embeddings_source_cell_id_fkey'[\s\S]*'fruma_staged_suggestions_source_cell_id_fkey'[\s\S]*RAISE EXCEPTION 'ON DELETE CASCADE is still set on %', cascading;/,
     );
     assert.match(ddl, /embedding public\.vector\(1536\) NOT NULL/);
     assert.match(ddl, /updated_at TIMESTAMPTZ NOT NULL/);

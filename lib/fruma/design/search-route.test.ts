@@ -7,7 +7,12 @@ import { DEMO_COOKIE, sessionToken } from "../../gate";
 import { FileSpineStore, getSpineStore, setSpineStoreForTests } from "../persist";
 import type { PersistedCellMutation, PersistedSourceCell } from "../persist";
 import { cosineDistance } from "../persist/embeddings";
-import { COMPLIANCE_READY_COEFFICIENT, rerankByComplianceReadiness, type SearchResult } from "./rerank";
+import {
+  COMPLIANCE_READY_COEFFICIENT,
+  DESIGN_SEARCH_RESULT_LIMIT,
+  rerankByComplianceReadiness,
+  type SearchResult,
+} from "./rerank";
 import { handleDesignSearchRequest } from "./search-http";
 
 const TEST_PASS = "spec8-test-password";
@@ -195,6 +200,9 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     assert.match(handler, /requireTestFounder\(request\)/);
     assert.match(handler, /getSpineStore\(surface\)/);
     assert.match(handler, /searchMaterialEmbeddings\(embedding\)/);
+    const founderAt = handler.indexOf("await requireTestFounder(request)");
+    const vectorAt = handler.indexOf("store.searchMaterialEmbeddings(embedding)");
+    assert.equal(founderAt >= 0 && founderAt < vectorAt, true);
     assert.match(handler, /listActiveProductTruthEvidence\(\)/);
     assert.match(handler, /rerankByComplianceReadiness\(/);
     assert.match(handler, /complianceTarget/);
@@ -207,6 +215,20 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     const end = store.indexOf("async reset()");
     const body = store.slice(start, end);
     assert.match(body, /<=>/);
+    const searchEnd = store.indexOf("async listActiveProductTruthEvidence");
+    const search = store.slice(start, searchEnd);
+    assert.match(search, /WITH nearest AS MATERIALIZED \(/);
+    assert.match(search, /\.replaceAll\("\$vector", "\$1"\)/);
+    assert.match(
+      search,
+      /ORDER BY emb\.embedding OPERATOR\(public\.<=>\) \$vector::public\.vector ASC\s+LIMIT 50/,
+    );
+    assert.equal(/MIN\s*\(/.test(search), false);
+    assert.equal(/GROUP BY/.test(search), false);
+    const scan = search.slice(search.indexOf("WITH nearest AS MATERIALIZED"));
+    const limitAt = scan.indexOf("LIMIT 50");
+    assert.equal(limitAt < scan.indexOf("fruma_source_cells"), true);
+    assert.equal(limitAt < scan.indexOf("fruma_deposits"), true);
     assert.match(body, /fruma_material_embeddings/);
     assert.match(body, /INNER JOIN/);
     assert.match(body, /fruma_source_cells/);
@@ -342,7 +364,7 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     assert.equal(uk.body.length, 2);
   });
 
-  it("reranks the ten closest matches when certificates are evidenced and human-confirmed", async () => {
+  it("applies the compliance coefficient to the closest fifty index rows", async () => {
     const confirmed = {
       status: "evidenced" as const,
       confirmedBy: "owen",
@@ -386,12 +408,17 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     const untouched = rerankByComplianceReadiness([closer, ready], "");
     assert.deepEqual(untouched.map((item) => item.id), ["closer", "ready"]);
 
-    const overflow = Array.from({ length: 11 }, (_, index) =>
-      row(`q${index}`, index / 100, index === 10 ? ready.certificates : []),
-    );
-    const ten = rerankByComplianceReadiness(overflow, "EU_DPP");
-    assert.equal(ten.length, 10);
-    assert.equal(ten.some((item) => item.id === "q10"), false);
+    assert.equal(DESIGN_SEARCH_RESULT_LIMIT, 50);
+    assert.equal(COMPLIANCE_READY_COEFFICIENT, 1.25);
+    const fillers = Array.from({ length: 49 }, (_, index) => row(`q${index}`, 0.3, []));
+    const inside = row("inside", 0.4, ready.certificates);
+    const outside = row("outside", 0.9, ready.certificates);
+    const windowed = rerankByComplianceReadiness([outside, ...fillers, inside], "EU_DPP");
+    assert.equal(windowed.length, 50);
+    assert.equal(windowed.some((item) => item.id === "outside"), false);
+    assert.equal(windowed[0]?.id, "inside");
+    assert.equal(windowed[0]?.score, (1 - 0.4) * COMPLIANCE_READY_COEFFICIENT);
+    assert.equal(windowed[1]?.score, 1 - 0.3);
   });
 
   it("bubbles a fully certified quality above a closer uncertified match inside the active schema", async () => {
@@ -583,7 +610,7 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     );
   });
 
-  it("returns at most the ten closest qualities", async () => {
+  it("returns every quality inside the fifty-row index window", async () => {
     const store = getSpineStore("demo");
     await store.saveDepositPointer(
       {
@@ -642,14 +669,14 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     );
     assert.equal(result.status, 200);
     if (result.status !== 200) return;
-    assert.equal(result.body.length, 10);
+    assert.equal(result.body.length, 12);
     assert.deepEqual(
       result.body.map((row) => row.millArticleCode),
-      ["Q00", "Q01", "Q02", "Q03", "Q04", "Q05", "Q06", "Q07", "Q08", "Q09"],
+      Array.from({ length: 12 }, (_, index) => `Q${index.toString().padStart(2, "0")}`),
     );
     assert.deepEqual(
       result.body.map((row) => row.rank),
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      Array.from({ length: 12 }, (_, index) => index + 1),
     );
     assert.equal(result.body[0]?.cosineDistance, 0);
     assert.equal(result.body[1]?.cosineDistance, 1);
