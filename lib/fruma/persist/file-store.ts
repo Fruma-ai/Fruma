@@ -421,7 +421,13 @@ export class FileSpineStore implements SpineStore {
         const mutations = snap.cellMutations
           .filter((event) => event.sourceCellId === cell.id)
           .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
-        hits.push({ cell, supplierOrgId, mutations, cosineDistance: distance });
+        hits.push({
+          cell,
+          supplierOrgId,
+          mutations,
+          cosineDistance: distance,
+          historicalArticles: [],
+        });
       }
     }
     return hits;

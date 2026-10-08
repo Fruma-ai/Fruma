@@ -69,6 +69,7 @@ export const LEDGER_TABLES = [
   "fruma_loom_capabilities",
   "fruma_search_telemetry",
   "fruma_staged_suggestions",
+  "fruma_brand_historical_articles",
 ] as const;
 
 /**
@@ -81,6 +82,7 @@ export const LEDGER_TABLES = [
  * `fruma_search_telemetry` records anonymized design searches. It has no brand column.
  * `fruma_staged_suggestions` is the proposal buffer for the deterministic engine.
  * It lives in the same schema and is not a product-truth fact.
+ * `fruma_brand_historical_articles` is brand PLM recall, matched on material hash and mill.
  * `fruma_deposits.bytes` is the raw file. Nothing in this script updates it.
  * Isolation is the schema (`fruma_demo`, `fruma_test`, `fruma_production`).
  */
@@ -271,6 +273,16 @@ CREATE TABLE IF NOT EXISTS ${rel("fruma_staged_suggestions")} (
   confidence REAL NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS ${rel("fruma_brand_historical_articles")} (
+  article_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  supplier_org_id TEXT NOT NULL,
+  article_code TEXT NOT NULL,
+  composition TEXT NOT NULL,
+  material_hash TEXT NOT NULL,
+  last_ordered_at TIMESTAMPTZ NOT NULL DEFAULT NOW()::timestamptz
+);
+CREATE INDEX IF NOT EXISTS brand_historical_recall_idx
+  ON ${rel("fruma_brand_historical_articles")} (material_hash, supplier_org_id);
 ALTER TABLE ${rel("fruma_staged_suggestions")}
   DROP CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey,
   ADD CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey

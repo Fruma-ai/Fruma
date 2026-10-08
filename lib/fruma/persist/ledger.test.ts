@@ -77,7 +77,7 @@ describe("immutable postgres ledger schema", () => {
     assert.equal(ddl.includes("ON CONFLICT"), false);
     assert.equal(ddl.includes("pointer JSONB"), false);
     assert.equal(ddl.includes("surface_environment"), false);
-    assert.equal(ddl.match(/id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/g)?.length, 9);
+    assert.equal(ddl.match(/\bid UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/g)?.length, 9);
     assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_factory_profiles/);
     assert.match(ddl, /mill_org_id TEXT NOT NULL/);
     assert.match(ddl, /facility_name TEXT NOT NULL/);
@@ -134,6 +134,14 @@ describe("immutable postgres ledger schema", () => {
     assert.match(stagedBody, /derivation_source TEXT NOT NULL/);
     assert.match(stagedBody, /confidence REAL NOT NULL/);
     assert.match(stagedBody, /created_at TIMESTAMPTZ NOT NULL DEFAULT NOW\(\)/);
+    assert.match(ddl, /CREATE TABLE IF NOT EXISTS fruma_test\.fruma_brand_historical_articles/);
+    assert.match(ddl, /article_code TEXT NOT NULL/);
+    assert.match(ddl, /material_hash TEXT NOT NULL/);
+    assert.match(ddl, /last_ordered_at TIMESTAMPTZ NOT NULL DEFAULT NOW\(\)::timestamptz/);
+    assert.match(
+      ddl,
+      /CREATE INDEX IF NOT EXISTS brand_historical_recall_idx\s+ON fruma_test\.fruma_brand_historical_articles \(material_hash, supplier_org_id\)/,
+    );
     assert.equal(stagedBody.includes("document_type"), false);
     const facts = ddl.slice(ddl.indexOf("CREATE TABLE IF NOT EXISTS fruma_test.fruma_product_truth_facts"));
     const factsBody = facts.slice(0, facts.indexOf(");"));
@@ -191,7 +199,7 @@ describe("immutable postgres ledger schema", () => {
       assert.match(ddl, new RegExp(`CREATE SCHEMA IF NOT EXISTS ${schema}`));
       assert.match(ddl, new RegExp(`SET search_path TO ${schema}`));
       const tables = ddl.split("CREATE TABLE IF NOT EXISTS ").slice(1);
-      assert.equal(tables.length, 14);
+      assert.equal(tables.length, 15);
       for (const table of tables) {
         assert.match(table, new RegExp(`^${schema}\\.fruma_`));
         assert.equal(table.includes("surface_environment"), false);

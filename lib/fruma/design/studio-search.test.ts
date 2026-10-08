@@ -16,6 +16,7 @@ const TEST_PASS = "studio-search-password";
 function hit(distance: number): MaterialSearchHit {
   return {
     cosineDistance: distance,
+    historicalArticles: [],
     supplierOrgId: "org_mill_synthetic",
     mutations: [
       {

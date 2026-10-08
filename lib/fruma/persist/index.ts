@@ -15,6 +15,7 @@ export type {
   PersistedDepositPointer,
   PersistedHeaderMap,
   ActiveProductTruthEvidence,
+  HistoricalArticleRecall,
   JoinedSourceCell,
   LinkedProductTruthFact,
   MaterialSearchHit,
