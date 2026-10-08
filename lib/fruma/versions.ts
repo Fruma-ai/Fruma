@@ -1,9 +1,11 @@
 /**
- * Fruma ships two product surfaces:
- * - demo  — customer-facing story (/app). Update only when test is accepted.
- * - test  — engineering / founder corpus (/app/test). Safe to break and reseeds.
+ * Runtime contexts. Each one owns a PostgreSQL schema (`fruma_${version}`).
+ * - demo       — customer-facing story (/app). Update only when test is accepted.
+ * - test       — engineering / founder corpus (/app/test). Safe to break and reseeds.
+ * - production — live ledger. Not a customer page.
  */
-export type FrumaVersion = "demo" | "test";
+export const FRUMA_VERSION_IDS = ["demo", "test", "production"] as const;
+export type FrumaVersion = (typeof FRUMA_VERSION_IDS)[number];
 
 export const FRUMA_VERSIONS = {
   demo: {
@@ -23,5 +25,5 @@ export const FRUMA_VERSIONS = {
 } as const;
 
 export function isFrumaVersion(value: string | null | undefined): value is FrumaVersion {
-  return value === "demo" || value === "test";
+  return value != null && (FRUMA_VERSION_IDS as readonly string[]).includes(value);
 }

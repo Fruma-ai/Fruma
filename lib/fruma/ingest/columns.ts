@@ -12,6 +12,15 @@ export function columnLetter(index0: number): string {
   return s;
 }
 
+/** Spreadsheet column letter → 1-based index (A → 1, Z → 26, AA → 27). */
+export function columnNumber(letter: string): number {
+  const s = letter.trim().toUpperCase();
+  if (!/^[A-Z]+$/.test(s)) throw new Error("column letter");
+  let n = 0;
+  for (const ch of s) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n;
+}
+
 export function parseCellRef(ref: string): { column: string; row: number } {
   const m = ref.trim().match(/^([A-Z]+)(\d+)$/i);
   if (!m) throw new Error(`cell ref ${ref}`);

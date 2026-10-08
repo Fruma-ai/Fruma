@@ -9,6 +9,7 @@ import { IngestException } from "./exceptions";
 import { baseQualityId } from "./identity";
 import { sha256Hex } from "./hash";
 import { buildXlsx } from "./parse-xlsx";
+import { convertInchToCm, convertOunceToGsm, formatConverted } from "./units";
 import {
   GRANT_STATUS_GRANTED,
   GRANT_STATUS_REVOKED,
@@ -76,6 +77,23 @@ describe("SPEC 6 ingest — parse csv and xlsx bytes", () => {
     assert.equal(article.header, "Article");
   });
 
+  it("writes ounce and inch conversions onto normalizedValue and leaves sourceValue", () => {
+    const { result } = depositCsv();
+    const ounces = result.cells.find((c) => c.sourceValue === "8.2 OZ");
+    const grams = result.cells.find((c) => c.sourceValue === "185gr");
+    const inches = result.cells.find((c) => c.sourceValue === '68"');
+    const centimetres = result.cells.find((c) => c.sourceValue === "160cm");
+    assert.equal(ounces?.standardField, "weight");
+    assert.equal(ounces?.sourceValue, "8.2 OZ");
+    assert.equal(ounces?.normalizedValue, formatConverted(convertOunceToGsm(8.2)));
+    assert.equal(grams?.normalizedValue, undefined);
+    assert.equal(inches?.standardField, "width");
+    assert.equal(inches?.sourceValue, '68"');
+    assert.equal(inches?.normalizedValue, formatConverted(convertInchToCm(68)));
+    assert.equal(centimetres?.normalizedValue, undefined);
+    assert.equal(centimetres?.sourceValue, "160cm");
+  });
+
   it("parses synthetic xlsx bytes and keeps the sheet name as written", () => {
     const ing = engine();
     const bytes = buildXlsx([{ name: "HangerList", rows: HANGER_ROWS }]);
@@ -123,8 +141,18 @@ describe("SPEC 6 ingest — cell pointers and immutable source", () => {
   it("mapped and confirmed cells keep sheet/row/column as sent", () => {
     const { ing, result } = depositCsv();
     const pointer = { sheet: CSV_NAME, row: 2, column: "D" };
-    const mapped = ing.mapCell(result.deposit.depositId, pointer, "weight", "185 g/m²");
-    const confirmed = ing.confirmCell(result.deposit.depositId, pointer);
+    const original = result.cells.find(
+      (cell) => cell.pointer.row === pointer.row && cell.pointer.column === pointer.column,
+    );
+    assert.ok(original);
+    const mapped = ing.mapCell(
+      result.deposit.depositId,
+      pointer,
+      "weight",
+      "185 g/m²",
+      "founder=owen",
+    );
+    const confirmed = ing.confirmCell(result.deposit.depositId, pointer, "founder=owen");
     assert.deepEqual(mapped.pointer, pointer);
     assert.deepEqual(confirmed.pointer, pointer);
     assert.equal(mapped.sourceValue, "185gr");
@@ -132,6 +160,23 @@ describe("SPEC 6 ingest — cell pointers and immutable source", () => {
     assert.equal(confirmed.standardValue, "185 g/m²");
     assert.equal(confirmed.confirmed, true);
     assert.notEqual(confirmed.standardValue, confirmed.sourceValue);
+    assert.equal(original.sourceValue, "185gr");
+    assert.equal(original.standardValue, undefined);
+    assert.notEqual(original.confirmed, true);
+    assert.equal(Object.isFrozen(original), true);
+    assert.equal(Object.isFrozen(original.pointer), true);
+    const events = ing.cellMutationEvents();
+    assert.deepEqual(
+      events.map((event) => event.actionType),
+      ["map", "confirm"],
+    );
+    assert.equal(events[0]?.operatorCookie, "founder=owen");
+    assert.equal(events[0]?.oldStandardValue, null);
+    assert.equal(events[0]?.newStandardValue, "185 g/m²");
+    assert.equal(events[0]?.standardField, "weight");
+    assert.equal(events[1]?.oldStandardValue, "185 g/m²");
+    assert.equal(events[1]?.newStandardValue, "185 g/m²");
+    assert.equal(events[0]?.sourceCellId, events[1]?.sourceCellId);
   });
 });
 

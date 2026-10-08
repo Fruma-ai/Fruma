@@ -29,16 +29,24 @@ export const DEFAULT_DENY_FIELD_CLASSES: readonly FieldClass[] = [
   "customer_specific",
 ];
 
-export type StandardField =
-  | "article"
-  | "construction"
-  | "composition"
-  | "weight"
-  | "width"
-  | "colour"
-  | "moq"
-  | "customer"
-  | "cert";
+/** Fruma nine-field standard. Workshop maps and header overlays use these names only. */
+export const STANDARD_FIELDS = [
+  "article",
+  "construction",
+  "composition",
+  "weight",
+  "width",
+  "colour",
+  "moq",
+  "customer",
+  "cert",
+] as const;
+
+export type StandardField = (typeof STANDARD_FIELDS)[number];
+
+export function isStandardField(value: string): value is StandardField {
+  return (STANDARD_FIELDS as readonly string[]).includes(value);
+}
 
 export const FIELD_CLASS_OF: Record<StandardField, FieldClass> = {
   article: "identity",
@@ -69,6 +77,11 @@ export type SourceCell = {
   standardField?: StandardField;
   /** Derived / mapped value. Must not replace sourceValue. */
   standardValue?: string;
+  /**
+   * Unit conversion (ounces → g/m², inches → cm). Absent when the source
+   * is already in Fruma units. Never copied into sourceValue.
+   */
+  normalizedValue?: string;
   confirmed?: boolean;
 };
 

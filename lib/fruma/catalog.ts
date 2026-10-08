@@ -1,3 +1,4 @@
+import { normalizedValueFor } from "./ingest/units";
 import { isOnTheStandard, rowIsAsSent, type RowProvenance } from "./honesty";
 import type { CatalogField, CatalogFilter, CatalogStatus, ColourName, Fabric, FabricStructure } from "./types";
 import { COLOURS } from "./cloth";
@@ -45,11 +46,11 @@ const TEMPLATES: Template[] = [
     moq: "MIN 500YDS",
     colours: ["NVY/WHT/CHR", "ECRU/SAGE", "BLK"],
     options: {
-      structure: ["waffle", "rib 2x2", "rib 1x1"],
+      construction: ["waffle", "rib 2x2", "rib 1x1"],
       composition: ["cotton + elastane", "100% cotton", "cotton / viscose"],
-      gsm: ["285 g/m²", "270 g/m²", "unpublished"],
-      widthCm: ["183 cm", "180 cm", "72 in (as sent)"],
-      moqM: ["460 m", "500 m", "—"],
+      weight: ["285 g/m²", "270 g/m²", "unpublished"],
+      width: ["183 cm", "180 cm", "72 in (as sent)"],
+      moq: ["460 m", "500 m", "—"],
     },
     issues: ["width in inches", "MOQ in yards", "composition slash"],
     confidence: 86,
@@ -63,11 +64,11 @@ const TEMPLATES: Template[] = [
     moq: "150M",
     colours: ["WHT/NVY", "STONE", ""],
     options: {
-      structure: ["single jersey", "slub jersey", "interlock"],
+      construction: ["single jersey", "slub jersey", "interlock"],
       composition: ["100% cotton", "cotton + elastane", "cotton / polyester"],
-      gsm: ["185 g/m²", "180 g/m²", "unpublished"],
-      widthCm: ["160 cm", "162 cm", "—"],
-      moqM: ["150 m", "200 m", "—"],
+      weight: ["185 g/m²", "180 g/m²", "unpublished"],
+      width: ["160 cm", "162 cm", "—"],
+      moq: ["150 m", "200 m", "—"],
     },
     issues: ["weight unit informal"],
     confidence: 91,
@@ -81,11 +82,11 @@ const TEMPLATES: Template[] = [
     moq: "",
     colours: ["NVY", "WHT/BLK", "FOREST"],
     options: {
-      structure: ["pique", "mesh", "single jersey"],
+      construction: ["pique", "mesh", "single jersey"],
       composition: ["95% cotton / 5% elastane", "100% cotton", "cotton + elastane"],
-      gsm: ["220 g/m²", "210 g/m²", "unpublished"],
-      widthCm: ["173 cm", "170 cm", "68 in (as sent)"],
-      moqM: ["—", "150 m", "300 m"],
+      weight: ["220 g/m²", "210 g/m²", "unpublished"],
+      width: ["173 cm", "170 cm", "68 in (as sent)"],
+      moq: ["—", "150 m", "300 m"],
     },
     issues: ["width in inches", "MOQ blank"],
     confidence: 64,
@@ -99,11 +100,11 @@ const TEMPLATES: Template[] = [
     moq: "300M",
     colours: ["CHR/GREY", "NVY", ""],
     options: {
-      structure: ["interlock", "single jersey", "french terry"],
+      construction: ["interlock", "single jersey", "french terry"],
       composition: ["100% combed cotton", "100% cotton", "cotton / modal"],
-      gsm: ["278 g/m²", "270 g/m²", "unpublished"],
-      widthCm: ["180 cm", "178 cm", "—"],
-      moqM: ["300 m", "250 m", "—"],
+      weight: ["278 g/m²", "270 g/m²", "unpublished"],
+      width: ["180 cm", "178 cm", "—"],
+      moq: ["300 m", "250 m", "—"],
     },
     issues: ["weight in ounces", "yarn count in composition"],
     confidence: 71,
@@ -117,15 +118,15 @@ const TEMPLATES: Template[] = [
     moq: "ON REQUEST",
     colours: ["NVY/CHR/WHT", "GREY MEL"],
     options: {
-      structure: ["mesh", "pique", "single jersey"],
+      construction: ["mesh", "pique", "single jersey"],
       composition: [
         "100% extra-long staple cotton",
         "100% cotton",
         "cotton + elastane",
       ],
-      gsm: ["unpublished", "150 g/m²", "180 g/m²"],
-      widthCm: ["—", "160 cm", "180 cm"],
-      moqM: ["—", "150 m", "500 m"],
+      weight: ["unpublished", "150 g/m²", "180 g/m²"],
+      width: ["—", "160 cm", "180 cm"],
+      moq: ["—", "150 m", "500 m"],
     },
     issues: ["GSM unpublished", "width missing"],
     confidence: 58,
@@ -139,11 +140,11 @@ const TEMPLATES: Template[] = [
     moq: "80KG",
     colours: ["DYE TO MATCH", "NVY", "WHT"],
     options: {
-      structure: ["rib 1x1", "rib 2x2", "waffle"],
+      construction: ["rib 1x1", "rib 2x2", "waffle"],
       composition: ["cotton + elastane", "100% cotton", "cotton / viscose"],
-      gsm: ["268 g/m²", "260 g/m²", "unpublished"],
-      widthCm: ["60 cm tubular", "120 cm open", "—"],
-      moqM: ["—", "150 m", "80 kg (as sent)"],
+      weight: ["268 g/m²", "260 g/m²", "unpublished"],
+      width: ["60 cm tubular", "120 cm open", "—"],
+      moq: ["—", "150 m", "80 kg (as sent)"],
     },
     issues: ["MOQ in kilograms", "trim not a garment cloth"],
     confidence: 62,
@@ -157,11 +158,11 @@ const TEMPLATES: Template[] = [
     moq: "500M",
     colours: ["GREY MARL", "NVY/BLK", "ECRU"],
     options: {
-      structure: ["french terry", "loopback", "interlock"],
+      construction: ["french terry", "loopback", "interlock"],
       composition: ["80% cotton / 20% polyester", "100% cotton", "cotton / viscose"],
-      gsm: ["340 g/m²", "320 g/m²", "unpublished"],
-      widthCm: ["180 cm", "175 cm", "—"],
-      moqM: ["500 m", "400 m", "—"],
+      weight: ["340 g/m²", "320 g/m²", "unpublished"],
+      width: ["180 cm", "175 cm", "—"],
+      moq: ["500 m", "400 m", "—"],
     },
     issues: [],
     confidence: 94,
@@ -175,15 +176,15 @@ const TEMPLATES: Template[] = [
     moq: "200M",
     colours: ["ECRU", "WHT", ""],
     options: {
-      structure: ["slub jersey", "single jersey", "mesh"],
+      construction: ["slub jersey", "single jersey", "mesh"],
       composition: [
         "100% cotton — organic unconfirmed",
         "100% cotton",
         "cotton + elastane",
       ],
-      gsm: ["168 g/m²", "170 g/m²", "unpublished"],
-      widthCm: ["165 cm", "160 cm", "—"],
-      moqM: ["200 m", "150 m", "—"],
+      weight: ["168 g/m²", "170 g/m²", "unpublished"],
+      width: ["165 cm", "160 cm", "—"],
+      moq: ["200 m", "150 m", "—"],
     },
     issues: ["organic claimed, no cert on file"],
     confidence: 54,
@@ -197,11 +198,11 @@ const TEMPLATES: Template[] = [
     moq: "250M",
     colours: ["BURG/NVY", "BLK", "FOREST"],
     options: {
-      structure: ["rib 2x2", "rib 1x1", "waffle"],
+      construction: ["rib 2x2", "rib 1x1", "waffle"],
       composition: ["96% cotton / 4% elastane", "cotton + elastane", "100% cotton"],
-      gsm: ["290 g/m²", "280 g/m²", "unpublished"],
-      widthCm: ["178 cm", "180 cm", "70 in (as sent)"],
-      moqM: ["250 m", "200 m", "—"],
+      weight: ["290 g/m²", "280 g/m²", "unpublished"],
+      width: ["178 cm", "180 cm", "70 in (as sent)"],
+      moq: ["250 m", "200 m", "—"],
     },
     issues: ["width in inches"],
     confidence: 88,
@@ -215,11 +216,11 @@ const TEMPLATES: Template[] = [
     moq: "",
     colours: ["", "", ""],
     options: {
-      structure: ["loopback", "french terry", "interlock"],
+      construction: ["loopback", "french terry", "interlock"],
       composition: ["100% cotton", "cotton / polyester", "cotton + elastane"],
-      gsm: ["312 g/m²", "300 g/m²", "unpublished"],
-      widthCm: ["170 cm", "175 cm", "—"],
-      moqM: ["—", "150 m", "300 m"],
+      weight: ["312 g/m²", "300 g/m²", "unpublished"],
+      width: ["170 cm", "175 cm", "—"],
+      moq: ["—", "150 m", "300 m"],
     },
     issues: ["no stock colours", "MOQ blank"],
     confidence: 41,
@@ -233,15 +234,15 @@ const TEMPLATES: Template[] = [
     moq: "ON REQ",
     colours: ["WHT/NVY/BLK", "STONE"],
     options: {
-      structure: ["single jersey", "slub jersey", "interlock"],
+      construction: ["single jersey", "slub jersey", "interlock"],
       composition: [
         "100% extra-long staple Supima cotton",
         "100% cotton",
         "cotton + elastane",
       ],
-      gsm: ["unpublished", "180 g/m²", "160 g/m²"],
-      widthCm: ["160 cm", "162 cm", "—"],
-      moqM: ["—", "150 m", "200 m"],
+      weight: ["unpublished", "180 g/m²", "160 g/m²"],
+      width: ["160 cm", "162 cm", "—"],
+      moq: ["—", "150 m", "200 m"],
     },
     issues: ["GSM unpublished"],
     confidence: 77,
@@ -255,11 +256,11 @@ const TEMPLATES: Template[] = [
     moq: "800M",
     colours: ["NVY", "KHAKI", "STONE"],
     options: {
-      structure: ["twill", "corduroy", "single jersey"],
+      construction: ["twill", "corduroy", "single jersey"],
       composition: ["100% cotton", "cotton / elastane", "cotton / polyester"],
-      gsm: ["265 g/m²", "260 g/m²", "unpublished"],
-      widthCm: ["148 cm", "150 cm", "—"],
-      moqM: ["800 m", "500 m", "—"],
+      weight: ["265 g/m²", "260 g/m²", "unpublished"],
+      width: ["148 cm", "150 cm", "—"],
+      moq: ["800 m", "500 m", "—"],
     },
     issues: [],
     confidence: 96,
@@ -295,11 +296,11 @@ export function buildCatalog(): CatalogRow[] {
         },
         options: t.options,
         values: {
-          structure: seedValue(t.options.structure, status),
+          construction: seedValue(t.options.construction, status),
           composition: seedValue(t.options.composition, status),
-          gsm: seedValue(t.options.gsm, status),
-          widthCm: seedValue(t.options.widthCm, status),
-          moqM: seedValue(t.options.moqM, status),
+          weight: seedValue(t.options.weight, status),
+          width: seedValue(t.options.width, status),
+          moq: seedValue(t.options.moq, status),
         },
         issues: [
           ...t.issues,
@@ -316,11 +317,11 @@ export function buildCatalog(): CatalogRow[] {
 
 export const CATALOG_FIELDS: { key: CatalogField; label: string; raw: keyof CatalogRow["raw"] }[] =
   [
-    { key: "structure", label: "Structure", raw: "construction" },
+    { key: "construction", label: "Structure", raw: "construction" },
     { key: "composition", label: "Composition", raw: "composition" },
-    { key: "gsm", label: "Weight", raw: "weight" },
-    { key: "widthCm", label: "Width", raw: "width" },
-    { key: "moqM", label: "MOQ", raw: "moq" },
+    { key: "weight", label: "Weight", raw: "weight" },
+    { key: "width", label: "Width", raw: "width" },
+    { key: "moq", label: "MOQ", raw: "moq" },
   ];
 
 export function catalogCounts(rows: CatalogRow[]) {
@@ -347,7 +348,7 @@ export function filterCatalog(
       r.raw.construction,
       r.raw.composition,
       r.raw.colours,
-      r.values.structure,
+      r.values.construction,
       r.values.composition,
     ]
       .join(" ")
@@ -373,11 +374,7 @@ export function applySuggestions(row: CatalogRow, learn: MillLearn): CatalogRow 
 }
 
 function rawFor(field: CatalogField): keyof CatalogRow["raw"] {
-  if (field === "structure") return "construction";
-  if (field === "composition") return "composition";
-  if (field === "gsm") return "weight";
-  if (field === "widthCm") return "width";
-  return "moq";
+  return field;
 }
 
 export { rawFor };
@@ -390,12 +387,22 @@ export function applyIssueFix(row: CatalogRow, needle: string, learn: MillLearn)
   if (!row.issues.some((i) => i.includes(needle))) return row;
   const next = applySuggestions(row, learn);
   if (needle === "width in inches") {
-    const ranked = rankMillOptions("widthCm", row.raw.width, row.options.widthCm, learn);
-    next.values.widthCm = ranked.find((o) => /cm/.test(o)) ?? ranked[0] ?? next.values.widthCm;
+    const converted = normalizedValueFor("width", row.raw.width);
+    if (converted != null) {
+      next.values.width = `${converted} cm`;
+    } else {
+      const ranked = rankMillOptions("width", row.raw.width, row.options.width, learn);
+      next.values.width = ranked.find((o) => /cm/.test(o)) ?? ranked[0] ?? next.values.width;
+    }
   }
   if (needle === "weight in ounces" || needle === "weight unit informal") {
-    const ranked = rankMillOptions("gsm", row.raw.weight, row.options.gsm, learn);
-    next.values.gsm = ranked.find((o) => /g\/m/.test(o)) ?? ranked[0] ?? next.values.gsm;
+    const converted = normalizedValueFor("weight", row.raw.weight);
+    if (converted != null) {
+      next.values.weight = `${converted} g/m²`;
+    } else {
+      const ranked = rankMillOptions("weight", row.raw.weight, row.options.weight, learn);
+      next.values.weight = ranked.find((o) => /g\/m/.test(o)) ?? ranked[0] ?? next.values.weight;
+    }
   }
   if (needle === "composition slash" || needle === "yarn count") {
     const ranked = rankMillOptions(
@@ -407,8 +414,8 @@ export function applyIssueFix(row: CatalogRow, needle: string, learn: MillLearn)
     next.values.composition = ranked[0] ?? next.values.composition;
   }
   if (needle === "MOQ in yards" || needle === "MOQ blank" || needle === "MOQ in kilograms") {
-    const ranked = rankMillOptions("moqM", row.raw.moq, row.options.moqM, learn);
-    next.values.moqM = ranked.find((o) => /m$/.test(o) && o !== "—") ?? ranked[0] ?? next.values.moqM;
+    const ranked = rankMillOptions("moq", row.raw.moq, row.options.moq, learn);
+    next.values.moq = ranked.find((o) => /m$/.test(o) && o !== "—") ?? ranked[0] ?? next.values.moq;
   }
   const filled = CATALOG_FIELDS.every((f) => next.values[f.key] && next.values[f.key] !== "");
   return {
@@ -520,13 +527,13 @@ export function liveCatalogFabrics(
 }
 
 export function catalogToFabric(row: CatalogRow): Fabric | null {
-  const structure = asStructure(row.values.structure);
+  const structure = asStructure(row.values.construction);
   if (!structure) return null;
   const composition = row.values.composition;
   if (!composition) return null;
-  const gsmLabel = row.values.gsm || row.raw.weight;
-  const widthLabel = row.values.widthCm || row.raw.width;
-  const moqLabel = row.values.moqM || row.raw.moq;
+  const gsmLabel = row.values.weight || row.raw.weight;
+  const widthLabel = row.values.width || row.raw.width;
+  const moqLabel = row.values.moq || row.raw.moq;
   const gsm = /unpublish/i.test(gsmLabel) ? 0 : parseNum(gsmLabel);
   const ways = waysFromMill(row.raw.colours);
   return {

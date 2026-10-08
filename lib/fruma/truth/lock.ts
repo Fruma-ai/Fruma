@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { MillConfirmation } from "../persist";
+import { sourceCellId } from "../ingest/cell-mutations";
+import { columnNumber } from "../ingest/columns";
+import type { MillConfirmation, PersistedSourceCell } from "../persist";
 import type { BrandBrief } from "../intelligence/retrieval";
 import {
   type ProductTruthFact,
@@ -9,6 +11,17 @@ import {
 import { getSpineStore } from "../persist";
 import type { FrumaVersion } from "../versions";
 import { TEST_SURFACE } from "../surfaces";
+
+/** A deposited mill cell. `sourceCellId` must be the id of this deposit's sheet/row/column. */
+export type LockedMillCell = {
+  sourceCellId: string;
+  sheet: string;
+  row: number;
+  column: string;
+  rawHeader: string;
+  sourceValue: string;
+  normalizedValue?: string | null;
+};
 
 export type LockSourceInput = {
   brief: BrandBrief;
@@ -20,6 +33,14 @@ export type LockSourceInput = {
   compositionAsWritten: string;
   weightAsWritten: string;
   colourAsWritten: string;
+  /** Mill-file facts join here. Strings alone are not provenance. */
+  cells: {
+    article: LockedMillCell;
+    construction: LockedMillCell;
+    composition: LockedMillCell;
+    weight: LockedMillCell;
+    colour: LockedMillCell | null;
+  };
   confirmation: MillConfirmation;
   /** Prior version if re-locking; defaults to 1. */
   priorVersion?: number;
@@ -28,6 +49,58 @@ export type LockSourceInput = {
 
 function fact(partial: Omit<ProductTruthFact, "id" | "version"> & { version: number }): ProductTruthFact {
   return { id: `fact_${randomUUID()}`, ...partial };
+}
+
+/** Reject a cell id that is not the immutable id of this deposit's coordinates. */
+export function assertSourceCellFk(depositId: string, cell: LockedMillCell): void {
+  if (!depositId.trim()) throw new Error("product_truth_deposit_required");
+  if (!cell.sourceCellId.trim()) throw new Error("product_truth_source_cell_required");
+  const expected = sourceCellId(depositId, {
+    sheet: cell.sheet,
+    row: cell.row,
+    column: cell.column,
+  });
+  if (cell.sourceCellId !== expected) {
+    throw new Error(
+      `product_truth_cell_fk: ${cell.sourceCellId} is not a cell of deposit ${depositId}`,
+    );
+  }
+}
+
+function millFact(
+  partial: Omit<ProductTruthFact, "id" | "version" | "sourceType" | "sourceCellId" | "depositId"> & {
+    version: number;
+  },
+  depositId: string,
+  cell: LockedMillCell,
+): ProductTruthFact {
+  assertSourceCellFk(depositId, cell);
+  if (cell.sourceValue !== String(partial.sourceValue ?? "")) {
+    throw new Error(
+      `product_truth_cell_value: ${partial.field} does not match source cell ${cell.sourceCellId}`,
+    );
+  }
+  return fact({
+    ...partial,
+    sourceType: "mill-file",
+    sourceCellId: cell.sourceCellId,
+    depositId,
+    sourceRecordId: depositId,
+  });
+}
+
+export function persistedCellForLock(depositId: string, cell: LockedMillCell): PersistedSourceCell {
+  assertSourceCellFk(depositId, cell);
+  return {
+    id: cell.sourceCellId,
+    depositId,
+    sheetName: cell.sheet,
+    rowIndex: cell.row,
+    colIndex: columnNumber(cell.column),
+    rawHeader: cell.rawHeader,
+    sourceValue: cell.sourceValue,
+    normalizedValue: cell.normalizedValue ?? null,
+  };
 }
 
 /**
@@ -51,66 +124,86 @@ export function buildLockedProductTruth(input: LockSourceInput): ProductTruthRec
       confirmedAt: new Date().toISOString(),
       version,
     }),
-    fact({
-      productId,
-      field: "mill_article",
-      value: input.qualityArticle,
-      sourceType: "mill-file",
-      sourceRecordId: input.depositId,
-      sourceField: "article",
-      sourceValue: input.qualityArticle,
-      scope: "quality",
-      status: "evidenced",
-      version,
-    }),
-    fact({
-      productId,
-      field: "construction",
-      value: input.constructionAsWritten,
-      sourceType: "mill-file",
-      sourceRecordId: input.depositId,
-      sourceField: "construction",
-      sourceValue: input.constructionAsWritten,
-      scope: "quality",
-      status: "evidenced",
-      version,
-    }),
-    fact({
-      productId,
-      field: "composition",
-      value: input.compositionAsWritten,
-      sourceType: "mill-file",
-      sourceRecordId: input.depositId,
-      sourceField: "composition",
-      sourceValue: input.compositionAsWritten,
-      scope: "quality",
-      status: "evidenced",
-      version,
-    }),
-    fact({
-      productId,
-      field: "weight",
-      value: input.weightAsWritten,
-      sourceType: "mill-file",
-      sourceRecordId: input.depositId,
-      sourceField: "weight",
-      sourceValue: input.weightAsWritten,
-      scope: "quality",
-      status: "evidenced",
-      version,
-    }),
-    fact({
-      productId,
-      field: "colour",
-      value: input.colourAsWritten,
-      sourceType: "mill-file",
-      sourceRecordId: input.depositId,
-      sourceField: "colour",
-      sourceValue: input.colourAsWritten,
-      scope: "quality",
-      status: input.colourAsWritten ? "evidenced" : "missing",
-      version,
-    }),
+    millFact(
+      {
+        productId,
+        field: "mill_article",
+        value: input.qualityArticle,
+        sourceField: "article",
+        sourceValue: input.qualityArticle,
+        scope: "quality",
+        status: "evidenced",
+        version,
+      },
+      input.depositId,
+      input.cells.article,
+    ),
+    millFact(
+      {
+        productId,
+        field: "construction",
+        value: input.constructionAsWritten,
+        sourceField: "construction",
+        sourceValue: input.constructionAsWritten,
+        scope: "quality",
+        status: "evidenced",
+        version,
+      },
+      input.depositId,
+      input.cells.construction,
+    ),
+    millFact(
+      {
+        productId,
+        field: "composition",
+        value: input.compositionAsWritten,
+        sourceField: "composition",
+        sourceValue: input.compositionAsWritten,
+        scope: "quality",
+        status: "evidenced",
+        version,
+      },
+      input.depositId,
+      input.cells.composition,
+    ),
+    millFact(
+      {
+        productId,
+        field: "weight",
+        value: input.weightAsWritten,
+        sourceField: "weight",
+        sourceValue: input.weightAsWritten,
+        scope: "quality",
+        status: "evidenced",
+        version,
+      },
+      input.depositId,
+      input.cells.weight,
+    ),
+    input.colourAsWritten
+      ? millFact(
+          {
+            productId,
+            field: "colour",
+            value: input.colourAsWritten,
+            sourceField: "colour",
+            sourceValue: input.colourAsWritten,
+            scope: "quality",
+            status: "evidenced",
+            version,
+          },
+          input.depositId,
+          requireColourCell(input),
+        )
+      : fact({
+          productId,
+          field: "colour",
+          value: input.colourAsWritten,
+          sourceType: "mill-file",
+          scope: "quality",
+          status: "missing",
+          version,
+        }),
     fact({
       productId,
       field: "moq_m",
@@ -168,6 +261,11 @@ export function buildLockedProductTruth(input: LockSourceInput): ProductTruthRec
   };
 }
 
+function requireColourCell(input: LockSourceInput): LockedMillCell {
+  if (!input.cells.colour) throw new Error("product_truth_source_cell_required");
+  return input.cells.colour;
+}
+
 export async function lockProductSource(input: LockSourceInput): Promise<ProductTruthRecord> {
   if (!input.confirmation.available) {
     throw new Error("cannot_lock_unavailable_quality");
@@ -182,6 +280,13 @@ export async function lockProductSource(input: LockSourceInput): Promise<Product
     ...input,
     priorVersion: prior?.version ?? input.priorVersion ?? 0,
   });
+  const wanted = [input.cells.article, input.cells.construction, input.cells.composition, input.cells.weight];
+  if (input.colourAsWritten && input.cells.colour) wanted.push(input.cells.colour);
+  const have = new Set(snap.sourceCells.map((cell) => cell.id));
+  const missing = wanted.filter((cell) => !have.has(cell.sourceCellId));
+  if (missing.length) {
+    await store.saveSourceCells(missing.map((cell) => persistedCellForLock(input.depositId, cell)));
+  }
   await store.saveProductTruth(record);
   return record;
 }

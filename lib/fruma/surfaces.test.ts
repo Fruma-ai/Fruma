@@ -19,7 +19,10 @@ describe("surface isolation", () => {
     assert.equal(surfaceStorageKey(TEST_SURFACE, "mill-learn"), "fruma:test:mill-learn");
     assert.notEqual(surfaceMillOrgId(DEMO_SURFACE), surfaceMillOrgId(TEST_SURFACE));
     assert.equal(parseFrumaSurface("test"), "test");
+    assert.equal(parseFrumaSurface("production"), "production");
     assert.equal(parseFrumaSurface("nope"), null);
+    assert.equal(surfaceMillOrgId("production"), "org_mill_production");
+    assert.equal(surfaceStorageKey("production", "mill-learn"), "fruma:production:mill-learn");
   });
 
   it("defaults mill deposits to demo unless header/form says test", () => {
@@ -31,6 +34,12 @@ describe("surface isolation", () => {
       headers: { "X-Fruma-Version": "test" },
     });
     assert.equal(surfaceFromRequest(testReq), TEST_SURFACE);
+
+    const productionReq = new Request("http://localhost/api/mill/deposits", {
+      method: "POST",
+      headers: { "X-Fruma-Version": "production" },
+    });
+    assert.equal(surfaceFromRequest(productionReq), "production");
   });
 
   it("keeps separate ingest engines for demo and test", () => {

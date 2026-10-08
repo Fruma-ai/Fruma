@@ -37,6 +37,18 @@ describe("full Test wedge — confirm → lock → persist", () => {
 
     assert.ok(result.locked.lockedSourceId?.includes(result.confirmation.qualityArticle));
     assert.equal(result.locked.version, 1);
+    const snap = await getSpineStore().load();
+    const construction = result.locked.facts.find((f) => f.field === "construction");
+    assert.ok(construction?.sourceCellId);
+    assert.equal(construction?.depositId, result.pilot.workbook.depositId);
+    const cell = snap.sourceCells.find((row) => row.id === construction?.sourceCellId);
+    assert.ok(cell);
+    assert.equal(cell.depositId, construction.depositId);
+    assert.equal(cell.sheetName, "Qualities");
+    assert.equal(cell.sourceValue, construction.sourceValue);
+    assert.ok(cell.rowIndex >= 2);
+    assert.ok(cell.colIndex >= 1);
+
     const moq = result.locked.facts.find((f) => f.field === "moq_m");
     assert.ok(moq);
     assert.equal(moq.status, "confirmed");
@@ -44,7 +56,6 @@ describe("full Test wedge — confirm → lock → persist", () => {
     assert.equal(moq.value, 350);
     assert.ok(isDestinationSafe(moq));
 
-    const snap = await getSpineStore().load();
     assert.equal(snap.confirmations.length, 1);
     assert.equal(snap.productTruth.length, 1);
     assert.equal(snap.deposits.length, 1);
