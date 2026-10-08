@@ -2,6 +2,8 @@
 
 import { useState, type ChangeEvent, type DragEvent } from "react";
 import { CheckCircle2, FileSpreadsheet, RefreshCw, ShieldCheck, Upload } from "lucide-react";
+import type { SupplierParsingAnomaly } from "@/lib/fruma/ingest/supplier-anomalies";
+import { SupplierExceptionGrid } from "./SupplierExceptionGrid";
 
 export type LedgerSchemaName = "demo" | "test" | "production";
 
@@ -11,6 +13,7 @@ interface FactoryIngestWorkbenchProps {
   onFileProcess: (file: File) => void;
   isProcessing: boolean;
   activeSchema: LedgerSchemaName;
+  anomalies?: SupplierParsingAnomaly[];
 }
 
 function workbookRejection(file: File): string | null {
@@ -27,6 +30,7 @@ export function FactoryIngestWorkbench({
   onFileProcess,
   isProcessing,
   activeSchema,
+  anomalies = [],
 }: FactoryIngestWorkbenchProps) {
   const [dragActive, setDragActive] = useState(false);
   const [stagedFile, setStagedFile] = useState<File | null>(null);
@@ -206,6 +210,8 @@ export function FactoryIngestWorkbench({
           </div>
         </div>
       </div>
+
+      <SupplierExceptionGrid anomalies={anomalies} />
     </div>
   );
 }

@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FactoryIngestWorkbench,
   type LedgerSchemaName,
 } from "@/components/fruma/FactoryIngestWorkbench";
 import { WorkspaceShell } from "@/components/fruma/WorkspaceShell";
+import {
+  isSupplierParsingAnomaly,
+  type SupplierParsingAnomaly,
+} from "@/lib/fruma/ingest/supplier-anomalies";
 import {
   formatMillDepositException,
   isMillDepositResponse,
@@ -37,12 +41,47 @@ export default function DepositsWorkspacePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<DepositReceipt | null>(null);
+  const [ledgerDepositId, setLedgerDepositId] = useState<string | null>(null);
+  const [anomalies, setAnomalies] = useState<SupplierParsingAnomaly[]>([]);
 
   function selectSchema(next: LedgerSchemaName) {
     setActiveSchema(next);
+    setLedgerDepositId(null);
+    setAnomalies([]);
     setStatus(null);
     setReceipt(null);
   }
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams();
+    if (ledgerDepositId) params.set("depositId", ledgerDepositId);
+    const query = params.toString();
+    void (async () => {
+      try {
+        const response = await fetch(`/api/mill/cell-state${query ? `?${query}` : ""}`, {
+          credentials: "same-origin",
+          headers: { "x-fruma-version": activeSchema },
+        });
+        if (cancelled) return;
+        if (!response.ok) {
+          setAnomalies([]);
+          return;
+        }
+        const data: unknown = await response.json();
+        const rows =
+          data && typeof data === "object" && Array.isArray((data as { anomalies?: unknown }).anomalies)
+            ? (data as { anomalies: unknown[] }).anomalies.filter(isSupplierParsingAnomaly)
+            : [];
+        if (!cancelled) setAnomalies(rows);
+      } catch {
+        if (!cancelled) setAnomalies([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSchema, ledgerDepositId]);
 
   async function handleFileProcess(file: File) {
     setIsProcessing(true);
@@ -74,6 +113,7 @@ export default function DepositsWorkspacePage() {
         exceptions: data.exceptions.map(formatMillDepositException),
         sentence: data.fileStepSentence,
       });
+      setLedgerDepositId(data.depositId);
       setStatus(`${data.filename} appended to fruma_${activeSchema}.`);
     } catch (err) {
       console.error("Mill deposit failed:", err);
@@ -107,6 +147,7 @@ export default function DepositsWorkspacePage() {
         <FactoryIngestWorkbench
           activeSchema={activeSchema}
           isProcessing={isProcessing}
+          anomalies={anomalies}
           onFileProcess={(file) => {
             void handleFileProcess(file);
           }}
