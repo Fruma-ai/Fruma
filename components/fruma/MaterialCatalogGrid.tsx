@@ -24,8 +24,8 @@ export function MaterialCatalogGrid({
 
   return (
     <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {materials.map((item) => (
-        <TactileCompass key={item.id} item={item} onInspectMaterial={onInspectMaterial} />
+      {materials.map((item, index) => (
+        <TactileCompass key={`${item.id}:${index}`} item={item} onInspectMaterial={onInspectMaterial} />
       ))}
     </div>
   );

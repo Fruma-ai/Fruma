@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { hasEuDppPass, swatchHex, uniformMaterialFromHit, type CatalogSearchHit } from "./catalog-card";
+import {
+  hasEuDppPass,
+  priorDevelopmentsFor,
+  swatchHex,
+  uniformMaterialFromHit,
+  type CatalogSearchHit,
+} from "./catalog-card";
 
 const HIT: CatalogSearchHit = {
   id: "bq:org_mill:HX-100",
@@ -34,6 +40,19 @@ describe("uniform material cards", () => {
     ]);
     assert.equal(card.hasDppProof, false);
     assert.equal(card.historicalProductMatch, undefined);
+    assert.deepEqual(
+      priorDevelopmentsFor([
+        { articleCode: " JK-2026 ", lastOrderedAt: " 2026-01-15T00:00:00.000Z " },
+        { articleCode: "JK-2026", lastOrderedAt: "2024-03-01T00:00:00.000Z" },
+        { articleCode: "  ", lastOrderedAt: "2020-01-01T00:00:00.000Z" },
+        { articleCode: "JK-2024", lastOrderedAt: "2024-03-01T00:00:00.000Z" },
+      ]),
+      [
+        { article_code: "JK-2026", last_ordered_at: "2026-01-15T00:00:00.000Z" },
+        { article_code: "JK-2024", last_ordered_at: "2024-03-01T00:00:00.000Z" },
+      ],
+    );
+    assert.deepEqual(priorDevelopmentsFor(undefined), []);
     assert.equal(swatchHex("unknown glaze"), swatchHex("unknown glaze"));
   });
 

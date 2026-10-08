@@ -2,6 +2,7 @@
 
 import { Box, Compass, Eye, Scale } from "lucide-react";
 import type { UniformMaterialCard } from "@/lib/fruma/design/catalog-card";
+import { PriorDevelopmentBadge } from "./PriorDevelopmentBadge";
 
 /** One audited quality from the vector search, including any in-house swatch match. */
 export function TactileCompass({
@@ -21,6 +22,13 @@ export function TactileCompass({
               Audited Quality Match
             </span>
             <h4 className="truncate font-mono text-xs font-semibold text-[#F5F5F7]">{item.articleCode}</h4>
+            {(item.priorDevelopments ?? []).map((recall) => (
+              <PriorDevelopmentBadge
+                key={`${recall.article_code}:${recall.last_ordered_at}`}
+                article_code={recall.article_code}
+                last_ordered_at={recall.last_ordered_at}
+              />
+            ))}
           </div>
 
           {item.hasDppProof ? (

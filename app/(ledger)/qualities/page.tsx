@@ -10,7 +10,7 @@ import {
   versionFromNamespace,
   type StudioSearchLoad,
 } from "@/lib/fruma/design/studio-search";
-import type { UniformMaterialCard } from "@/lib/fruma/design/catalog-card";
+import { priorDevelopmentsFor, type UniformMaterialCard } from "@/lib/fruma/design/catalog-card";
 import { getSpineStore } from "@/lib/fruma/persist";
 
 function firstParam(value: string | string[] | undefined): string | undefined {
@@ -48,7 +48,11 @@ export default async function MaterialDiscoveryStudioPage({
         },
       );
       hnswMatchCount = loaded.hnswMatchCount;
-      materials = loaded.materials;
+      const historyById = new Map(loaded.hits.map((hit) => [hit.id, hit.historicalArticles]));
+      materials = loaded.materials.map((card) => ({
+        ...card,
+        priorDevelopments: priorDevelopmentsFor(historyById.get(card.id)),
+      }));
       if (hnswMatchCount === 0) notice = "No materials matched that search.";
     } catch (error) {
       console.error("[LEDGER READ FAILURE] Qualities page:", error);
