@@ -128,15 +128,22 @@ async function tenantPool(): Promise<TenantPool> {
   return shared;
 }
 
+export type TenantQueryOptions = {
+  /** Opens `BEGIN READ ONLY` before the statement. Inbox reads set this. */
+  readOnly?: boolean;
+};
+
 /**
  * Run one postgres.js query inside a transaction whose search_path is that
  * tenant schema, then public. SET LOCAL ends with the transaction, so the
  * pooled connection does not keep the tenant. UPDATE, DELETE, DROP, TRUNCATE,
  * ALTER, GRANT, REVOKE, and CREATE OR REPLACE are rejected before a connection opens.
+ * `readOnly` opens the transaction with `READ ONLY`.
  */
 export async function executeTenantQuery<T extends object>(
   namespace: TenantNamespace,
   queryExpression: postgres.PendingQuery<T[]>,
+  options?: TenantQueryOptions,
 ): Promise<T[]> {
   if (!isTenantNamespace(namespace)) {
     throw new Error(`SECURITY_VIOLATION: Unrecognized tenant namespace context: "${namespace}"`);
@@ -144,12 +151,25 @@ export async function executeTenantQuery<T extends object>(
   const parts = queryParts(queryExpression);
   assertTaggedQuery(parts, new Set());
 
+  const run = async (tx: postgres.TransactionSql) => {
+    await tx`SET LOCAL search_path TO ${tx(namespace)}, public;`;
+    return await runOnTransaction<T>(tx, parts);
+  };
+
   const sql = await tenantPool();
   try {
-    return await sql.begin(async (tx) => {
-      await tx`SET LOCAL search_path TO ${tx(namespace)}, public;`;
-      return await runOnTransaction<T>(tx, parts);
-    });
+    if (options?.readOnly) {
+      const beginReadOnly = (
+        sql as unknown as {
+          begin<R>(
+            mode: "READ ONLY",
+            callback: (tx: postgres.TransactionSql) => Promise<R>,
+          ): Promise<R>;
+        }
+      ).begin.bind(sql);
+      return await beginReadOnly("READ ONLY", run);
+    }
+    return await sql.begin(run);
   } catch (error) {
     console.error(`[LEDGER EXECUTION FAILURE] Tenant: ${namespace} | Msg:`, error);
     throw error;

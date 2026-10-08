@@ -129,6 +129,42 @@ describe("append-only tenant queries", () => {
     assert.equal(recorded.began(), 0);
   });
 
+  it("opens a read-only transaction and still pins the tenant schema", async () => {
+    const modes: string[] = [];
+    const calls: Call[] = [];
+    const tx = (strings: TemplateStringsArray | string, ...args: readonly unknown[]) => {
+      if (typeof strings === "string") return { identifier: strings };
+      const query = strings.reduce((sql, part, index) => {
+        const arg = args[index - 1];
+        const rendered =
+          arg && typeof arg === "object" && "identifier" in arg
+            ? `"${String((arg as { identifier: string }).identifier)}"`
+            : "?";
+        return sql + rendered + part;
+      });
+      calls.push({ query, args });
+      const result = Promise.resolve(query.startsWith("SET LOCAL") ? [] : [{ id: "row-1" }]);
+      return Object.assign(result, { strings, args });
+    };
+    setTenantPoolForTests({
+      async begin(modeOrCallback: unknown, callback?: unknown) {
+        if (typeof modeOrCallback === "string") {
+          modes.push(modeOrCallback);
+          return (callback as (transaction: typeof tx) => Promise<unknown>)(tx);
+        }
+        return (modeOrCallback as (transaction: typeof tx) => Promise<unknown>)(tx);
+      },
+    } as never);
+
+    const rows = await executeTenantQuery("fruma_production", template(["SELECT 1"]), {
+      readOnly: true,
+    });
+    assert.deepEqual(rows, [{ id: "row-1" }]);
+    assert.deepEqual(modes, ["READ ONLY"]);
+    assert.equal(calls[0]?.query, 'SET LOCAL search_path TO "fruma_production", public;');
+    assert.equal(calls[1]?.query, "SELECT 1");
+  });
+
   it("refuses to open a pool when DATABASE_URL is missing", async () => {
     const previous = process.env.DATABASE_URL;
     delete process.env.DATABASE_URL;
