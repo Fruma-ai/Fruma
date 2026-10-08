@@ -184,10 +184,14 @@ END $$;
 ALTER TABLE ${rel("fruma_source_cells")} ADD COLUMN IF NOT EXISTS normalized_value TEXT;
 CREATE TABLE IF NOT EXISTS ${rel("fruma_material_embeddings")} (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  source_cell_id TEXT NOT NULL REFERENCES ${rel("fruma_source_cells")} (id) ON DELETE CASCADE,
+  source_cell_id TEXT NOT NULL REFERENCES ${rel("fruma_source_cells")} (id) ON DELETE RESTRICT,
   embedding public.vector(1536) NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
 );
+ALTER TABLE ${rel("fruma_material_embeddings")}
+  DROP CONSTRAINT fruma_material_embeddings_source_cell_id_fkey,
+  ADD CONSTRAINT fruma_material_embeddings_source_cell_id_fkey
+    FOREIGN KEY (source_cell_id) REFERENCES ${rel("fruma_source_cells")} (id) ON DELETE RESTRICT;
 CREATE INDEX IF NOT EXISTS material_embedding_hnsw_idx
   ON ${rel("fruma_material_embeddings")}
   USING hnsw (embedding public.vector_cosine_ops);
@@ -260,13 +264,17 @@ CREATE INDEX IF NOT EXISTS fruma_search_telemetry_zero_results_idx
 CREATE TABLE IF NOT EXISTS ${rel("fruma_staged_suggestions")} (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   deposit_id TEXT NOT NULL REFERENCES ${rel("fruma_deposits")} (id) ON DELETE CASCADE,
-  source_cell_id TEXT NOT NULL REFERENCES ${rel("fruma_source_cells")} (id) ON DELETE CASCADE,
+  source_cell_id TEXT NOT NULL REFERENCES ${rel("fruma_source_cells")} (id) ON DELETE RESTRICT,
   target_field TEXT NOT NULL CHECK (target_field IN (${STANDARD_FIELD_SQL})),
   suggested_value TEXT NOT NULL,
   derivation_source TEXT NOT NULL,
   confidence REAL NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE ${rel("fruma_staged_suggestions")}
+  DROP CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey,
+  ADD CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey
+    FOREIGN KEY (source_cell_id) REFERENCES ${rel("fruma_source_cells")} (id) ON DELETE RESTRICT;
 CREATE OR REPLACE VIEW ${rel("fruma_product_truth_provenance")} AS
 SELECT
   f.id AS fact_id,
