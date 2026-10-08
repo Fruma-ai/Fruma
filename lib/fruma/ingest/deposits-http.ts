@@ -4,6 +4,7 @@ import { DEMO_SURFACE, surfaceFromRequest, surfaceMillOrgId } from "../surfaces"
 import type { FrumaVersion } from "../versions";
 import { IngestEngine } from "./engine";
 import { isIngestException } from "./exceptions";
+import { unmappedHeaderCells, type UnmappedHeaderCell } from "./header-llm";
 
 /** @deprecated Prefer surfaceMillOrgId("demo"). Kept for existing deposit tests. */
 export const SYNTHETIC_MILL_ORG_ID = surfaceMillOrgId(DEMO_SURFACE);
@@ -37,7 +38,7 @@ function cookieNamed(request: Request, name: string): string | undefined {
 }
 
 export type MillDepositHttpResult =
-  | { status: 200; body: MillDepositResponse }
+  | { status: 200; body: MillDepositResponse; unmappedHeaders: UnmappedHeaderCell[] }
   | { status: 401; body: { error: string } }
   | { status: 400; body: { code: string; message: string } | { error: string } };
 
@@ -88,6 +89,7 @@ export async function handleMillDepositRequest(request: Request): Promise<MillDe
           column: e.pointer?.column,
         })),
       }),
+      unmappedHeaders: unmappedHeaderCells(result.deposit.depositId, result.cells),
     };
   } catch (err) {
     if (isIngestException(err)) {
