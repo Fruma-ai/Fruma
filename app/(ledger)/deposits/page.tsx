@@ -1,175 +1,138 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import {
-  FactoryIngestWorkbench,
-  type LedgerSchemaName,
-} from "@/components/fruma/FactoryIngestWorkbench";
+import { cookies } from "next/headers";
+import { DepositsIngestConsole } from "@/components/fruma/DepositsIngestConsole";
+import { SupplierExceptionGrid } from "@/components/fruma/SupplierExceptionGrid";
 import { WorkspaceShell } from "@/components/fruma/WorkspaceShell";
 import {
-  isSupplierParsingAnomaly,
+  joinedCellsFromLedgerRows,
+  overlaysFromLedger,
+  tenantNamespaceFromSessionCookies,
+  versionFromNamespace,
+  type DepositCellLedgerRow,
+} from "@/lib/fruma/ingest/deposit-anomaly-loader";
+import {
+  supplierParsingAnomalies,
   type SupplierParsingAnomaly,
 } from "@/lib/fruma/ingest/supplier-anomalies";
-import {
-  formatMillDepositException,
-  isMillDepositResponse,
-} from "@/lib/fruma/mill-deposit";
+import type { LedgerSchemaName } from "@/lib/fruma/persist/postgres-schema";
+import { executeTenantQuery, ledgerSql } from "@/src/lib/db";
 
-type DepositReceipt = {
-  depositId: string;
-  filename: string;
-  sha256: string;
-  receivedAt: string;
-  qualityCount: number;
-  exceptions: string[];
-  sentence: string;
-};
+/** Editable dashed amber proposal blocks for parsing anomalies. */
+const ANOMALY_PROPOSAL = "border-dashed border-amber-500/80 bg-amber-500/5";
 
-async function errorMessage(response: Response, fallback: string): Promise<string> {
-  try {
-    const body = (await response.json()) as { error?: unknown; message?: unknown };
-    if (typeof body.message === "string" && body.message.trim()) return body.message;
-    if (typeof body.error === "string" && body.error.trim()) return body.error;
-  } catch {
-    /* The status line is enough when the body is not JSON. */
-  }
-  return fallback;
+type DepositIdRow = { id: string };
+type HeaderMapRow = { overlays: unknown };
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const trimmed = raw?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
-export default function DepositsWorkspacePage() {
-  const [activeSchema, setActiveSchema] = useState<LedgerSchemaName>("demo");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<DepositReceipt | null>(null);
-  const [ledgerDepositId, setLedgerDepositId] = useState<string | null>(null);
-  const [anomalies, setAnomalies] = useState<SupplierParsingAnomaly[]>([]);
+/**
+ * Read-only cell state for one deposit.
+ * Source rows, a chronological mutation join, then in-memory replay.
+ */
+export async function loadLiveDepositAnomalies(
+  namespace: LedgerSchemaName,
+  depositId: string | undefined,
+): Promise<{ depositId: string | null; anomalies: SupplierParsingAnomaly[] }> {
+  const requested = depositId?.trim();
+  const depositRows = requested
+    ? [{ id: requested }]
+    : await executeTenantQuery<DepositIdRow>(
+        namespace,
+        ledgerSql<DepositIdRow>`
+          SELECT id
+          FROM fruma_deposits
+          ORDER BY received_at DESC
+          LIMIT 1
+        `,
+      );
+  const activeDepositId = depositRows[0]?.id?.trim() || null;
+  if (!activeDepositId) return { depositId: null, anomalies: [] };
 
-  function selectSchema(next: LedgerSchemaName) {
-    setActiveSchema(next);
-    setLedgerDepositId(null);
-    setAnomalies([]);
-    setStatus(null);
-    setReceipt(null);
-  }
+  const [cellRows, mapRows] = await Promise.all([
+    executeTenantQuery<DepositCellLedgerRow>(
+      namespace,
+      ledgerSql<DepositCellLedgerRow>`
+        SELECT
+          c.id,
+          c.deposit_id,
+          c.sheet_name,
+          c.row_index,
+          c.col_index,
+          c.raw_header,
+          c.source_value,
+          c.normalized_value,
+          e.event_id,
+          e.action_type,
+          e.old_standard_value,
+          e.new_standard_value,
+          e.standard_field,
+          e.occurred_at
+        FROM fruma_source_cells c
+        LEFT JOIN fruma_cell_mutation_events e ON e.source_cell_id = c.id
+        WHERE c.deposit_id = ${activeDepositId}
+        ORDER BY e.occurred_at ASC
+      `,
+    ),
+    executeTenantQuery<HeaderMapRow>(
+      namespace,
+      ledgerSql<HeaderMapRow>`
+        SELECT overlays
+        FROM fruma_header_maps
+        WHERE is_active = TRUE
+        ORDER BY version DESC
+        LIMIT 1
+      `,
+    ),
+  ]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const params = new URLSearchParams();
-    if (ledgerDepositId) params.set("depositId", ledgerDepositId);
-    const query = params.toString();
-    void (async () => {
-      try {
-        const response = await fetch(`/api/mill/cell-state${query ? `?${query}` : ""}`, {
-          credentials: "same-origin",
-          headers: { "x-fruma-version": activeSchema },
-        });
-        if (cancelled) return;
-        if (!response.ok) {
-          setAnomalies([]);
-          return;
-        }
-        const data: unknown = await response.json();
-        const rows =
-          data && typeof data === "object" && Array.isArray((data as { anomalies?: unknown }).anomalies)
-            ? (data as { anomalies: unknown[] }).anomalies.filter(isSupplierParsingAnomaly)
-            : [];
-        if (!cancelled) setAnomalies(rows);
-      } catch {
-        if (!cancelled) setAnomalies([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeSchema, ledgerDepositId]);
+  return {
+    depositId: activeDepositId,
+    anomalies: supplierParsingAnomalies(
+      joinedCellsFromLedgerRows(cellRows),
+      overlaysFromLedger(mapRows[0]?.overlays),
+    ),
+  };
+}
 
-  async function handleFileProcess(file: File) {
-    setIsProcessing(true);
-    setStatus(null);
-    setReceipt(null);
+export default async function DepositsWorkspacePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ depositId?: string | string[] }>;
+}) {
+  const cookieStore = await cookies();
+  const namespace = await tenantNamespaceFromSessionCookies(cookieStore);
+  const requestedDepositId = firstParam((await searchParams).depositId);
+
+  let anomalies: SupplierParsingAnomaly[] = [];
+  let notice: string | null = null;
+  let activeSchema: "demo" | "test" | "production" = "demo";
+
+  if (!namespace) {
+    notice = "Sign in to read mill cells.";
+  } else {
+    activeSchema = versionFromNamespace(namespace);
     try {
-      const body = new FormData();
-      body.set("file", file);
-      const response = await fetch("/api/mill/deposits", {
-        method: "POST",
-        headers: { "x-fruma-version": activeSchema },
-        body,
-      });
-      if (!response.ok) {
-        setStatus(await errorMessage(response, "The workbook was not appended."));
-        return;
-      }
-      const data: unknown = await response.json();
-      if (!isMillDepositResponse(data)) {
-        setStatus("The ledger accepted the file, but the receipt was incomplete.");
-        return;
-      }
-      setReceipt({
-        depositId: data.depositId,
-        filename: data.filename,
-        sha256: data.sha256,
-        receivedAt: data.receivedAt,
-        qualityCount: data.qualities.length,
-        exceptions: data.exceptions.map(formatMillDepositException),
-        sentence: data.fileStepSentence,
-      });
-      setLedgerDepositId(data.depositId);
-      setStatus(`${data.filename} appended to fruma_${activeSchema}.`);
-    } catch (err) {
-      console.error("Mill deposit failed:", err);
-      setStatus("The workbook was not appended.");
-    } finally {
-      setIsProcessing(false);
+      const loaded = await loadLiveDepositAnomalies(namespace, requestedDepositId);
+      anomalies = loaded.anomalies;
+    } catch (error) {
+      console.error("[LEDGER READ FAILURE] Deposits page:", error);
+      notice = error instanceof Error ? error.message : "The ledger read did not complete.";
     }
   }
 
   return (
     <WorkspaceShell activeVersion={activeSchema} activeOntology="Retail/Apparel">
       <div className="space-y-6">
-        <div className="flex gap-1" role="group" aria-label="Active schema">
-          {(["demo", "test", "production"] as const).map((schema) => (
-            <button
-              key={schema}
-              type="button"
-              aria-pressed={activeSchema === schema}
-              onClick={() => selectSchema(schema)}
-              className={
-                activeSchema === schema
-                  ? "rounded-sm border border-[#3B82F6] px-3 py-1.5 font-mono text-[10px] uppercase text-[#F5F5F7]"
-                  : "rounded-sm border border-[#1F1F23] px-3 py-1.5 font-mono text-[10px] uppercase text-[#6E7E91]"
-              }
-            >
-              {schema}
-            </button>
-          ))}
-        </div>
-
-        <FactoryIngestWorkbench
-          activeSchema={activeSchema}
-          isProcessing={isProcessing}
-          anomalies={anomalies}
-          onFileProcess={(file) => {
-            void handleFileProcess(file);
-          }}
-        />
-
-        {status ? <p className="font-mono text-[11px] text-[#F5F5F7]">{status}</p> : null}
-
-        {receipt ? (
-          <div className="space-y-2 rounded-sm border border-[#1F1F23] bg-[#121214] p-4 font-mono text-[11px]">
-            <p className="text-[#F5F5F7]">{receipt.sentence}</p>
-            <p className="text-[#6E7E91]">
-              Deposit <span className="text-[#3B82F6]">{receipt.depositId}</span> · {receipt.qualityCount}{" "}
-              {receipt.qualityCount === 1 ? "quality" : "qualities"}
-            </p>
-            <p className="break-all text-[#6E7E91]">SHA-256 {receipt.sha256}</p>
-            {receipt.exceptions.map((message, index) => (
-              <p key={`${index}-${message}`} className="text-amber-400">
-                {message}
-              </p>
-            ))}
-          </div>
-        ) : null}
+        <p className="font-mono text-[10px] uppercase tracking-widest text-[#6E7E91]">
+          Session schema{" "}
+          <span className="text-[#3B82F6]">{namespace ?? "unsigned"}</span>
+        </p>
+        <DepositsIngestConsole activeSchema={activeSchema} />
+        {notice ? <p className="font-mono text-[11px] text-amber-400">{notice}</p> : null}
+        <SupplierExceptionGrid anomalies={anomalies} className={ANOMALY_PROPOSAL} />
       </div>
     </WorkspaceShell>
   );
