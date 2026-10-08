@@ -29,6 +29,7 @@ export { PostgresSpineStore } from "./postgres-store";
 export { MissingConfigurationException, isMissingConfigurationException } from "./configuration";
 export { IdempotencyException, isIdempotencyException } from "./idempotency";
 export type { SurfaceEnvironment } from "./postgres-schema";
+export { executeTenantQuery, type TenantNamespace } from "./tenant-query";
 
 const stores = new Map<string, SpineStore>();
 const schemaStores = new Map<FrumaVersion, SpineStore>();
