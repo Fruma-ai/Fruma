@@ -1,7 +1,12 @@
 import { isStandardField } from "../ingest/types";
 import type { EvidenceRecord, ProductTruthRecord } from "../product-truth";
 import { databaseUrlOrThrow } from "./configuration";
-import { assertEmbeddingVector, assertMaterialEmbedding, vectorLiteral } from "./embeddings";
+import {
+  assertEmbeddingVector,
+  assertMaterialEmbedding,
+  MATERIAL_SEARCH_CANDIDATE_LIMIT,
+  vectorLiteral,
+} from "./embeddings";
 import {
   conflictingDeposit,
   depositIdempotencyException,
@@ -677,26 +682,23 @@ export class PostgresSpineStore implements SpineStore {
     const deposits = this.table(sql, "fruma_deposits");
     const events = this.table(sql, "fruma_cell_mutation_events");
     const literal = vectorLiteral(embedding);
+    // vector_cosine_ops is used only when ORDER BY is public.<=> itself.
+    // MATERIALIZED keeps that ordered limit from being flattened into the joins.
     const rows = await sql`
-      WITH scored AS (
+      WITH nearest AS MATERIALIZED (
         SELECT
-          source_cell_id,
-          (embedding OPERATOR(public.<=>) ${literal}::public.vector) AS distance
-        FROM ${embeddings}
-      ),
-      nearest AS (
-        SELECT source_cell_id, MIN(distance) AS distance
-        FROM scored
-        GROUP BY source_cell_id
-        ORDER BY MIN(distance) ASC
-        LIMIT 50
+          emb.source_cell_id,
+          (emb.embedding OPERATOR(public.<=>) ${literal}::public.vector) AS cosine_distance
+        FROM ${embeddings} emb
+        ORDER BY emb.embedding OPERATOR(public.<=>) ${literal}::public.vector ASC
+        LIMIT ${MATERIAL_SEARCH_CANDIDATE_LIMIT}
       ),
       hit_rows AS (
         SELECT
           c.deposit_id,
           c.sheet_name,
           c.row_index,
-          MIN(n.distance) AS distance
+          MIN(n.cosine_distance) AS distance
         FROM nearest n
         INNER JOIN ${nearestCells} c ON c.id = n.source_cell_id
         GROUP BY c.deposit_id, c.sheet_name, c.row_index

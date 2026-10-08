@@ -207,13 +207,19 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     const end = store.indexOf("async reset()");
     const body = store.slice(start, end);
     assert.match(body, /<=>/);
+    assert.match(
+      body,
+      /ORDER BY emb\.embedding OPERATOR\(public\.<=>\) \$\{literal\}::public\.vector ASC/,
+    );
+    assert.match(body, /WITH nearest AS MATERIALIZED/);
+    assert.equal(/ORDER BY MIN\(distance\)/.test(body), false);
     assert.match(body, /fruma_material_embeddings/);
     assert.match(body, /INNER JOIN/);
     assert.match(body, /fruma_source_cells/);
     assert.match(body, /LEFT JOIN/);
     assert.match(body, /fruma_cell_mutation_events/);
     assert.match(body, /public\.vector/);
-    assert.match(body, /LIMIT 50/);
+    assert.match(body, /LIMIT \$\{MATERIAL_SEARCH_CANDIDATE_LIMIT\}/);
     assert.match(body, /fruma_product_truth_facts/);
     assert.match(body, /fruma_product_truth/);
     assert.match(body, /MAX\(version\)/);
