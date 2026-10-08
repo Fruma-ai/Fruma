@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, it } from "node:test";
 import { assertAppendOnlyQuery, setTenantPoolForTests } from "../../lib/fruma/persist/tenant-query";
 import {
+  SOURCING_DISCLOSURE_COLUMN_SQL,
   SOURCING_MESSAGES_INDEX_SQL,
   SOURCING_MESSAGES_TABLE_SQL,
   SOURCING_SCHEMAS,
@@ -62,6 +63,7 @@ describe("sourcing ledger migration", () => {
     assert.match(source, /message_id UUID PRIMARY KEY DEFAULT gen_random_uuid\(\)/);
     assert.match(source, /deposit_id TEXT NOT NULL REFERENCES fruma_deposits\(id\)/);
     assert.match(source, /sender_handle TEXT NOT NULL/);
+    assert.match(source, /is_identity_disclosed BOOLEAN NOT NULL DEFAULT FALSE/);
     assert.match(source, /encrypted_payload TEXT NOT NULL/);
     assert.match(source, /sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW\(\)::timestamptz/);
     assert.match(source, /CREATE INDEX IF NOT EXISTS sourcing_messages_deposit_idx/);
@@ -72,7 +74,19 @@ describe("sourcing ledger migration", () => {
       assertAppendOnlyQuery("CREATE SCHEMA IF NOT EXISTS fruma_demo"),
       "CREATE SCHEMA IF NOT EXISTS fruma_demo",
     );
-    assert.doesNotMatch(source, /\b(?:UPDATE|DELETE|DROP|TRUNCATE|ALTER|GRANT|REVOKE)\b/i);
+    assert.equal(
+      SOURCING_DISCLOSURE_COLUMN_SQL,
+      "ALTER TABLE fruma_sourcing_messages ADD COLUMN IF NOT EXISTS is_identity_disclosed BOOLEAN NOT NULL DEFAULT FALSE",
+    );
+    assert.doesNotMatch(source, /\b(?:UPDATE|DELETE|DROP|TRUNCATE|GRANT|REVOKE)\b/i);
+    const alterLines = source.split("\n").filter((line) => /\bALTER\b/i.test(line));
+    assert.ok(alterLines.length > 0);
+    for (const line of alterLines) {
+      assert.match(
+        line,
+        /ADD COLUMN IF NOT EXISTS is_identity_disclosed BOOLEAN NOT NULL DEFAULT FALSE/,
+      );
+    }
   });
 
   it("opens one tenant transaction per statement in each schema", async () => {
