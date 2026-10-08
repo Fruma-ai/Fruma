@@ -58,15 +58,15 @@
 }
 
 .fv-test {
-  background: #0c0d10;
-  color: #f2f4f6;
-  border-bottom-color: #2a3037;
+  background: #0b0c0e;
+  color: #f4f4f5;
+  border-bottom-color: rgb(39 39 42 / 0.6);
 }
 
 .tc-shell {
   min-height: 100dvh;
-  background: #0c0d10;
-  color: #eef1f4;
+  background: #0b0c0e;
+  color: #f4f4f5;
   font-family: Archivo, ui-sans-serif, system-ui, sans-serif;
 }
 
