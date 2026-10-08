@@ -99,7 +99,7 @@ export async function getBrandDeltaFeed(
   const rows = await executeTenantQuery<DeltaRow>(
     namespace,
     ledgerSql<DeltaRow>`
-      WITH brand_articles AS (
+      WITH brand_articles AS MATERIALIZED (
         SELECT
           a.article_id,
           a.article_code,
@@ -132,21 +132,24 @@ export async function getBrandDeltaFeed(
           a.article_code,
           a.supplier_org_id,
           p.mill_org_id,
-          e.occurred_at,
-          e.event_id,
-          e.action_type,
+          hit.occurred_at,
+          hit.event_id,
+          hit.action_type,
           p.certificate_expiry_date,
           a.last_ordered_at
         FROM brand_articles a
-        INNER JOIN fruma_deposits d
-          ON d.supplier_org_id = a.supplier_org_id
-        INNER JOIN fruma_source_cells c
-          ON c.deposit_id = d.id
-         AND c.normalized_value = a.material_hash
-        INNER JOIN fruma_cell_mutation_events e
-          ON e.source_cell_id = c.id
-         AND e.action_type = 'confirm'
-         AND e.occurred_at > a.last_ordered_at
+        INNER JOIN LATERAL (
+          SELECT e.occurred_at, e.event_id, e.action_type
+          FROM fruma_deposits d
+          INNER JOIN fruma_source_cells c
+            ON c.deposit_id = d.id
+           AND c.normalized_value = a.material_hash
+          INNER JOIN fruma_cell_mutation_events e
+            ON e.source_cell_id = c.id
+           AND e.action_type = 'confirm'
+           AND e.occurred_at > a.last_ordered_at
+          WHERE d.supplier_org_id = a.supplier_org_id
+        ) hit ON TRUE
         LEFT JOIN LATERAL (
           SELECT mill_org_id, certificate_expiry_date
           FROM fruma_factory_profiles

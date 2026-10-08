@@ -64,6 +64,7 @@ describe("brand delta feed", () => {
     assert.match(source, /executeTenantQuery/);
     assert.match(source, /readOnly:\s*true/);
     assert.match(source, /tenantNamespaceFromSessionCookies/);
+    assert.match(source, /WITH brand_articles AS MATERIALIZED/);
     assert.match(source, /fruma_brand_historical_articles/);
     assert.match(source, /fruma_cell_mutation_events/);
     assert.match(source, /fruma_factory_profiles/);
