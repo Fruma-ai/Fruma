@@ -162,7 +162,7 @@
 }
 
 @utility obsidian-focus {
-  @apply outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-300;
+  @apply outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-300;
 }
 
 @utility table-head-enterprise {
@@ -222,7 +222,8 @@ button {
 }
 
 [data-mode="mill"] :focus-visible {
-  @apply outline-2 outline-offset-2 outline-zinc-300;
+  outline: 2px solid #d4d4d8;
+  outline-offset: 2px;
 }
 
 ::selection {
