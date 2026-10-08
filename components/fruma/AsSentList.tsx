@@ -32,7 +32,7 @@ export function AsSentList({
     <section className="register-as-sent space-y-4">
       <div>
         <p className="ui-label">{kicker}</p>
-        <p className="mt-1 text-[13px] text-mute">
+        <p className="type-meta mt-1">
           {rows.length} {rows.length === 1 ? "quality" : "qualities"} ·{" "}
           {PROVENANCE.asSent}. {honesty.mapped} · {honesty.review} ·{" "}
           {honesty.catalogue}.
@@ -44,7 +44,7 @@ export function AsSentList({
           {exceptions.map((exception, i) => (
             <li
               key={`${exception.depositId}-${exception.code}-${i}`}
-              className="mill-card px-4 py-3"
+              className="factory-exception border border-dashed border-amber-500/80 bg-amber-500/5 px-4 py-3"
               role="status"
             >
               <p className="spec text-[11px] text-mute">

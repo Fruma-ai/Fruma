@@ -37,34 +37,34 @@
 }
 
 [data-mode="mill"] {
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #111111;
-  --card-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #141414;
-  --secondary-foreground: #ffffff;
-  --muted: #141414;
-  --muted-foreground: rgba(255, 255, 255, 0.55);
-  --accent: #141414;
-  --accent-foreground: #ffffff;
+  --background: #0b0c0e;
+  --foreground: #f4f4f5;
+  --card: #101114;
+  --card-foreground: #f4f4f5;
+  --primary: #f4f4f5;
+  --primary-foreground: #0b0c0e;
+  --secondary: #141518;
+  --secondary-foreground: #f4f4f5;
+  --muted: #141518;
+  --muted-foreground: #a1a1aa;
+  --accent: #141518;
+  --accent-foreground: #f4f4f5;
   --destructive: #c45c54;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.15);
-  --ring: #ffffff;
-  --line: rgba(255, 255, 255, 0.1);
-  --line2: rgba(255, 255, 255, 0.18);
-  --panel: #111111;
-  --panel2: #141414;
-  --raw: rgba(255, 255, 255, 0.72);
-  --mute: rgba(255, 255, 255, 0.55);
+  --border: rgb(39 39 42 / 0.6);
+  --input: rgb(39 39 42 / 0.6);
+  --ring: #d4d4d8;
+  --line: rgb(39 39 42 / 0.6);
+  --line2: rgb(63 63 70 / 0.85);
+  --panel: #101114;
+  --panel2: #141518;
+  --raw: #d4d4d8;
+  --mute: #a1a1aa;
   --ok: #5e9e76;
   --madder: #c45c54;
-  --chalk: #ffffff;
-  --canvas: #0a0a0a;
-  --paper: #000000;
-  --ink: #ffffff;
+  --chalk: #f4f4f5;
+  --canvas: #0b0c0e;
+  --paper: #0b0c0e;
+  --ink: #f4f4f5;
 }
 
 @theme inline {
@@ -107,6 +107,80 @@
   --radius-xl: 10px;
 }
 
+/* Obsidian baseline. Utilities only — no extra motion, no extra padding. */
+@layer base {
+  [data-mode="mill"] {
+    @apply bg-[#0B0C0E] text-zinc-100;
+  }
+
+  [data-mode="mill"] .ui-label,
+  [data-mode="mill"] .page-lede,
+  [data-mode="mill"] .mill-wizard-status {
+    @apply text-zinc-400;
+  }
+
+  [data-mode="mill"] .page-title,
+  [data-mode="mill"] .register-as-sent,
+  [data-mode="mill"] h1,
+  [data-mode="mill"] h2,
+  [data-mode="mill"] h3 {
+    @apply text-zinc-100;
+  }
+}
+
+@utility type-kicker {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  @apply text-zinc-400;
+}
+
+@utility type-title {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.032em;
+  @apply text-zinc-100;
+}
+
+@utility type-body {
+  font-size: 13.5px;
+  line-height: 1.5;
+  @apply text-zinc-100;
+}
+
+@utility type-meta {
+  font-size: 13px;
+  line-height: 1.45;
+  @apply text-zinc-400;
+}
+
+@utility obsidian-boundary {
+  @apply border border-zinc-800/60;
+}
+
+@utility obsidian-focus {
+  @apply outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-300;
+}
+
+@utility table-head-enterprise {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.14em;
+  text-align: left;
+  text-transform: uppercase;
+  @apply border-b border-zinc-800/60 text-zinc-400;
+}
+
+@utility factory-exception {
+  border-width: 1px;
+  @apply border-dashed border-amber-500/80 bg-amber-500/5 text-zinc-100;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -145,6 +219,10 @@ button {
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+[data-mode="mill"] :focus-visible {
+  @apply outline-2 outline-offset-2 outline-zinc-300;
 }
 
 ::selection {
@@ -458,8 +536,8 @@ button {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: #000;
-  border-bottom: 1px solid var(--line);
+  background: #0b0c0e;
+  @apply border-b border-zinc-800/60;
 }
 
 .mill-wizard-top {
@@ -624,8 +702,12 @@ button {
 }
 
 .mill-card {
-  border: 1px solid var(--line);
   background: var(--panel);
+  @apply border border-zinc-800/60;
+}
+
+[data-mode="mill"] .data-table th {
+  @apply table-head-enterprise;
 }
 
 .mill-file {
