@@ -207,19 +207,27 @@ describe("POST /api/design/search", { concurrency: 1 }, () => {
     const end = store.indexOf("async reset()");
     const body = store.slice(start, end);
     assert.match(body, /<=>/);
+    const searchEnd = store.indexOf("async listActiveProductTruthEvidence");
+    const search = store.slice(start, searchEnd);
+    assert.match(search, /WITH nearest AS MATERIALIZED \(/);
+    assert.match(search, /\.replaceAll\("\$vector", "\$1"\)/);
     assert.match(
-      body,
-      /ORDER BY emb\.embedding OPERATOR\(public\.<=>\) \$\{literal\}::public\.vector ASC/,
+      search,
+      /ORDER BY emb\.embedding OPERATOR\(public\.<=>\) \$vector::public\.vector ASC\s+LIMIT 50/,
     );
-    assert.match(body, /WITH nearest AS MATERIALIZED/);
-    assert.equal(/ORDER BY MIN\(distance\)/.test(body), false);
+    assert.equal(/MIN\s*\(/.test(search), false);
+    assert.equal(/GROUP BY/.test(search), false);
+    const scan = search.slice(search.indexOf("WITH nearest AS MATERIALIZED"));
+    const limitAt = scan.indexOf("LIMIT 50");
+    assert.equal(limitAt < scan.indexOf("fruma_source_cells"), true);
+    assert.equal(limitAt < scan.indexOf("fruma_deposits"), true);
     assert.match(body, /fruma_material_embeddings/);
     assert.match(body, /INNER JOIN/);
     assert.match(body, /fruma_source_cells/);
     assert.match(body, /LEFT JOIN/);
     assert.match(body, /fruma_cell_mutation_events/);
     assert.match(body, /public\.vector/);
-    assert.match(body, /LIMIT \$\{MATERIAL_SEARCH_CANDIDATE_LIMIT\}/);
+    assert.match(body, /LIMIT 50/);
     assert.match(body, /fruma_product_truth_facts/);
     assert.match(body, /fruma_product_truth/);
     assert.match(body, /MAX\(version\)/);
