@@ -118,7 +118,7 @@ function ScorePanel({ health }: { health: RegulatoryHealthScore }) {
             id="regulatory-health-score"
             className="spec mt-3 text-6xl leading-none text-[var(--ink)] md:text-7xl"
           >
-            {health.score}%
+            {`${health.score}%`}
           </p>
           <p className="page-lede mt-4">
             Human-confirmed rows with an active evidence certificate, divided by source cells for this mill.
