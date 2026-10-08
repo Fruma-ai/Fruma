@@ -163,6 +163,10 @@ describe("initialize cloud database", () => {
         query,
         /ALTER TABLE fruma_(demo|test|production)\.fruma_staged_suggestions\s+DROP CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey,\s+ADD CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey\s+FOREIGN KEY \(source_cell_id\) REFERENCES fruma_(demo|test|production)\.fruma_source_cells \(id\) ON DELETE RESTRICT/,
       );
+      assert.match(
+        query,
+        /FROM pg_constraint c[\s\S]*c\.confdeltype = 'c'[\s\S]*RAISE EXCEPTION 'ON DELETE CASCADE is still set on %', cascading;/,
+      );
       assert.equal(query, postgresLedgerSchema(query.match(/CREATE SCHEMA IF NOT EXISTS (fruma_[a-z]+)/)![1]!));
     }
     assert.equal(LEDGER_TABLES.length, 14);

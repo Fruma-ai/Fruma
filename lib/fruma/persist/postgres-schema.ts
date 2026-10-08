@@ -275,6 +275,26 @@ ALTER TABLE ${rel("fruma_staged_suggestions")}
   DROP CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey,
   ADD CONSTRAINT fruma_staged_suggestions_source_cell_id_fkey
     FOREIGN KEY (source_cell_id) REFERENCES ${rel("fruma_source_cells")} (id) ON DELETE RESTRICT;
+DO $$
+DECLARE
+  cascading text;
+BEGIN
+  SELECT string_agg(n.nspname || '.' || c.conname, ', ' ORDER BY c.conname)
+    INTO cascading
+  FROM pg_constraint c
+  JOIN pg_class rel ON rel.oid = c.conrelid
+  JOIN pg_namespace n ON n.oid = rel.relnamespace
+  WHERE c.contype = 'f'
+    AND c.confdeltype = 'c'
+    AND n.nspname = '${schema}'
+    AND c.conname IN (
+      'fruma_material_embeddings_source_cell_id_fkey',
+      'fruma_staged_suggestions_source_cell_id_fkey'
+    );
+  IF cascading IS NOT NULL THEN
+    RAISE EXCEPTION 'ON DELETE CASCADE is still set on %', cascading;
+  END IF;
+END $$;
 CREATE OR REPLACE VIEW ${rel("fruma_product_truth_provenance")} AS
 SELECT
   f.id AS fact_id,
