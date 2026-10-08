@@ -701,7 +701,9 @@ export class PostgresSpineStore implements SpineStore {
         e.old_standard_value,
         e.new_standard_value,
         e.standard_field,
-        e.occurred_at
+        e.occurred_at,
+        hist.article_code,
+        hist.last_ordered_at
       FROM nearest n
       INNER JOIN ${schema}."fruma_source_cells" anchor ON anchor.id = n.source_cell_id
       INNER JOIN ${schema}."fruma_source_cells" c
@@ -709,6 +711,10 @@ export class PostgresSpineStore implements SpineStore {
        AND c.sheet_name = anchor.sheet_name
        AND c.row_index = anchor.row_index
       INNER JOIN ${schema}."fruma_deposits" d ON d.id = c.deposit_id
+      -- Mill id lives on the deposit. Source cells do not carry supplier_org_id.
+      LEFT JOIN ${schema}."fruma_brand_historical_articles" hist
+        ON hist.material_hash = c.normalized_value
+       AND hist.supplier_org_id = d.supplier_org_id
       LEFT JOIN ${schema}."fruma_cell_mutation_events" e ON e.source_cell_id = c.id
       ORDER BY n.cosine_distance ASC, c.col_index ASC, e.occurred_at ASC
       `.replaceAll("$vector", "$1"),
@@ -971,7 +977,7 @@ function groupProductTruthEvidence(rows: readonly Record<string, unknown>[]): Ac
   return [...byProduct.values()];
 }
 
-function groupSearchRows(rows: readonly Record<string, unknown>[]): MaterialSearchHit[] {
+export function groupSearchRows(rows: readonly Record<string, unknown>[]): MaterialSearchHit[] {
   const byId = new Map<string, MaterialSearchHit>();
   for (const row of rows) {
     const id = String(row.id);
@@ -982,13 +988,30 @@ function groupSearchRows(rows: readonly Record<string, unknown>[]): MaterialSear
         supplierOrgId: String(row.supplier_org_id),
         mutations: [],
         cosineDistance: Number(row.distance),
+        historicalArticles: [],
       };
       byId.set(id, group);
     }
-    if (row.event_id != null) group.mutations.push(mutationFromRow(row));
+    if (row.event_id != null) {
+      const eventId = String(row.event_id);
+      if (!group.mutations.some((event) => event.eventId === eventId)) {
+        group.mutations.push(mutationFromRow(row));
+      }
+    }
+    if (row.article_code != null && row.last_ordered_at != null) {
+      const articleCode = String(row.article_code);
+      const lastOrderedAt = new Date(row.last_ordered_at as string | Date).toISOString();
+      const seen = group.historicalArticles.some(
+        (article) => article.articleCode === articleCode && article.lastOrderedAt === lastOrderedAt,
+      );
+      if (!seen) group.historicalArticles.push({ articleCode, lastOrderedAt });
+    }
   }
   for (const group of byId.values()) {
     group.mutations.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+    group.historicalArticles.sort(
+      (a, b) => b.lastOrderedAt.localeCompare(a.lastOrderedAt) || a.articleCode.localeCompare(b.articleCode),
+    );
   }
   return [...byId.values()];
 }

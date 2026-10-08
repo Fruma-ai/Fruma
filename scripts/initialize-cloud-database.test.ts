@@ -169,7 +169,7 @@ describe("initialize cloud database", () => {
       );
       assert.equal(query, postgresLedgerSchema(query.match(/CREATE SCHEMA IF NOT EXISTS (fruma_[a-z]+)/)![1]!));
     }
-    assert.equal(LEDGER_TABLES.length, 14);
+    assert.equal(LEDGER_TABLES.length, 15);
   });
 
   it("requires the vector extension, core tables, and an HNSW cosine index in each schema", async () => {

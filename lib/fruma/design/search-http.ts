@@ -9,7 +9,7 @@ import { replayActiveCell, type ActiveMaterialQuality } from "../ingest/qualitie
 import { qualitiesFromCells } from "../ingest/identity";
 import type { SourceCell } from "../ingest/types";
 import { requireTestFounder } from "../intelligence/http-auth";
-import type { MaterialSearchHit } from "../persist";
+import type { HistoricalArticleRecall, MaterialSearchHit } from "../persist";
 import { getSpineStore } from "../persist";
 import { MATERIAL_EMBEDDING_DIMENSIONS } from "../persist/embeddings";
 import { surfaceFromRequest } from "../surfaces";
@@ -20,6 +20,7 @@ export { DESIGN_SEARCH_RESULT_LIMIT } from "./rerank";
 export type RankedMaterialQuality = ActiveMaterialQuality & {
   rank: number;
   cosineDistance: number;
+  historicalArticles: HistoricalArticleRecall[];
   score?: number;
   compliance_warning?: ComplianceWarning;
 };
@@ -80,7 +81,12 @@ function toQuality(
 export function rankDesignSearchHits(hits: readonly MaterialSearchHit[]): RankedMaterialQuality[] {
   const byDeposit = new Map<
     string,
-    { supplierOrgId: string; cells: SourceCell[]; distanceByPointer: Map<string, number> }
+    {
+      supplierOrgId: string;
+      cells: SourceCell[];
+      distanceByPointer: Map<string, number>;
+      recallByPointer: Map<string, HistoricalArticleRecall[]>;
+    }
   >();
 
   for (const hit of hits) {
@@ -90,12 +96,21 @@ export function rankDesignSearchHits(hits: readonly MaterialSearchHit[]): Ranked
       supplierOrgId: hit.supplierOrgId,
       cells: [],
       distanceByPointer: new Map<string, number>(),
+      recallByPointer: new Map<string, HistoricalArticleRecall[]>(),
     };
     group.cells.push(active);
     const previous = group.distanceByPointer.get(key);
     if (previous == null || hit.cosineDistance < previous) {
       group.distanceByPointer.set(key, hit.cosineDistance);
     }
+    const recall = group.recallByPointer.get(key) ?? [];
+    for (const article of hit.historicalArticles) {
+      const seen = recall.some(
+        (row) => row.articleCode === article.articleCode && row.lastOrderedAt === article.lastOrderedAt,
+      );
+      if (!seen) recall.push(article);
+    }
+    group.recallByPointer.set(key, recall);
     byDeposit.set(hit.cell.depositId, group);
   }
 
@@ -113,7 +128,19 @@ export function rankDesignSearchHits(hits: readonly MaterialSearchHit[]): Ranked
         if (cellDistance != null && cellDistance < distance) distance = cellDistance;
       }
       if (!Number.isFinite(distance)) continue;
-      ranked.push({ ...toQuality(qualityRow), cosineDistance: distance });
+      const historicalArticles: HistoricalArticleRecall[] = [];
+      for (const cell of qualityRow.cells) {
+        for (const article of group.recallByPointer.get(pointerKey(depositId, cell)) ?? []) {
+          const seen = historicalArticles.some(
+            (row) => row.articleCode === article.articleCode && row.lastOrderedAt === article.lastOrderedAt,
+          );
+          if (!seen) historicalArticles.push(article);
+        }
+      }
+      historicalArticles.sort(
+        (a, b) => b.lastOrderedAt.localeCompare(a.lastOrderedAt) || a.articleCode.localeCompare(b.articleCode),
+      );
+      ranked.push({ ...toQuality(qualityRow), cosineDistance: distance, historicalArticles });
     }
   }
 

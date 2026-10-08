@@ -112,9 +112,16 @@ export type PersistedMaterialEmbedding = {
   updatedAt: string;
 };
 
+/** One brand PLM article recalled for a source cell. */
+export type HistoricalArticleRecall = {
+  articleCode: string;
+  lastOrderedAt: string;
+};
+
 /** A source cell on a sheet row hit by a nearest embedding, with that row's cosine distance. */
 export type MaterialSearchHit = JoinedSourceCell & {
   cosineDistance: number;
+  historicalArticles: HistoricalArticleRecall[];
 };
 
 /** A fact on the latest active product truth, including the evidence id stored on the document. */
