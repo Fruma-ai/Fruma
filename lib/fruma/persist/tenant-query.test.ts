@@ -91,6 +91,12 @@ describe("append-only tenant queries", () => {
       "ALTER TABLE fruma_factory_profiles ADD COLUMN IF NOT EXISTS other_col TIMESTAMPTZ",
       "ALTER TABLE fruma_factory_profiles ADD COLUMN IF NOT EXISTS certificate_expiry_date TEXT",
       "ALTER TABLE fruma_factory_profiles ADD COLUMN IF NOT EXISTS certificate_expiry_date TIMESTAMPTZ; SELECT 1",
+      "ALTER TABLE fruma_deposits RENAME COLUMN id TO grant_id",
+      "ALTER TABLE fruma_named_grants RENAME COLUMN id TO something_else",
+      "ALTER TABLE fruma_named_grants RENAME COLUMN supplier_org_id TO mill_org_id",
+      "ALTER TABLE fruma_named_grants ADD COLUMN IF NOT EXISTS is_revoked TEXT",
+      "ALTER TABLE fruma_named_grants ADD COLUMN IF NOT EXISTS other BOOLEAN NOT NULL DEFAULT FALSE",
+      "ALTER TABLE fruma_named_grants RENAME COLUMN id TO grant_id; SELECT 1",
       "GRANT SELECT ON fruma_deposits TO public",
       "REVOKE SELECT ON fruma_deposits FROM public",
       "CREATE OR REPLACE VIEW fruma_open AS SELECT 1",
@@ -115,6 +121,15 @@ describe("append-only tenant queries", () => {
         "ALTER TABLE fruma_factory_profiles ADD COLUMN IF NOT EXISTS certificate_expiry_date TIMESTAMPTZ",
       ),
     );
+    for (const query of [
+      "ALTER TABLE fruma_named_grants RENAME COLUMN id TO grant_id",
+      "ALTER TABLE fruma_named_grants RENAME COLUMN mill_org_id TO supplier_org_id",
+      "ALTER TABLE fruma_named_grants RENAME COLUMN scope_class TO access_scope",
+      "ALTER TABLE fruma_named_grants RENAME COLUMN created_at TO granted_at",
+      "ALTER TABLE fruma_named_grants ADD COLUMN IF NOT EXISTS is_revoked BOOLEAN NOT NULL DEFAULT FALSE",
+    ]) {
+      assert.doesNotThrow(() => assertAppendOnlyQuery(query));
+    }
   });
 
   it("blocks a destructive fragment nested inside a read", async () => {
