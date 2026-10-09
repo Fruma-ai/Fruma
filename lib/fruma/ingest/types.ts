@@ -40,6 +40,22 @@ export type StandardField =
   | "customer"
   | "cert";
 
+const STANDARD_FIELDS: readonly StandardField[] = [
+  "article",
+  "construction",
+  "composition",
+  "weight",
+  "width",
+  "colour",
+  "moq",
+  "customer",
+  "cert",
+];
+
+export function isStandardField(value: string): value is StandardField {
+  return STANDARD_FIELDS.includes(value as StandardField);
+}
+
 export const FIELD_CLASS_OF: Record<StandardField, FieldClass> = {
   article: "identity",
   construction: "technical",
