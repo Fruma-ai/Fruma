@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { afterEach, describe, it } from "node:test";
 import { assertAppendOnlyQuery, setTenantPoolForTests } from "./tenant-query";
-import { brandHistoryMatchQuery, matchBrandHistory, parseBrandHistoryQuery } from "./brand-history-match";
+import { postBrandHistoryRequest } from "./brand-history-http";
+import {
+  brandHistoryMatchQuery,
+  matchBrandHistory,
+  missingQueryDimensions,
+  parseBrandHistoryQuery,
+} from "./brand-history-match";
 
 afterEach(() => {
   setTenantPoolForTests(null);
@@ -23,14 +29,51 @@ describe("brand history match", () => {
     assert.match(sql, /e\.standard_field IN \('weight', 'width', 'composition'\)/);
     assert.match(sql, /ORDER BY e\.source_cell_id, e\.occurred_at DESC/);
     assert.match(sql, /LEFT JOIN fruma_brand_historical_articles hist/);
+    assert.match(sql, /AS resolved_gsm/);
     assert.match(sql, /LIMIT 12/);
-    assert.doesNotMatch(sql, /search_path|BrandHistoryIngest|corrected_value|mapped_attribute|created_at|fruma_\$\{/);
+    assert.equal(missingQueryDimensions({ targetGsm: "240 GSM", targetWidth: "150 cm" }), true);
+    assert.equal(
+      missingQueryDimensions({ targetGsm: "240 GSM", targetWidth: "150 cm", tenantVersion: "demo" }),
+      false,
+    );
+    assert.doesNotMatch(
+      sql,
+      /search_path|BrandHistoryIngest|corrected_value|mapped_attribute|created_at|swatch_name|warehouse_location|rack_id|hex_variants|fruma_\$\{/,
+    );
     assert.doesNotMatch(sql, /240 GSM|150 cm/);
     assert.deepEqual(pending.args, ["240 GSM", "150 cm"]);
     assert.equal(assertAppendOnlyQuery(sql), sql);
 
-    const route = readFileSync(new URL("../../../app/api/ledger/brand-history/route.ts", import.meta.url), "utf8");
-    assert.doesNotMatch(route, /neonPool|search_path|fruma_\$\{|error\.message/);
+    for (const file of [
+      "../../../app/api/ledger/brand-history/route.ts",
+      "./brand-history-http.ts",
+    ]) {
+      const source = readFileSync(new URL(file, import.meta.url), "utf8");
+      assert.doesNotMatch(source, /neonPool|search_path|fruma_\$\{|error\.message/);
+    }
+    const http = readFileSync(new URL("./brand-history-http.ts", import.meta.url), "utf8");
+    assert.match(http, /Infrastructure Environment Offline/);
+    assert.match(http, /Missing query dimensions/);
+    assert.match(http, /Failed to scan historical warehouse matrix\./);
+  });
+
+  it("stays offline when DATABASE_URL is missing", async () => {
+    const previous = process.env.DATABASE_URL;
+    delete process.env.DATABASE_URL;
+    try {
+      const response = await postBrandHistoryRequest(
+        new Request("http://localhost/api/ledger/brand-history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetGsm: "240 GSM", targetWidth: "150 cm", tenantVersion: "demo" }),
+        }),
+      );
+      assert.equal(response.status, 500);
+      assert.deepEqual(await response.json(), { error: "Infrastructure Environment Offline" });
+    } finally {
+      if (previous === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = previous;
+    }
   });
 
   it("runs the match in a read-only tenant transaction", async () => {

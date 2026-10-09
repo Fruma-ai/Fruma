@@ -4,9 +4,9 @@ import { executeTenantQuery, ledgerSql } from "@/src/lib/db";
 const MAX_TARGET = 256;
 
 export type BrandHistoryMatch = {
-  cell_id: string;
+  id: string;
   original_gsm: string;
-  gsm: string;
+  resolved_gsm: string;
   width: string;
   supplier_org_id: string;
   article_id: string | null;
@@ -25,6 +25,13 @@ function target(value: unknown): string | null {
   const trimmed = value.trim();
   if (!trimmed || trimmed.length > MAX_TARGET) return null;
   return trimmed;
+}
+
+/** GSM, width, and tenant are all required before a scan starts. */
+export function missingQueryDimensions(body: unknown): boolean {
+  if (!body || typeof body !== "object") return true;
+  const row = body as { targetGsm?: unknown; targetWidth?: unknown; tenantVersion?: unknown };
+  return !row.targetGsm || !row.targetWidth || !row.tenantVersion;
 }
 
 /** `targetGsm` and `targetWidth` stay parameters. They never enter the SQL text. */
@@ -105,9 +112,9 @@ export function brandHistoryMatchQuery(targetGsm: string, targetWidth: string) {
         c.col_index
     )
     SELECT
-      weight_cells.id AS cell_id,
+      weight_cells.id AS id,
       weight_cells.source_value AS original_gsm,
-      COALESCE(weight_latest.new_standard_value, weight_cells.source_value) AS gsm,
+      COALESCE(weight_latest.new_standard_value, weight_cells.source_value) AS resolved_gsm,
       COALESCE(width_latest.new_standard_value, width_cells.source_value) AS width,
       deposit.supplier_org_id,
       hist.article_id::text AS article_id,
