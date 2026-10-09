@@ -10,7 +10,7 @@ const TENANT_NAMESPACES = Object.values(LEDGER_SCHEMAS);
 /**
  * Statement keywords that mutate rows or reassign privileges.
  * `replace(` is the string function and stays allowed. `CREATE OR REPLACE` does not.
- * The only ALTER that stays allowed is the certificate-expiry column add below.
+ * ALTER stays blocked except the exact column adaptations listed below.
  */
 const ROW_MUTATION =
   /\b(?:UPDATE|DELETE|DROP|TRUNCATE|GRANT|REVOKE|REPLACE(?!\s*\())\b/i;
@@ -21,6 +21,23 @@ const ROW_MUTATION =
  */
 const CERTIFICATE_EXPIRY_COLUMN =
   /^\s*ALTER\s+TABLE\s+fruma_factory_profiles\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+certificate_expiry_date\s+TIMESTAMPTZ\s*;?\s*$/i;
+
+/**
+ * In-place named-grants evolution. Each pattern is the whole statement.
+ * A second clause after the semicolon stays blocked.
+ */
+const NAMED_GRANTS_ALTERS = [
+  /^\s*ALTER\s+TABLE\s+fruma_named_grants\s+RENAME\s+COLUMN\s+id\s+TO\s+grant_id\s*;?\s*$/i,
+  /^\s*ALTER\s+TABLE\s+fruma_named_grants\s+RENAME\s+COLUMN\s+mill_org_id\s+TO\s+supplier_org_id\s*;?\s*$/i,
+  /^\s*ALTER\s+TABLE\s+fruma_named_grants\s+RENAME\s+COLUMN\s+scope_class\s+TO\s+access_scope\s*;?\s*$/i,
+  /^\s*ALTER\s+TABLE\s+fruma_named_grants\s+RENAME\s+COLUMN\s+created_at\s+TO\s+granted_at\s*;?\s*$/i,
+  /^\s*ALTER\s+TABLE\s+fruma_named_grants\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+is_revoked\s+BOOLEAN\s+NOT\s+NULL\s+DEFAULT\s+FALSE\s*;?\s*$/i,
+] as const;
+
+function isAllowedAlter(scanned: string): boolean {
+  if (CERTIFICATE_EXPIRY_COLUMN.test(scanned)) return true;
+  return NAMED_GRANTS_ALTERS.some((pattern) => pattern.test(scanned));
+}
 
 const BLOCKED =
   "CRITICAL_VIOLATION: Non-destructive engine rules violated. Mutation blocked upstream.";
@@ -65,7 +82,7 @@ export function assertAppendOnlyQuery(query: string): string {
   if (!text) throw new Error("query is required");
   const scanned = sqlForScan(text);
   if (ROW_MUTATION.test(scanned)) throw new Error(BLOCKED);
-  if (/\bALTER\b/i.test(scanned) && !CERTIFICATE_EXPIRY_COLUMN.test(scanned)) {
+  if (/\bALTER\b/i.test(scanned) && !isAllowedAlter(scanned)) {
     throw new Error(BLOCKED);
   }
   return query;
@@ -149,9 +166,9 @@ export type TenantQueryOptions = {
  * Run one postgres.js query inside a transaction whose search_path is that
  * tenant schema, then public. SET LOCAL ends with the transaction, so the
  * pooled connection does not keep the tenant. UPDATE, DELETE, DROP, TRUNCATE,
- * GRANT, REVOKE, CREATE OR REPLACE, and every ALTER other than
- * `ADD COLUMN IF NOT EXISTS certificate_expiry_date TIMESTAMPTZ`
- * on `fruma_factory_profiles` are rejected before a connection opens.
+ * GRANT, REVOKE, CREATE OR REPLACE, and every ALTER other than the
+ * certificate-expiry column add or the named-grants rename and
+ * `is_revoked` column add are rejected before a connection opens.
  * `readOnly` opens the transaction with `READ ONLY`.
  */
 export async function executeTenantQuery<T extends object>(
