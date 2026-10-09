@@ -237,7 +237,7 @@ describe("confirm mutation log", () => {
   it("refuses a composition that does not sum to 100 before the pool opens", async () => {
     const source = actionSource()
     const gateAt = source.indexOf("validateFibreIntegrity(")
-    const poolAt = source.indexOf("mutationSql()")
+    const poolAt = source.indexOf("const sql = mutationSql()")
     assert.ok(gateAt > 0 && poolAt > gateAt)
     assert.match(source, /target_field === "composition"/)
     assert.match(source, /success: false as const/)
