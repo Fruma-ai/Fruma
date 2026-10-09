@@ -8,7 +8,9 @@ import {
   DiscoveryCanvas,
   type DiscoverySearchPayload,
 } from "@/components/fruma/DiscoveryCanvas";
+import { dimensionsFromPrompt } from "@/lib/fruma/design/compass-scan";
 import { StudioCarousel } from "@/components/fruma/StudioCarousel";
+import { StudioCompass } from "@/components/fruma/StudioCompass";
 
 type SchemaName = "demo" | "test" | "production";
 
@@ -20,6 +22,7 @@ export function StudioDiscovery({
   materials,
   hnswMatchCount,
   notice,
+  scanEnabled = false,
 }: {
   activeSchema: SchemaName;
   initialPrompt: string;
@@ -27,6 +30,7 @@ export function StudioDiscovery({
   materials: UniformMaterialCard[];
   hnswMatchCount: number | null;
   notice: string | null;
+  scanEnabled?: boolean;
 }) {
   const router = useRouter();
   const [isSearching, setIsSearching] = useState(false);
@@ -45,7 +49,10 @@ export function StudioDiscovery({
     router.replace(`/qualities?${params.toString()}`);
   }
 
+  const dimensions = dimensionsFromPrompt(initialPrompt);
+
   return (
+    <div className="space-y-6">
     <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
       <div className="xl:col-span-5">
         <DiscoveryCanvas
@@ -112,6 +119,14 @@ export function StudioDiscovery({
           />
         </div>
       </div>
+    </div>
+    {dimensions && scanEnabled ? (
+      <StudioCompass
+        currentGsm={dimensions.gsm}
+        currentWidth={dimensions.width}
+        tenantVersion={activeSchema}
+      />
+    ) : null}
     </div>
   );
 }

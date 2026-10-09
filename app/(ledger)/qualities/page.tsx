@@ -67,6 +67,7 @@ export default async function MaterialDiscoveryStudioPage({
             materials={materials}
             hnswMatchCount={null}
             notice={null}
+            scanEnabled={namespace !== null}
           />
         </div>
       </div>
