@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { FactoryIngestWorkbench } from "@/components/fruma/FactoryIngestWorkbench";
-import { ANOMALY_PROPOSAL, SupplierExceptionGrid } from "@/components/fruma/SupplierExceptionGrid";
+import {
+  ANOMALY_PROPOSAL,
+  SupplierExceptionGrid,
+  type IngestExceptionFrame,
+} from "@/components/fruma/SupplierExceptionGrid";
 import { WorkspaceShell } from "@/components/fruma/WorkspaceShell";
 import type { SupplierParsingAnomaly } from "@/lib/fruma/ingest/supplier-anomalies";
 import { LEDGER_SCHEMAS, type LedgerSchemaName } from "@/lib/fruma/persist/postgres-schema";
@@ -16,6 +20,16 @@ export default async function DepositsWorkspacePage() {
   const namespace = await tenantNamespaceFromSessionCookies(await cookies());
   const activeSchema = versionFromNamespace(namespace);
   const anomalies: SupplierParsingAnomaly[] = [];
+  const initialExceptions: IngestExceptionFrame[] = anomalies.flatMap((row) => {
+    if (!row.standardField) return [];
+    return [
+      {
+        id: (row.cellId ?? row.id).trim(),
+        currentVal: row.sourceValue,
+        expectedField: row.standardField,
+      },
+    ];
+  });
 
   return (
     <WorkspaceShell activeVersion={activeSchema} activeOntology="Retail/Apparel">
@@ -23,7 +37,7 @@ export default async function DepositsWorkspacePage() {
         <div className="space-y-6">
           <FactoryIngestWorkbench activeSchema={activeSchema} />
           <SupplierExceptionGrid
-            anomalies={anomalies}
+            initialExceptions={initialExceptions}
             tenantVersion={activeSchema}
             className={ANOMALY_PROPOSAL}
           />

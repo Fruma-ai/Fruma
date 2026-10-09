@@ -33,9 +33,14 @@ describe("obsidian deposits workbench", () => {
   });
 
   it("confirms amber overrides through the session tenant", () => {
+    assert.match(page, /initialExceptions=\{initialExceptions\}/);
     assert.match(page, /tenantVersion=\{activeSchema\}/);
+    assert.match(grid, /stageCellOverride/);
+    assert.match(grid, /useTransition/);
     assert.match(grid, /confirmPendingOverrides/);
+    assert.match(grid, /startTransition/);
     assert.match(grid, /router\.refresh\(\)/);
+    assert.doesNotMatch(grid, /transition-all|animate-|indigo-|p-6|rounded-lg/);
     assert.doesNotMatch(grid, /tenantVersion:\s*"production"/);
     assert.doesNotMatch(page, /tenantVersion:\s*"production"/);
     const client = readFileSync(

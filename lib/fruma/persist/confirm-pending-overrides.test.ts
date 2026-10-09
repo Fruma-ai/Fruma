@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { SupplierParsingAnomaly } from "@/lib/fruma/ingest/supplier-anomalies";
-import { confirmPendingOverrides, pendingOverridesFromAnomalies } from "./confirm-pending-overrides";
+import {
+  confirmPendingOverrides,
+  pendingOverridesFromAnomalies,
+  stageCellOverride,
+} from "./confirm-pending-overrides";
 
 function anomaly(overrides: Partial<SupplierParsingAnomaly> = {}): SupplierParsingAnomaly {
   return {
@@ -19,6 +23,15 @@ function anomaly(overrides: Partial<SupplierParsingAnomaly> = {}): SupplierParsi
 }
 
 describe("confirm pending overrides", () => {
+  it("stages a value and drops it when the frame is cleared", () => {
+    const staged = stageCellOverride([], "cell-1", "weight", "220 GSM");
+    const replaced = stageCellOverride(staged, "cell-1", "weight", "240 GSM");
+    const kept = stageCellOverride(replaced, "cell-1", "width", "150 cm");
+    assert.deepEqual(stageCellOverride(kept, "cell-1", "weight", ""), [
+      { cellId: "cell-1", field: "width", newValue: "150 cm" },
+    ]);
+  });
+
   it("keeps only amber rows that name a cell and a standard field", () => {
     const pending = pendingOverridesFromAnomalies([
       anomaly(),

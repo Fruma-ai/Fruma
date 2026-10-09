@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { SupplierParsingAnomaly } from "@/lib/fruma/ingest/supplier-anomalies";
 import {
   confirmPendingOverrides,
-  pendingOverridesFromAnomalies,
+  stageCellOverride,
+  type PendingCellOverride,
   type TenantVersion,
 } from "@/lib/fruma/persist/confirm-pending-overrides";
 
 /** Dashed amber proposal blocks for parsing anomalies. */
 export const ANOMALY_PROPOSAL = "border border-dashed border-amber-500/80 bg-amber-500/5";
+
+export type IngestExceptionFrame = {
+  id: string;
+  currentVal: string;
+  expectedField: string;
+};
 
 const HEADER =
   "border-b border-zinc-800/60 pb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400";
@@ -18,75 +24,100 @@ const HEADER =
 const CONFIRM_BUTTON =
   "border border-zinc-800/60 bg-zinc-900/40 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-100 disabled:opacity-40";
 
-/** Dashed amber blocks. Confirm posts those overrides for the session tenant. */
+/** Dashed amber frames. Typed values stay local until confirm posts them. */
 export function SupplierExceptionGrid({
-  anomalies,
+  initialExceptions,
   tenantVersion,
   className = ANOMALY_PROPOSAL,
 }: {
-  anomalies: SupplierParsingAnomaly[];
+  initialExceptions: IngestExceptionFrame[];
   tenantVersion: TenantVersion;
   className?: string;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const pendingOverrides = pendingOverridesFromAnomalies(anomalies);
-  const unmapped = anomalies.filter((row) => row.reason === "unmapped").length;
-  const unconfirmed = anomalies.length - unmapped;
+  const [isPending, startTransition] = useTransition();
+  const [overrides, setOverrides] = useState<PendingCellOverride[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  async function handleBulkConfirm() {
-    if (busy || pendingOverrides.length === 0) return;
-    setBusy(true);
-    setNotice(null);
-    const ok = await confirmPendingOverrides(pendingOverrides, tenantVersion, () => router.refresh());
-    if (!ok) setNotice("The append did not complete.");
-    setBusy(false);
+  function handleStageOverride(cellId: string, field: string, value: string) {
+    setErrorMessage(null);
+    setOverrides((previous) => stageCellOverride(previous, cellId, field, value));
   }
+
+  async function handleConfirmExceptions() {
+    if (overrides.length === 0 || saving || isPending) return;
+    setErrorMessage(null);
+    setSaving(true);
+    try {
+      const ok = await confirmPendingOverrides(overrides, tenantVersion, () => {
+        setOverrides([]);
+        startTransition(() => {
+          router.refresh();
+        });
+      });
+      if (!ok) setErrorMessage("The append did not complete.");
+    } catch {
+      setErrorMessage("The append did not complete.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const busy = saving || isPending;
 
   return (
     <section aria-label="Parsing anomalies" className="bg-[#0B0C0E] text-zinc-100">
       <div className={`${HEADER} flex items-end justify-between gap-3`}>
         <div>
           <h2>Parsing anomalies</h2>
-          <p className="mt-1">
-            {unmapped} unmapped · {unconfirmed} unconfirmed
-          </p>
+          <p className="mt-1">fruma_{tenantVersion}</p>
         </div>
         <button
           type="button"
-          disabled={busy || pendingOverrides.length === 0}
-          onClick={() => void handleBulkConfirm()}
+          onClick={() => void handleConfirmExceptions()}
+          disabled={overrides.length === 0 || busy}
           className={CONFIRM_BUTTON}
         >
-          Confirm exceptions
+          {busy ? "Appending..." : "Confirm exceptions"}
         </button>
       </div>
-      {notice ? <p className="mt-2 text-[11px] text-amber-200">{notice}</p> : null}
-      {anomalies.length === 0 ? (
+      {errorMessage ? <p className="mt-2 text-[11px] text-amber-200">{errorMessage}</p> : null}
+      {initialExceptions.length === 0 ? (
         <p className={`mt-3 px-2 py-1 text-[11px] text-amber-200 ${className}`}>
           No parsing anomalies in this file.
         </p>
       ) : (
-        <ul className="mt-3 space-y-2">
-          {anomalies.map((row) => (
-            <li
-              key={row.id}
-              className={`grid grid-cols-1 gap-1 px-2 py-1 sm:grid-cols-[7rem_minmax(0,1fr)_auto] ${className}`}
-            >
-              <span className="text-[11px] uppercase tracking-[0.14em] text-amber-200">{row.reason}</span>
-              <span className="min-w-0 text-[11px] text-zinc-100">
-                <span className="text-zinc-400">{row.header || "blank header"}</span>
-                {" · "}
-                <span className="break-all">{row.sourceValue || "—"}</span>
-                {row.standardField ? <span className="text-zinc-400"> → {row.standardField}</span> : null}
-              </span>
-              <span className="text-[11px] text-zinc-400">
-                {row.sheet} · row {row.row} · {row.column}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+          {initialExceptions.map((item) => {
+            const matchingOverride = overrides.find(
+              (row) => row.cellId === item.id && row.field === item.expectedField,
+            );
+            return (
+              <div key={`${item.id}:${item.expectedField}`} className="flex flex-col gap-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-[11px] uppercase tracking-[0.14em] text-zinc-400">
+                    {item.id}
+                  </span>
+                  <span className="border border-zinc-800/60 px-1 py-0 text-[11px] font-medium uppercase leading-none tracking-[0.14em] text-amber-200">
+                    {item.expectedField}
+                  </span>
+                </div>
+                <div className={className}>
+                  <input
+                    type="text"
+                    aria-label={`${item.expectedField} for ${item.id}`}
+                    placeholder={`Resolve anomaly [Original: "${item.currentVal}"]...`}
+                    value={matchingOverride?.newValue ?? ""}
+                    onChange={(event) => handleStageOverride(item.id, item.expectedField, event.target.value)}
+                    spellCheck={false}
+                    className="w-full bg-transparent px-2 py-1 text-[11px] text-zinc-100 outline-none placeholder:text-zinc-400 focus-visible:outline-2! focus-visible:outline-solid! focus-visible:outline-zinc-400!"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </section>
   );

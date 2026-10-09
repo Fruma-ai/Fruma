@@ -11,6 +11,18 @@ export type PendingCellOverride = {
 
 export const DEPOSITS_MUTATE_PATH = "/api/deposits/mutate";
 
+/** One cell and field. An empty value removes that override. */
+export function stageCellOverride(
+  previous: readonly PendingCellOverride[],
+  cellId: string,
+  field: string,
+  value: string,
+): PendingCellOverride[] {
+  const filtered = previous.filter((row) => !(row.cellId === cellId && row.field === field));
+  if (!value) return filtered;
+  return [...filtered, { cellId, field, newValue: value }];
+}
+
 /** Amber rows that already name a cell and a standard field. */
 export function pendingOverridesFromAnomalies(
   anomalies: readonly SupplierParsingAnomaly[],
