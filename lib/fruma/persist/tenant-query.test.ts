@@ -128,6 +128,32 @@ describe("append-only tenant queries", () => {
     assert.equal(recorded.began(), 0);
   });
 
+  it("refuses cross-schema SQL before a connection opens", async () => {
+    const recorded = recordingPool();
+    setTenantPoolForTests(recorded.pool as never);
+    for (const query of [
+      "SELECT * FROM fruma_production.fruma_deposits",
+      "SELECT * FROM FRUMA_DEMO . fruma_factory_profiles",
+      "SELECT * FROM\nfruma_test.fruma_source_cells",
+    ]) {
+      await assert.rejects(
+        () => executeTenantQuery("fruma_demo", template([query])),
+        /SECURITY_VIOLATION: Cross-schema database access explicitly denied\./,
+      );
+    }
+    const split = template(["SELECT * FROM fruma_production.", ""], ["fruma_deposits"]);
+    await assert.rejects(
+      () => executeTenantQuery("fruma_demo", split),
+      /SECURITY_VIOLATION: Cross-schema database access explicitly denied\./,
+    );
+    const nested = template(["fruma_test.fruma_source_cells"]);
+    await assert.rejects(
+      () => executeTenantQuery("fruma_demo", template(["SELECT * FROM ", ""], [nested])),
+      /SECURITY_VIOLATION: Cross-schema database access explicitly denied\./,
+    );
+    assert.equal(recorded.began(), 0);
+  });
+
   it("rejects a namespace outside the three ledger schemas", async () => {
     const recorded = recordingPool();
     setTenantPoolForTests(recorded.pool as never);

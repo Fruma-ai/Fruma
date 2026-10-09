@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { interceptCrossSchemaAccess } from "@/src/lib/fruma/security/interceptor";
 import { MissingConfigurationException } from "./configuration";
 import { LEDGER_SCHEMAS, type LedgerSchemaName } from "./postgres-schema";
 
@@ -27,6 +28,9 @@ const BLOCKED =
 
 const MISSING_DATABASE_URL =
   "CRITICAL_CONFIG_ERROR: DATABASE_URL is missing. Connection pool refused.";
+
+const CROSS_SCHEMA_DENIED =
+  "SECURITY_VIOLATION: Cross-schema database access explicitly denied.";
 
 type TaggedQuery = {
   strings: TemplateStringsArray | readonly string[];
@@ -102,6 +106,29 @@ function queryParts(query: unknown): TaggedQuery {
 }
 
 /**
+ * Reconstruct the incoming SQL, including nested tagged fragments.
+ * Joining template parts with an empty string keeps `fruma_demo.` intact
+ * when an interpolation sits against the qualifier.
+ */
+export function rawSqlFromPendingQuery(query: unknown, seen = new Set<unknown>()): string {
+  if (!isTaggedQuery(query) || seen.has(query)) return "";
+  seen.add(query);
+  let text = query.strings.join("");
+  for (const arg of query.args ?? []) {
+    text += rawSqlFromPendingQuery(arg, seen);
+    if (Array.isArray(arg)) {
+      for (const item of arg) text += rawSqlFromPendingQuery(item, seen);
+    }
+  }
+  return text;
+}
+
+function assertCrossSchemaBoundary(query: TaggedQuery): void {
+  const access = interceptCrossSchemaAccess(rawSqlFromPendingQuery(query));
+  if (!access.isSafe) throw new Error(CROSS_SCHEMA_DENIED);
+}
+
+/**
  * Replay the tagged query on the transaction connection.
  * Awaiting the original PendingQuery checks out a different pool connection,
  * so SET LOCAL on this transaction would not apply to it.
@@ -152,7 +179,9 @@ export type TenantQueryOptions = {
  * GRANT, REVOKE, CREATE OR REPLACE, and every ALTER other than
  * `ADD COLUMN IF NOT EXISTS certificate_expiry_date TIMESTAMPTZ`
  * on `fruma_factory_profiles` are rejected before a connection opens.
- * `readOnly` opens the transaction with `READ ONLY`.
+ * SQL that qualifies `fruma_demo`, `fruma_test`, or `fruma_production`
+ * with dot notation is rejected before a connection opens and before
+ * `SET LOCAL search_path`. `readOnly` opens the transaction with `READ ONLY`.
  */
 export async function executeTenantQuery<T extends object>(
   namespace: TenantNamespace,
@@ -163,6 +192,7 @@ export async function executeTenantQuery<T extends object>(
     throw new Error(`SECURITY_VIOLATION: Unrecognized tenant namespace context: "${namespace}"`);
   }
   const parts = queryParts(queryExpression);
+  assertCrossSchemaBoundary(parts);
   assertTaggedQuery(parts, new Set());
 
   const run = async (tx: postgres.TransactionSql) => {
