@@ -19,8 +19,14 @@ describe("append cell mutations", () => {
     assert.equal(schemaForTenantVersion("fruma_demo"), "fruma_demo");
     assert.equal(schemaForTenantVersion(undefined), null);
     assert.equal(schemaForTenantVersion("fruma_production; DROP SCHEMA fruma_demo"), "invalid");
-    const route = readFileSync(new URL("../../../app/api/ledger/cell-mutations/route.ts", import.meta.url), "utf8");
-    assert.doesNotMatch(route, /neonPool|search_path|fruma_\$\{/);
+    for (const file of [
+      "../../../app/api/ledger/cell-mutations/route.ts",
+      "../../../app/api/deposits/mutate/route.ts",
+      "./cell-mutation-http.ts",
+    ]) {
+      const source = readFileSync(new URL(file, import.meta.url), "utf8");
+      assert.doesNotMatch(source, /neonPool|search_path|fruma_\$\{/);
+    }
   });
 
   it("builds one parameterized confirm insert and leaves deposits untouched", () => {

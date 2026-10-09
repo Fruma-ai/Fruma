@@ -22,7 +22,11 @@ export default async function DepositsWorkspacePage() {
       <div className="min-h-full bg-[#0B0C0E] text-zinc-100">
         <div className="space-y-6">
           <FactoryIngestWorkbench activeSchema={activeSchema} />
-          <SupplierExceptionGrid anomalies={anomalies} className={ANOMALY_PROPOSAL} />
+          <SupplierExceptionGrid
+            anomalies={anomalies}
+            tenantVersion={activeSchema}
+            className={ANOMALY_PROPOSAL}
+          />
         </div>
       </div>
     </WorkspaceShell>

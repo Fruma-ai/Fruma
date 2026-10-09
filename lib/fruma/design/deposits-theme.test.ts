@@ -27,7 +27,24 @@ describe("obsidian deposits workbench", () => {
 
   it("keeps confirmation controls compact", () => {
     assert.match(workbench, /px-3 py-1 text-\[11px\]/);
+    assert.match(grid, /px-3 py-1 text-\[11px\]/);
     assert.doesNotMatch(workbench, /py-3|p-8|animate-/);
     assert.doesNotMatch(workbench, /\bfetch\b/);
+  });
+
+  it("confirms amber overrides through the session tenant", () => {
+    assert.match(page, /tenantVersion=\{activeSchema\}/);
+    assert.match(grid, /confirmPendingOverrides/);
+    assert.match(grid, /router\.refresh\(\)/);
+    assert.doesNotMatch(grid, /tenantVersion:\s*"production"/);
+    assert.doesNotMatch(page, /tenantVersion:\s*"production"/);
+    const client = readFileSync(
+      new URL("../../../lib/fruma/persist/confirm-pending-overrides.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(client, /\/api\/deposits\/mutate/);
+    const route = readFileSync(new URL("../../../app/api/deposits/mutate/route.ts", import.meta.url), "utf8");
+    assert.match(route, /postCellMutationRequest/);
+    assert.doesNotMatch(route, /neonPool|search_path|fruma_\$\{/);
   });
 });
