@@ -11,10 +11,17 @@ const CONFIRMED_AT = "2026-09-15T00:00:00.000Z";
 const CERTIFICATE_EXPIRY_DATE = "2028-12-31T00:00:00.000Z";
 const PERCENTAGE_INTEGER = /(?:^|[^\d.])(\d+)\s*%/g;
 
+export const PITCH_COLOURS = ["Navy", "Charcoal", "Ecru"] as const;
+
+export type PitchColour = (typeof PITCH_COLOURS)[number];
+
 export type PitchMaterial = {
   slug: string;
   name: string;
   composition: string;
+  /** Fabric weight in grams per square metre. */
+  weightGsm: number;
+  colour: PitchColour;
   millOrgId: string;
   facilityName: string;
   country: string;
@@ -28,6 +35,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "japanese-indigo-selvedge-denim",
     name: "Japanese Indigo Selvedge Denim",
     composition: "100% Cotton",
+    weightGsm: 475,
+    colour: "Navy",
     millOrgId: "pitch_kuroki_indigo",
     facilityName: "Kuroki Selvedge Mill",
     country: "JP",
@@ -38,6 +47,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "italian-recycled-cashmere-flannel",
     name: "Italian Recycled Cashmere Flannel",
     composition: "100% Cashmere",
+    weightGsm: 280,
+    colour: "Charcoal",
     millOrgId: "pitch_biella_cashmere",
     facilityName: "Filatura di Biella",
     country: "IT",
@@ -48,6 +59,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "portuguese-organic-cotton-mesh",
     name: "Portuguese Organic Cotton Mesh",
     composition: "98% Cotton / 2% Elastane",
+    weightGsm: 145,
+    colour: "Ecru",
     millOrgId: "pitch_vale_do_ave_mesh",
     facilityName: "Malhas do Vale do Ave",
     country: "PT",
@@ -55,9 +68,23 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     certificate: "GOTS",
   },
   {
+    slug: "technical-waterproof-ripstop-nylon",
+    name: "Technical Waterproof Ripstop Nylon",
+    composition: "100% Nylon",
+    weightGsm: 70,
+    colour: "Navy",
+    millOrgId: "pitch_fukui_ripstop",
+    facilityName: "Fukui Ripstop Mill",
+    country: "JP",
+    loomCount: 24,
+    certificate: "bluesign",
+  },
+  {
     slug: "swiss-cotton-voile",
     name: "Swiss Cotton Voile",
     composition: "100% Cotton",
+    weightGsm: 65,
+    colour: "Ecru",
     millOrgId: "pitch_st_gallen_voile",
     facilityName: "Weberei St. Gallen",
     country: "CH",
@@ -68,6 +95,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "scottish-estate-tweed",
     name: "Scottish Estate Tweed",
     composition: "100% Wool",
+    weightGsm: 420,
+    colour: "Charcoal",
     millOrgId: "pitch_hawick_tweed",
     facilityName: "Hawick Estate Tweeds",
     country: "GB",
@@ -78,6 +107,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "french-linen-canvas",
     name: "French Linen Canvas",
     composition: "100% Linen",
+    weightGsm: 265,
+    colour: "Ecru",
     millOrgId: "pitch_lisieux_linen",
     facilityName: "Toiles de Lisieux",
     country: "FR",
@@ -88,6 +119,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "japanese-high-twist-oxford",
     name: "Japanese High-Twist Oxford",
     composition: "100% Cotton",
+    weightGsm: 120,
+    colour: "Navy",
     millOrgId: "pitch_fukuyama_oxford",
     facilityName: "Fukuyama Shirtings",
     country: "JP",
@@ -98,6 +131,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "italian-silk-twill",
     name: "Italian Silk Twill",
     composition: "100% Silk",
+    weightGsm: 85,
+    colour: "Ecru",
     millOrgId: "pitch_como_silk",
     facilityName: "Tessitura di Como",
     country: "IT",
@@ -108,6 +143,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "portuguese-wool-jersey",
     name: "Portuguese Wool Jersey",
     composition: "98% Wool / 2% Elastane",
+    weightGsm: 240,
+    colour: "Charcoal",
     millOrgId: "pitch_famalicao_jersey",
     facilityName: "Malhas de Famalicão",
     country: "PT",
@@ -118,6 +155,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "turkish-long-staple-poplin",
     name: "Turkish Long-Staple Poplin",
     composition: "100% Cotton",
+    weightGsm: 110,
+    colour: "Ecru",
     millOrgId: "pitch_bursa_poplin",
     facilityName: "Bursa Long-Staple Weaving",
     country: "TR",
@@ -128,6 +167,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "peruvian-pima-jersey",
     name: "Peruvian Pima Jersey",
     composition: "95% Cotton / 5% Elastane",
+    weightGsm: 160,
+    colour: "Navy",
     millOrgId: "pitch_lima_pima",
     facilityName: "Hilandería de Lima",
     country: "PE",
@@ -138,6 +179,8 @@ export const PITCH_MATERIALS: readonly PitchMaterial[] = [
     slug: "english-fine-corduroy",
     name: "English Fine Corduroy",
     composition: "100% Cotton",
+    weightGsm: 320,
+    colour: "Charcoal",
     millOrgId: "pitch_rochdale_cord",
     facilityName: "Rochdale Corduroy Works",
     country: "GB",
@@ -176,14 +219,69 @@ export function compositionPercentageTotal(composition: string): { found: boolea
   return { found, total };
 }
 
-/** Pitch rows must state percentage integers that add to exactly 100. */
+/** Pitch rows must state percentage integers that add to exactly 100, plus a real weight and colour. */
 export function assertPitchCompositions(materials: readonly PitchMaterial[]): void {
   for (const material of materials) {
     const parsed = compositionPercentageTotal(material.composition);
     if (!parsed.found || parsed.total !== 100) {
       throw new Error(`COMPOSITION_INTEGRITY_MISMATCH: ${material.composition}`);
     }
+    if (!Number.isInteger(material.weightGsm) || material.weightGsm <= 0) {
+      throw new Error(`COMPOSITION_INTEGRITY_MISMATCH: ${material.name} weight`);
+    }
+    if (!PITCH_COLOURS.includes(material.colour)) {
+      throw new Error(`COMPOSITION_INTEGRITY_MISMATCH: ${material.name} colour`);
+    }
   }
+}
+
+type CatalogCell = {
+  id: string;
+  depositId: string;
+  colIndex: number;
+  rawHeader: string;
+  sourceValue: string;
+  normalizedValue: string;
+  eventId: string;
+  certificate: string;
+};
+
+/** Composition, weight, and colour cells for one cloth. The composition id stays stable across reseeds. */
+export function catalogCells(material: PitchMaterial): CatalogCell[] {
+  const depositId = `pitch-deposit-${material.slug}`;
+  const rows = [
+    {
+      suffix: "",
+      colIndex: 1,
+      rawHeader: "composition",
+      sourceValue: material.composition,
+      normalizedValue: material.name,
+    },
+    {
+      suffix: "-weight",
+      colIndex: 2,
+      rawHeader: "weight",
+      sourceValue: `${material.weightGsm} GSM`,
+      normalizedValue: `${material.weightGsm} GSM`,
+    },
+    {
+      suffix: "-colour",
+      colIndex: 3,
+      rawHeader: "colour",
+      sourceValue: material.colour,
+      normalizedValue: material.colour,
+    },
+  ];
+  return rows.map((row) => ({
+    id: `pitch-cell-${material.slug}${row.suffix}`,
+    depositId,
+    colIndex: row.colIndex,
+    rawHeader: row.rawHeader,
+    sourceValue: row.sourceValue,
+    normalizedValue: row.normalizedValue,
+    eventId: `pitch-cert-${material.slug}${row.suffix}`,
+    certificate: material.certificate,
+  }));
 }
 
 /** Unit-length deterministic stand-in for a hosted embedding model. */
@@ -222,7 +320,9 @@ async function insertChunk(
         filename: `${material.slug}.csv`,
         received_at: RECEIVED_AT,
         supplier_org_id: material.millOrgId,
-        bytes: Buffer.from(`${material.name}\n${material.composition}\n`),
+        bytes: Buffer.from(
+          `${material.name}\n${material.composition}\n${material.weightGsm} GSM\n${material.colour}\n`,
+        ),
       })),
       "id",
       "byte_hash",
@@ -235,17 +335,18 @@ async function insertChunk(
     RETURNING id
   `;
 
+  const cellRows = page.flatMap((material) => catalogCells(material));
   const cells = await tx`
     INSERT INTO fruma_source_cells ${tx(
-      page.map((material) => ({
-        id: `pitch-cell-${material.slug}`,
-        deposit_id: `pitch-deposit-${material.slug}`,
+      cellRows.map((cell) => ({
+        id: cell.id,
+        deposit_id: cell.depositId,
         sheet_name: "Pitch book",
         row_index: 1,
-        col_index: 1,
-        raw_header: "composition",
-        source_value: material.composition,
-        normalized_value: material.name,
+        col_index: cell.colIndex,
+        raw_header: cell.rawHeader,
+        source_value: cell.sourceValue,
+        normalized_value: cell.normalizedValue,
       })),
       "id",
       "deposit_id",
@@ -272,7 +373,9 @@ async function insertChunk(
      RETURNING source_cell_id`,
     [
       page.map((material) => `pitch-cell-${material.slug}`),
-      page.map((material) => mockEmbedding(`${material.name}\n${material.composition}`)),
+      page.map((material) =>
+        mockEmbedding(`${material.name}\n${material.composition}\n${material.weightGsm} GSM\n${material.colour}`),
+      ),
       CONFIRMED_AT,
     ],
   );
@@ -298,15 +401,17 @@ async function insertChunk(
     RETURNING mill_org_id
   `;
 
+  // The health numerator is cells whose latest event is a current cert confirm.
+  // Each composition, weight, and colour cell gets one so the mill stays Greenlit.
   const confirms = await tx`
     INSERT INTO fruma_cell_mutation_events ${tx(
-      page.map((material) => ({
-        event_id: `pitch-cert-${material.slug}`,
-        source_cell_id: `pitch-cell-${material.slug}`,
+      cellRows.map((cell) => ({
+        event_id: cell.eventId,
+        source_cell_id: cell.id,
         operator_cookie: "pitch-catalog",
         action_type: "confirm",
         old_standard_value: null,
-        new_standard_value: material.certificate,
+        new_standard_value: cell.certificate,
         standard_field: "cert",
         occurred_at: CONFIRMED_AT,
       })),
@@ -368,6 +473,7 @@ export async function seedPitchCatalog(): Promise<PitchSeedSummary> {
   console.log(`[pitch-catalog] factory profiles inserted ${summary.factoryProfilesInserted}`);
   console.log(`[pitch-catalog] certificate confirms inserted ${summary.certificateConfirmsInserted}`);
   console.log("[pitch-catalog] composition checks passed at 100");
+  console.log("[pitch-catalog] fields composition, weight GSM, colour Navy|Charcoal|Ecru");
   return summary;
 }
 

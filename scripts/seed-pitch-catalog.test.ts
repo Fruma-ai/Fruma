@@ -5,6 +5,7 @@ import {
   EMBEDDING_DIMENSIONS,
   PITCH_MATERIALS,
   assertPitchCompositions,
+  catalogCells,
   chunk,
   compositionPercentageTotal,
   mockEmbedding,
@@ -23,8 +24,19 @@ describe("pitch catalog seed", () => {
     assert.ok(PITCH_MATERIALS.some((material) => material.name === "Japanese Indigo Selvedge Denim"));
     assert.ok(PITCH_MATERIALS.some((material) => material.name === "Italian Recycled Cashmere Flannel"));
     assert.ok(PITCH_MATERIALS.some((material) => material.name === "Portuguese Organic Cotton Mesh"));
+    assert.ok(PITCH_MATERIALS.some((material) => material.name === "Technical Waterproof Ripstop Nylon"));
     assert.ok(PITCH_MATERIALS.some((material) => material.composition === "100% Cashmere"));
     assert.ok(PITCH_MATERIALS.some((material) => material.composition === "98% Cotton / 2% Elastane"));
+    assert.ok(PITCH_MATERIALS.some((material) => material.composition === "100% Nylon"));
+    for (const colour of ["Navy", "Charcoal", "Ecru"] as const) {
+      assert.ok(PITCH_MATERIALS.some((material) => material.colour === colour));
+    }
+    for (const material of PITCH_MATERIALS) {
+      assert.equal(Number.isInteger(material.weightGsm) && material.weightGsm > 0, true);
+    }
+    const ripstop = PITCH_MATERIALS.find((material) => material.name === "Technical Waterproof Ripstop Nylon");
+    assert.equal(ripstop?.weightGsm, 70);
+    assert.equal(ripstop?.colour, "Navy");
   });
 
   it("builds 1536-dimensional deterministic embeddings and chunks the insert", () => {
@@ -35,8 +47,15 @@ describe("pitch catalog seed", () => {
     assert.equal(mockEmbedding("Japanese Indigo Selvedge Denim"), vector);
     assert.deepEqual(
       chunk(PITCH_MATERIALS, 4).map((page) => page.length),
-      [4, 4, 4],
+      [4, 4, 4, 1],
     );
+    const denim = PITCH_MATERIALS[0];
+    assert.deepEqual(
+      catalogCells(denim).map((cell) => cell.rawHeader),
+      ["composition", "weight", "colour"],
+    );
+    assert.equal(catalogCells(denim)[1]?.sourceValue, "475 GSM");
+    assert.equal(catalogCells(denim)[2]?.sourceValue, "Navy");
   });
 
   it("writes the demo schema inside read-scoped transaction blocks", () => {
@@ -46,6 +65,7 @@ describe("pitch catalog seed", () => {
     assert.match(source, /fruma_material_embeddings/);
     assert.match(source, /fruma_factory_profiles/);
     assert.match(source, /2028-12-31/);
+    assert.match(source, /GSM/);
     assert.match(source, /public\.vector\(1536\)/);
     assert.match(source, /standard_field: "cert"/);
     assert.doesNotMatch(source, /\b(?:UPDATE|DELETE|DROP|TRUNCATE)\b/);
