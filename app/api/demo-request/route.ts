@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 const INBOX = "owen@fruma.ai";
 const ROLES = new Set(["brand", "designer", "factory", "other"]);
 
+/**
+ * Validates marketplace demo payloads and logs them.
+ * Actual email delivery is done client-side via FormSubmit — Vercel server
+ * IPs are Cloudflare-challenged by formsubmit.co, so server-side send fails.
+ */
 export async function POST(request: Request) {
   let body: Record<string, unknown> = {};
   try {
@@ -16,6 +21,7 @@ export async function POST(request: Request) {
   const company = String(body.company ?? "").trim();
   const role = String(body.role ?? "").trim();
   const notes = String(body.notes ?? "").trim();
+  const clientSent = Boolean(body.clientSent);
 
   if (!name || name.length > 120) {
     return NextResponse.json({ error: "Add your name." }, { status: 400 });
@@ -33,41 +39,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Notes are too long." }, { status: 400 });
   }
 
-  const roleLabel =
-    role === "brand"
-      ? "Apparel brand"
-      : role === "designer"
-        ? "Designer / design studio"
-        : role === "factory"
-          ? "Factory / mill"
-          : "Other";
-
-  const sent = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(INBOX)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      _subject: `Fruma demo request — ${roleLabel} — ${company}`,
-      _replyto: email,
-      name,
-      email,
-      company,
-      role: roleLabel,
-      notes: notes || "No notes provided.",
-      source: "www.fruma.ai marketplace demo form",
-    }),
+  console.info("demo-request", {
+    name,
+    email,
+    company,
+    role,
+    notes: notes || undefined,
+    clientSent,
+    inbox: INBOX,
   });
 
-  if (!sent.ok) {
-    console.error("demo-request: formsubmit failed", sent.status);
-    return NextResponse.json(
-      { error: "Could not send that just now. Email owen@fruma.ai." },
-      { status: 502 },
-    );
-  }
-
-  console.info("demo-request", { name, email, company, role, inbox: INBOX });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    inbox: INBOX,
+    delivery: "client-formsubmit",
+  });
 }
