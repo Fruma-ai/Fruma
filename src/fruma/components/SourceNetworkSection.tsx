@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowDownRight, ArrowUpRight, Info, Pause, Play, RotateCcw } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Info } from 'lucide-react'
 import useNetworkPlayback from '../hooks/useNetworkPlayback'
 import { Button } from '../lib/shadcn/button'
 import { Eyebrow } from './Brand'
@@ -12,11 +12,6 @@ export default function SourceNetworkSection() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const currentStage = networkStages[playback.stage] ?? networkStages[0]!
   const selectedNode = networkNodes.find(node => node.id === selectedId)
-
-  function selectNode(id: string) {
-    setSelectedId(id)
-    playback.pause()
-  }
 
   return (
     <section
@@ -34,20 +29,25 @@ export default function SourceNetworkSection() {
         </div>
         <div className="network-canvas">
           <div className="brand-divider flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b px-3 py-4 sm:px-6">
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Explore the four stages of the illustrative journey">
-              {networkStages.map((stage, index) => <Button key={stage.label} variant="ghost" className="network-stage-button" aria-pressed={playback.stage === index} disabled={playback.reducedMotion} onClick={() => { setSelectedId(null); playback.goToStage(index) }}><span className="opacity-50">0{index + 1}</span>{stage.label}</Button>)}
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Stages of the illustrative journey">
+              {networkStages.map((stage, index) => (
+                <span
+                  key={stage.label}
+                  className="network-stage-button"
+                  aria-current={playback.stage === index ? 'step' : undefined}
+                  data-active={playback.stage === index ? 'true' : 'false'}
+                >
+                  <span className="opacity-50">0{index + 1}</span>
+                  {stage.label}
+                </span>
+              ))}
             </div>
-            <div className="flex items-center gap-1">
-              {playback.reducedMotion ? <span className="brand-muted px-3 text-[10px]">Reduced-motion view</span> : <>
-                <Button type="button" variant="ghost" onClick={() => { setSelectedId(null); playback.togglePaused() }} className="brand-highlight h-9 gap-2 rounded-full px-3 text-[10px] hover:bg-primary/20" aria-label={playback.paused ? 'Play network animation' : 'Pause network animation'}>{playback.paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}{playback.paused ? 'Play' : 'Pause'}</Button>
-                <Button type="button" variant="ghost" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setSelectedId(null); playback.replay() }} className="brand-highlight h-9 gap-2 rounded-full px-3 text-[10px] hover:bg-primary/20" aria-label="Replay network animation"><RotateCcw className="h-3 w-3" />Replay</Button>
-              </>}
-            </div>
+            {playback.reducedMotion ? <span className="brand-muted px-3 text-[10px]">Reduced-motion view</span> : null}
           </div>
           <div className="grid items-center gap-0 px-2 py-6 sm:px-6 sm:py-8 lg:grid-cols-[1.8fr_1fr]">
-            <NetworkGraph stage={playback.stage} selectedId={selectedId} onSelect={selectNode} />
+            <NetworkGraph stage={playback.stage} selectedId={selectedId} onSelect={setSelectedId} />
             <div className="brand-highlight -mt-4 flex justify-center pb-4 lg:hidden" aria-hidden="true"><ArrowDownRight className="h-6 w-6" /></div>
-            <NetworkOutcome revealed={playback.stage === 3} onInspect={playback.pause} />
+            <NetworkOutcome revealed={playback.stage === 3} onInspect={() => undefined} />
           </div>
           <div id="network-connection-detail" className="brand-divider grid min-h-[122px] items-center gap-4 border-t bg-primary/5 px-6 py-5 md:grid-cols-[1fr_auto] sm:px-8">
             <div><p className="mb-2 text-sm font-medium">{selectedNode ? selectedNode.label : currentStage.title}</p><p className="brand-muted max-w-2xl text-xs leading-6">{selectedNode ? selectedNode.detail : currentStage.detail}</p></div>

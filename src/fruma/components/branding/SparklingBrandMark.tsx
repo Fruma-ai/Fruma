@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
-import { Pause, Play } from 'lucide-react'
 const frumaMark = '/fruma/assets/fruma-purple-mark.jpeg'
-import { Button } from '../../lib/shadcn/button'
 import { sampleBrandDots, type BrandSparklePoint } from './sampleBrandDots'
 
 export default function SparklingBrandMark() {
@@ -10,11 +8,10 @@ export default function SparklingBrandMark() {
   const elapsedRef = useRef(0)
   const dimensionsRef = useRef({ width: 0, height: 0 })
   const [points, setPoints] = useState<BrandSparklePoint[]>([])
-  const [paused, setPaused] = useState(false)
   const [inView, setInView] = useState(false)
   const [pageVisible, setPageVisible] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(false)
-  const running = inView && pageVisible && !paused && !reducedMotion
+  const running = inView && pageVisible && !reducedMotion
 
   useEffect(() => {
     const element = containerRef.current
@@ -115,7 +112,6 @@ export default function SparklingBrandMark() {
         <img className="fruma-f-sheen" src={frumaMark} alt="" aria-hidden="true" />
         <canvas ref={canvasRef} aria-hidden="true" />
       </div>
-      {!reducedMotion && <Button variant="ghost" className="fruma-f-motion-control" onClick={() => setPaused(previous => !previous)} aria-label={paused ? 'Play F sparkle animation' : 'Pause F sparkle animation'}>{paused ? <Play /> : <Pause />}{paused ? 'Play sparkle' : 'Pause sparkle'}</Button>}
     </div>
   )
 }
