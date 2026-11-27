@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../src/fruma/tw-bridge.css";
 
 :root {
   --ink: #12141a;

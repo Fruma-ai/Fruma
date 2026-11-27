@@ -1,0 +1,134 @@
+/*
+  Tailwind v4 bridge for the approved marketing utilities that were authored
+  against a Tailwind 3 theme (hsl channel tokens, density spacing, retool shadows).
+  Scoped colour overrides live under .fruma-site.
+*/
+
+@layer base {
+  .fruma-site {
+    --color-background: hsl(var(--background));
+    --color-foreground: hsl(var(--foreground));
+    --color-card: hsl(var(--card));
+    --color-card-foreground: hsl(var(--card-foreground));
+    --color-popover: hsl(var(--popover));
+    --color-popover-foreground: hsl(var(--popover-foreground));
+    --color-primary: hsl(var(--primary));
+    --color-primary-foreground: hsl(var(--primary-foreground));
+    --color-secondary: hsl(var(--secondary));
+    --color-secondary-foreground: hsl(var(--secondary-foreground));
+    --color-muted: hsl(var(--muted));
+    --color-muted-foreground: hsl(var(--muted-foreground));
+    --color-accent: hsl(var(--accent));
+    --color-accent-foreground: hsl(var(--accent-foreground));
+    --color-destructive: hsl(var(--destructive));
+    --color-border: hsl(var(--border));
+    --color-input: hsl(var(--input));
+    --color-ring: hsl(var(--ring));
+    --radius-lg: var(--radius);
+    --radius-md: var(--radius-md);
+    --radius-sm: var(--radius-sm);
+    --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+  }
+}
+
+@utility px-density-xs {
+  padding-inline: var(--density-xs);
+}
+@utility px-density-sm {
+  padding-inline: var(--density-sm);
+}
+@utility px-density-md {
+  padding-inline: var(--density-md);
+}
+@utility px-density-lg {
+  padding-inline: var(--density-lg);
+}
+@utility px-density-xl {
+  padding-inline: var(--density-xl);
+}
+@utility py-density-xs {
+  padding-block: var(--density-xs);
+}
+@utility py-density-sm {
+  padding-block: var(--density-sm);
+}
+@utility py-density-md {
+  padding-block: var(--density-md);
+}
+@utility py-density-lg {
+  padding-block: var(--density-lg);
+}
+@utility py-density-xl {
+  padding-block: var(--density-xl);
+}
+@utility p-density-xs {
+  padding: var(--density-xs);
+}
+@utility p-density-sm {
+  padding: var(--density-sm);
+}
+@utility p-density-md {
+  padding: var(--density-md);
+}
+@utility p-density-lg {
+  padding: var(--density-lg);
+}
+@utility p-density-xl {
+  padding: var(--density-xl);
+}
+@utility gap-density-xs {
+  gap: var(--density-xs);
+}
+@utility gap-density-sm {
+  gap: var(--density-sm);
+}
+@utility gap-density-md {
+  gap: var(--density-md);
+}
+@utility gap-density-lg {
+  gap: var(--density-lg);
+}
+@utility gap-density-xl {
+  gap: var(--density-xl);
+}
+
+@utility shadow-retool-sm {
+  box-shadow: var(--shadow-retool-sm);
+}
+@utility shadow-retool-md {
+  box-shadow: var(--shadow-retool-md);
+}
+@utility shadow-retool-lg {
+  box-shadow: var(--shadow-retool-lg);
+}
+
+@utility ring-offset-background {
+  --tw-ring-offset-color: hsl(var(--background));
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@utility animate-accordion-down {
+  animation: accordion-down 0.2s ease-out;
+}
+
+@utility animate-accordion-up {
+  animation: accordion-up 0.2s ease-out;
+}

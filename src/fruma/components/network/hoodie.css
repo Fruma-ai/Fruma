@@ -1,0 +1,61 @@
+.hoodie-product-image {
+  position: relative;
+  aspect-ratio: 9 / 10;
+  width: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.hoodie-product-image > .hoodie-base-image {
+  position: absolute;
+  width: 344%;
+  max-width: none;
+  height: auto;
+  left: -19%;
+  top: -1%;
+  /* Exclude the source sheet title above the hood without trimming the garment. */
+  clip-path: inset(3.8% 0 0 0);
+}
+
+/* Sample nearby unbranded fabric to relocate the original chest lockup
+   without mirroring the garment or the Fruma F. This is a visual mockup. */
+.hoodie-original-lockup-cover {
+  position: absolute;
+  left: 54%;
+  top: 44.5%;
+  width: 20%;
+  height: 6.5%;
+  overflow: hidden;
+  mask-image: radial-gradient(ellipse, black 72%, transparent 100%);
+}
+
+.hoodie-original-lockup-cover img {
+  position: absolute;
+  width: 1720%;
+  max-width: none;
+  height: auto;
+  left: -365%;
+  top: -837%;
+}
+
+/* Wearer's right chest appears on the viewer's left in a front photograph. */
+.hoodie-right-chest-mark {
+  position: absolute;
+  left: 34.5%;
+  top: 45.8%;
+  width: 6%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  mix-blend-mode: screen;
+  transform: rotate(-2deg);
+}
+
+.hoodie-right-chest-mark img {
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  max-width: none;
+  left: -25%;
+  top: -25%;
+  object-fit: cover;
+}

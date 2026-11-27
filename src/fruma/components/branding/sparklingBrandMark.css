@@ -1,0 +1,83 @@
+.fruma-f-animation {
+  position: absolute;
+  inset: 0;
+}
+
+.fruma-f-artwork {
+  position: absolute;
+  inset: 0;
+  transform: scale(1.18);
+  pointer-events: none;
+}
+
+.fruma-f-artwork > img,
+.fruma-f-artwork > canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  mix-blend-mode: screen;
+}
+
+.fruma-f-base {
+  animation: fruma-f-breathe 7s ease-in-out infinite;
+}
+
+.fruma-f-artwork > .fruma-f-sheen {
+  filter: brightness(2.5) saturate(1.15);
+  mask-image: linear-gradient(110deg, transparent 39%, black 49%, black 51%, transparent 61%);
+  mask-size: 300% 100%;
+  mask-position: 150% 0;
+  animation: fruma-f-shimmer 6.5s ease-in-out -1.4s infinite;
+}
+
+.fruma-f-animation .fruma-f-motion-control {
+  position: absolute;
+  right: 8px;
+  bottom: 35px;
+  z-index: 10;
+  height: 30px;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid hsl(var(--brand-border));
+  border-radius: 30px;
+  color: hsl(var(--brand-muted));
+  background: hsl(var(--brand-surface) / 0.8);
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.fruma-f-animation .fruma-f-motion-control:hover {
+  color: hsl(var(--brand-foreground));
+  border-color: hsl(var(--brand-highlight) / 0.6);
+  background: hsl(var(--brand-glow) / 0.15);
+}
+
+.fruma-f-animation .fruma-f-motion-control svg {
+  width: 11px;
+  height: 11px;
+}
+
+.fruma-f-animation[data-running='false'] .fruma-f-base,
+.fruma-f-animation[data-running='false'] .fruma-f-sheen {
+  animation-play-state: paused;
+}
+
+@keyframes fruma-f-breathe {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.22); }
+}
+
+@keyframes fruma-f-shimmer {
+  0%, 8% { mask-position: 150% 0; opacity: 0.3; }
+  48% { opacity: 0.9; }
+  86%, 100% { mask-position: -50% 0; opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fruma-f-animation .fruma-f-base { animation: none; filter: none; }
+  .fruma-f-animation .fruma-f-sheen,
+  .fruma-f-animation canvas,
+  .fruma-f-animation .fruma-f-motion-control { display: none; }
+}
