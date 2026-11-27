@@ -30,29 +30,29 @@ export const metadata: Metadata = {
     template: "%s — Fruma",
   },
   description:
-    "Find factories through the products they can make—and see the evidence behind the match.",
+    "Find manufacturing partners, assess capabilities and reputation, and request samples before committing to production.",
   openGraph: {
     type: "website",
     locale: "en_GB",
     url: "https://www.fruma.ai",
     siteName: "Fruma",
-    title: "Fruma — Product origin, made visible",
+    title: "Fruma — Find your factory. Start with a sample.",
     description:
-      "Find factories through the products they can make—and see the evidence behind the match. A clearer starting point for your next collection.",
+      "Fruma is being built for brands and designers to find manufacturing partners, assess their capabilities and reputation, and request samples before committing to production.",
     images: [
       {
         url: "/og.jpg",
         width: 1200,
         height: 630,
-        alt: "Fruma exhibition stand with the purple F mark and the line Product origin, made visible.",
+        alt: "Fruma exhibition stand with the purple F mark and brand marketplace concept.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fruma — Product origin, made visible",
+    title: "Fruma — Find your factory. Start with a sample.",
     description:
-      "Find factories through the products they can make—and see the evidence behind the match.",
+      "Find manufacturing partners, assess capabilities and reputation, and request samples before committing to production.",
     images: ["/og.jpg"],
   },
   icons: {
