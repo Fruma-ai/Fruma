@@ -24,8 +24,8 @@ export default function SourceNetworkSection() {
     >
       <div className="site-container">
         <div className="mb-9 grid gap-5 md:grid-cols-[1.1fr_0.9fr] md:items-end md:gap-14">
-          <div><Eyebrow className="brand-highlight mb-4">The power of a connected product story</Eyebrow><h2 id="source-network-heading" className="section-heading">Follow the thread.<br /><span className="brand-highlight">See the bigger picture.</span></h2></div>
-          <p className="brand-muted max-w-sm text-sm leading-7 md:ml-auto">Back to the source. Forward to the finished garment. Explore how a network of product records could come together—with a passport beside the product.</p>
+          <div><Eyebrow className="brand-highlight mb-4">The people behind the finished product</Eyebrow><h2 id="source-network-heading" className="section-heading">Good products start<br /><span className="brand-highlight">with the right partners.</span></h2></div>
+          <p className="brand-muted max-w-sm text-sm leading-7 md:ml-auto">Finding a factory is the starting point. Materials, processes and people make up the wider picture. This illustration explores those connections, with product passports shown as a later-phase concept.</p>
         </div>
         <div className="network-canvas">
           <div className="brand-divider flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b px-3 py-4 sm:px-6">
@@ -51,7 +51,7 @@ export default function SourceNetworkSection() {
           </div>
           <div id="network-connection-detail" className="brand-divider grid min-h-[122px] items-center gap-4 border-t bg-primary/5 px-6 py-5 md:grid-cols-[1fr_auto] sm:px-8">
             <div><p className="mb-2 text-sm font-medium">{selectedNode ? selectedNode.label : currentStage.title}</p><p className="brand-muted max-w-2xl text-xs leading-6">{selectedNode ? selectedNode.detail : currentStage.detail}</p></div>
-            <Button asChild variant="link" className="brand-highlight h-auto justify-start gap-2 p-0 text-[11px]"><a href="#product-passport">Explore the product passport<ArrowUpRight className="h-3.5 w-3.5" /></a></Button>
+            <Button asChild variant="link" className="brand-highlight h-auto justify-start gap-2 p-0 text-[11px]"><a href="#platform">Explore factory discovery<ArrowUpRight className="h-3.5 w-3.5" /></a></Button>
           </div>
         </div>
         <p className="brand-muted mt-5 flex items-start gap-2 text-[10px] leading-5"><Info className="mt-1 h-3 w-3 shrink-0" /><span>Illustrative journey, not live traceability. Suppliers, routes and records are examples; lighting up a connection does not verify it. Garment visual adapted from supplied Fruma brand artwork. No live passport is issued.</span></p>
