@@ -18,7 +18,7 @@ export default function SiteHeader({ onDemo }: { onDemo: () => void }) {
       <div className="site-container flex h-[88px] items-center justify-between gap-6">
         <Brand />
         <nav aria-label="Main navigation" className="hidden items-center gap-5 text-[11px] lg:flex xl:gap-8 xl:text-[12px]">
-          {links.map(link => <a key={link.href} href={link.href} className="brand-nav-link">{link.label}</a>)}
+          {links.map(link => <a key={link.href} href={link.href} className="brand-nav-link whitespace-nowrap">{link.label}</a>)}
         </nav>
         <div className="flex items-center gap-2">
           <Button onClick={onDemo} className="hidden h-10 gap-6 rounded-full px-5 text-[11px] sm:inline-flex">Request a demo<ArrowUpRight className="h-3.5 w-3.5" /></Button>
