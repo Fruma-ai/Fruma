@@ -180,6 +180,8 @@
 }
 
 .network-stage-button.network-stage-button {
+  display: inline-flex;
+  align-items: center;
   height: auto;
   gap: 8px;
   padding: 9px 12px;
@@ -191,8 +193,8 @@
   background: transparent;
 }
 
-.network-stage-button[aria-pressed='true'],
-.network-stage-button:hover {
+.network-stage-button[aria-current='step'],
+.network-stage-button[data-active='true'] {
   border-color: hsl(var(--brand-glow) / 0.5);
   background: hsl(var(--brand-glow) / 0.14);
   color: hsl(var(--brand-foreground));

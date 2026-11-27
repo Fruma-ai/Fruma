@@ -5,7 +5,6 @@ const stageDurations = [2400, 3000, 3200, 5500]
 export default function useNetworkPlayback() {
   const containerRef = useRef<HTMLElement>(null)
   const [stage, setStage] = useState(0)
-  const [paused, setPaused] = useState(false)
   const [iteration, setIteration] = useState(0)
   const [inView, setInView] = useState(false)
   const [pageVisible, setPageVisible] = useState(true)
@@ -29,7 +28,7 @@ export default function useNetworkPlayback() {
     }
   }, [])
 
-  const running = inView && pageVisible && !paused && !reducedMotion
+  const running = inView && pageVisible && !reducedMotion
 
   useEffect(() => {
     if (!running) return
@@ -37,26 +36,10 @@ export default function useNetworkPlayback() {
     return () => window.clearTimeout(timeout)
   }, [running, stage, iteration])
 
-  function replay() {
-    setStage(0)
-    setIteration(previous => previous + 1)
-    setPaused(false)
-  }
-
-  function goToStage(index: number) {
-    setStage(Math.max(0, Math.min(stageDurations.length - 1, index)))
-    setPaused(true)
-  }
-
   return {
     containerRef,
     stage: reducedMotion ? 3 : stage,
-    paused,
     running,
     reducedMotion,
-    replay,
-    goToStage,
-    pause: () => setPaused(true),
-    togglePaused: () => setPaused(previous => !previous),
   }
 }
