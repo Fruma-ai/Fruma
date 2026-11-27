@@ -63,7 +63,7 @@ const questions = [
   { question: 'Is the marketplace live?', answer: 'Not yet. The current marketplace is a working prototype using synthetic sample data for validation. The previews on this website are illustrative and do not represent real factories, live availability or customer activity.' },
   { question: 'Where do digital product passports fit?', answer: 'They are a key part of the longer-term roadmap, not the main marketplace journey today. The intention is to connect product specifications and supporting records into a fuller product story after establishing factory discovery and sampling. The passport shown here is an illustrative concept, not an issued passport or a claim of regulatory compliance.' },
   { question: 'What will I see in a demo?', answer: 'Start with a sourcing brief, explore factory matches, review a profile’s capabilities and brand-experience signals, build a shortlist and walk through a sample request. We can also discuss the roadmap for production orders and product passports, with planned features clearly separated from the working prototype.' },
-  { question: 'Can I request a demo from this website?', answer: 'This design prototype lets you prepare and download a demo brief. It does not send requests, create bookings or store your details on a server. A live submission destination has not been connected.' },
+  { question: 'Can I request a demo from this website?', answer: 'Yes. Use Request a demo to send your details to the Fruma team. We will reply to the work email you provide.' },
 ]
 
 export function QuestionsSection() {
