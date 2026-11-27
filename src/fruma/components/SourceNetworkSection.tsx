@@ -39,8 +39,8 @@ export default function SourceNetworkSection() {
             </div>
             <div className="flex items-center gap-1">
               {playback.reducedMotion ? <span className="brand-muted px-3 text-[10px]">Reduced-motion view</span> : <>
-                <Button variant="ghost" onClick={() => { setSelectedId(null); playback.togglePaused() }} className="brand-highlight h-9 gap-2 rounded-full px-3 text-[10px] hover:bg-primary/20" aria-label={playback.paused ? 'Play network animation' : 'Pause network animation'}>{playback.paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}{playback.paused ? 'Play' : 'Pause'}</Button>
-                <Button variant="ghost" onClick={() => { setSelectedId(null); playback.replay() }} className="brand-highlight h-9 gap-2 rounded-full px-3 text-[10px] hover:bg-primary/20" aria-label="Replay network animation"><RotateCcw className="h-3 w-3" />Replay</Button>
+                <Button type="button" variant="ghost" onClick={() => { setSelectedId(null); playback.togglePaused() }} className="brand-highlight h-9 gap-2 rounded-full px-3 text-[10px] hover:bg-primary/20" aria-label={playback.paused ? 'Play network animation' : 'Pause network animation'}>{playback.paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}{playback.paused ? 'Play' : 'Pause'}</Button>
+                <Button type="button" variant="ghost" onClick={(event) => { event.preventDefault(); event.stopPropagation(); setSelectedId(null); playback.replay() }} className="brand-highlight h-9 gap-2 rounded-full px-3 text-[10px] hover:bg-primary/20" aria-label="Replay network animation"><RotateCcw className="h-3 w-3" />Replay</Button>
               </>}
             </div>
           </div>
