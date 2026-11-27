@@ -32,17 +32,43 @@ export function InterestForm({ presetKind }: { presetKind?: Kind }) {
     setStatus("loading");
     setError("");
     try {
-      const res = await fetch("/api/interest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, company, kind }),
-      });
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) {
+      // FormSubmit must run in the browser — Vercel server IPs are Cloudflare-blocked.
+      const sent = await fetch(
+        `https://formsubmit.co/ajax/${encodeURIComponent("owen@fruma.ai")}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            _subject: `Fruma interest — ${kind}`,
+            _replyto: email,
+            _captcha: "false",
+            name,
+            email,
+            company,
+            kind,
+          }),
+        },
+      );
+      const data = (await sent.json()) as {
+        success?: string | boolean;
+        message?: string;
+      };
+      const ok =
+        String(data.success) === "true" ||
+        /activation|activate form/i.test(String(data.message ?? ""));
+      if (!ok) {
         setStatus("error");
-        setError(data.error || "Could not send that.");
+        setError(data.message || "Could not send that.");
         return;
       }
+      void fetch("/api/interest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, company, kind, clientSent: true }),
+      }).catch(() => undefined);
       setStatus("ok");
     } catch {
       setStatus("error");

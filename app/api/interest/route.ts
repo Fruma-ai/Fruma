@@ -34,31 +34,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tell us which you are." }, { status: 400 });
   }
 
-  const sent = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(INBOX)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      _subject: mill
-        ? `Fruma interest — ${kind} — ${mill}`
-        : `Fruma interest — ${kind}`,
-      name,
-      email,
-      company,
-      kind,
-      mill: mill || undefined,
-    }),
+  // Email delivery is client-side (FormSubmit). This route only validates/logs —
+  // Vercel datacenter IPs get Cloudflare-challenged by formsubmit.co.
+  console.info("interest", {
+    name,
+    email,
+    company,
+    kind,
+    mill: mill || undefined,
+    clientSent: Boolean(body.clientSent),
+    inbox: INBOX,
   });
-  if (!sent.ok) {
-    console.error("interest: formsubmit failed", sent.status);
-    return NextResponse.json(
-      { error: "Could not send that just now. Email owen@fruma.ai." },
-      { status: 502 },
-    );
-  }
-  console.info("interest", { name, email, company, kind, mill: mill || undefined, inbox: INBOX });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, inbox: INBOX, delivery: "client-formsubmit" });
 }
