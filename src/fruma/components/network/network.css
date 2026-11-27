@@ -119,15 +119,40 @@
 }
 
 .network-finished-product {
+  background: #fff;
+  color: #111;
   transform: translateY(6px) rotate(-3deg);
   opacity: 0.32;
   transition: opacity 1100ms ease, transform 1100ms ease, box-shadow 1100ms ease;
 }
 
+.network-finished-product-meta {
+  background: #0b0b0d;
+  color: #f5f5f5;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.network-finished-product-meta .text-\[9px\] {
+  color: rgba(255, 255, 255, 0.62);
+}
+
 .network-mini-passport {
+  /* Keep the passport opaque on the black stage so white hoodie media
+     cannot bleach through and kill contrast on the overlapping panel. */
+  background: #121218;
+  color: #f4f4f5;
   transform: translateY(15px) rotate(4deg);
   opacity: 0.3;
   transition: opacity 1300ms ease 180ms, transform 1300ms ease 180ms, box-shadow 1300ms ease 180ms;
+}
+
+.network-mini-passport-body {
+  background: #121218;
+  color: rgba(244, 244, 245, 0.72);
+}
+
+.network-mini-passport-body h3 {
+  color: #fafafa;
 }
 
 .network-outcome[data-revealed='true'] .network-finished-product,
