@@ -24,12 +24,37 @@ const plex = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.fruma.ai"),
   title: {
     default: "Fruma",
     template: "%s — Fruma",
   },
   description:
-    "The mill’s catalogue, as sent, on a standard buyers can use.",
+    "Find factories through the products they can make—and see the evidence behind the match.",
+  openGraph: {
+    type: "website",
+    locale: "en_GB",
+    url: "https://www.fruma.ai",
+    siteName: "Fruma",
+    title: "Fruma — Product origin, made visible",
+    description:
+      "Find factories through the products they can make—and see the evidence behind the match. A clearer starting point for your next collection.",
+    images: [
+      {
+        url: "/og.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Fruma exhibition stand with the purple F mark and the line Product origin, made visible.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Fruma — Product origin, made visible",
+    description:
+      "Find factories through the products they can make—and see the evidence behind the match.",
+    images: ["/og.jpg"],
+  },
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -38,7 +63,7 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
-}
+};
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
