@@ -56,12 +56,13 @@ export const metadata: Metadata = {
     images: ["/og.jpg"],
   },
   icons: {
+    // Prefer SVG/PNG so Chrome does not fall back to a black-tiled .ico.
+    // app/favicon.ico is intentionally omitted so Next does not auto-inject it first.
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
       { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
       { url: "/icon.png", type: "image/png", sizes: "512x512" },
-      { url: "/favicon.ico", sizes: "48x48" },
     ],
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
