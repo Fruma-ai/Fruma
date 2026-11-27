@@ -17,10 +17,10 @@ export default function NetworkOutcome({ revealed, onInspect }: { revealed: bool
   return (
     <>
     <figure className="network-outcome" data-revealed={revealed} aria-label="Illustrative finished Fruma hoodie beside a digital product passport concept">
-      <div className="relative mx-auto min-h-[360px] w-full max-w-[370px] sm:min-h-[400px]">
+      <div className="relative mx-auto min-h-[360px] w-full max-w-[370px] pb-2 sm:min-h-[400px]">
         <Card className="network-finished-product absolute left-0 top-4 w-[67%] overflow-hidden rounded-lg border-primary/20 shadow-retool-lg">
-          <Button variant="ghost" className="relative block h-auto w-full rounded-none p-0 hover:bg-transparent" onClick={inspectProduct} aria-label="Open Fruma Signature Hoodie product preview"><HoodieProductImage /><span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background/95 text-foreground"><Maximize2 className="h-3 w-3" /></span></Button>
-          <div className="border-t border-border px-4 py-3"><p className="text-[11px] font-semibold">Signature Hoodie</p><p className="mt-1 text-[9px] text-muted-foreground">Black · Right-chest Fruma F</p><Button onClick={inspectProduct} variant="link" className="mt-2 h-auto p-0 text-[9px]">View product<ArrowUpRight className="h-3 w-3" /></Button></div>
+          <Button type="button" variant="ghost" className="relative block h-auto w-full rounded-none p-0 hover:bg-transparent" onClick={inspectProduct} aria-label="Open Fruma Signature Hoodie product preview"><HoodieProductImage /><span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background/95 text-foreground"><Maximize2 className="h-3 w-3" /></span></Button>
+          <div className="border-t border-border px-4 py-3"><p className="text-[11px] font-semibold">Signature Hoodie</p><p className="mt-1 text-[9px] text-muted-foreground">Black · Right-chest Fruma F</p><Button type="button" onClick={inspectProduct} variant="link" className="mt-2 h-auto p-0 text-[9px]">View product<ArrowUpRight className="h-3 w-3" /></Button></div>
         </Card>
         <Card className="network-mini-passport absolute bottom-8 right-0 w-[42%] overflow-hidden rounded-lg border-primary/40 shadow-retool-lg">
           <Button asChild variant="ghost" className="h-auto w-full whitespace-normal rounded-none p-0 text-left hover:bg-primary/5">
@@ -31,7 +31,7 @@ export default function NetworkOutcome({ revealed, onInspect }: { revealed: bool
           </Button>
         </Card>
       </div>
-      <figcaption className="brand-muted mx-auto max-w-[340px] text-center text-[9px] leading-5">A product is more than its finished form.<br /><span className="brand-highlight">See the record beside it.</span></figcaption>
+      <figcaption className="brand-muted relative z-10 mx-auto mt-3 max-w-[340px] text-center text-[9px] leading-5">A product is more than its finished form.<br /><span className="brand-highlight">See the record beside it.</span></figcaption>
     </figure>
     <HoodieProductDialog open={productOpen} onOpenChange={setProductOpen} />
     </>

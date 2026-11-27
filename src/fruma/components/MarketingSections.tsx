@@ -31,7 +31,7 @@ export function HonestySection() {
           { label: 'Expired', description: 'Needs an updated record', icon: FileText },
           { label: 'Missing', description: 'No evidence on record', icon: Minus },
           { label: 'Unverified', description: 'Not yet substantiated', icon: CircleDashed },
-        ].map(item => <div key={item.label} className="brand-divider rounded-sm border bg-primary/10 p-4"><item.icon className="brand-highlight mb-3 h-4 w-4" /><p className="text-xs">{item.label}</p><p className="brand-muted mt-1.5 text-[9px] leading-4">{item.description}</p></div>)}</div><p className="brand-muted mt-6 text-[10px] leading-5">Fruma surfaces evidence. It does not certify factories, guarantee quality, or assert legal compliance.</p></div>
+        ].map(item => <div key={item.label} className="brand-divider min-w-0 rounded-sm border bg-primary/10 p-4"><item.icon className="brand-highlight mb-3 h-4 w-4" /><p className="text-xs">{item.label}</p><p className="brand-muted mt-1.5 text-[9px] leading-4">{item.description}</p></div>)}</div><p className="brand-muted mt-6 text-[10px] leading-5">Fruma surfaces evidence. It does not certify factories, guarantee quality, or assert legal compliance.</p></div>
       </div>
     </section>
   )
